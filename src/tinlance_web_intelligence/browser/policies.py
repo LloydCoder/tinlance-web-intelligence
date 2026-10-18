@@ -25,7 +25,11 @@ def validate_browser_resource_url(value: str) -> str:
     this function is an early application-layer filter, not the sole SSRF control.
     """
     try:
-        normalized = validate_url(value).normalized
+        incoming = urlsplit(value)
+        without_fragment = urlunsplit(
+            (incoming.scheme, incoming.netloc, incoming.path, incoming.query, "")
+        )
+        normalized = validate_url(without_fragment).normalized
         parsed = urlsplit(normalized)
         host = parsed.hostname
         if not host:
