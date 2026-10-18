@@ -1,9 +1,8 @@
 """Fail-closed tests for the explicit PostgreSQL migration runner."""
 from __future__ import annotations
 
-from apps.migrate.main import _validate_dsn, main
-
 import pytest
+from apps.migrate.main import _validate_dsn, main
 
 
 def test_production_migration_dsn_requires_verified_tls() -> None:
