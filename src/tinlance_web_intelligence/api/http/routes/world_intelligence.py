@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -74,10 +74,13 @@ def export_source_evidence(
     read_any = "twi:jobs:read:any" in principal.scopes
 
     def resolve_job(job_id: str) -> Job | None:
-        return repository.get(
-            job_id,
+        return cast(
+            Job | None,
+            repository.get(
+                job_id,
             tenant_id=principal.tenant_id,
-            subject_id=None if read_any else principal.subject_id,
+                subject_id=None if read_any else principal.subject_id,
+            ),
         )
 
     claim = ClaimInput(
