@@ -97,7 +97,7 @@ class Settings:
         if self.database_url is not None:
             try:
                 database = urlsplit(self.database_url)
-                query = parse_qs(database.query, strict_parsing=False)
+                query = parse_qs(database.query, keep_blank_values=True, strict_parsing=False)
             except ValueError as exc:
                 raise ConfigurationError("PostgreSQL database URL is malformed") from exc
             if (
@@ -111,7 +111,10 @@ class Settings:
                 raise ConfigurationError(
                     "TWI_DATABASE_URL must be a PostgreSQL URL with host, credentials, and database"
                 )
-            sslmode = query.get("sslmode", [""])[0]
+            sslmode_values = query.get("sslmode", [])
+            if len(sslmode_values) > 1:
+                raise ConfigurationError("PostgreSQL sslmode must be specified exactly once")
+            sslmode = sslmode_values[0] if sslmode_values else ""
             if sslmode and sslmode not in {
                 "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
             }:
