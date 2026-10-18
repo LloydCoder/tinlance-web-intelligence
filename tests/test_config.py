@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from tinlance_web_intelligence.config import ConfigurationError, Settings, validate_service_base_url
@@ -56,3 +58,16 @@ def test_browser_worker_requires_enabled_flag_and_authenticated_proxy() -> None:
         BrowserService(Settings.from_env({}))
     with pytest.raises(ConfigurationError):
         BrowserService(Settings.from_env({"TWI_BROWSER_ENABLED": "true"}))
+
+
+def test_example_environment_file_has_valid_defaults() -> None:
+    example_path = Path(__file__).resolve().parents[1] / ".env.example"
+    values: dict[str, str] = {}
+    for line in example_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key] = value
+    settings = Settings.from_env(values)
+    assert settings.browser_enabled is False

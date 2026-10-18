@@ -12,6 +12,8 @@ import socket
 from contextlib import suppress
 from dataclasses import dataclass
 
+from tinlance_web_intelligence.security.url_validation import is_public_routable_ip
+
 
 class ProxyProtocolError(ValueError):
     """Malformed or unsupported proxy request."""
@@ -38,8 +40,18 @@ class EgressProxyConfig:
     idle_timeout_seconds: int = 15
 
     def validate(self) -> None:
-        if not self.host or not 1 <= self.port <= 65535:
-            raise ValueError("egress proxy host and port are required")
+        if not 1 <= self.port <= 65535:
+            raise ValueError("egress proxy port must be between 1 and 65535")
+        try:
+            bind_address = ipaddress.ip_address(self.host)
+        except ValueError as exc:
+            raise ValueError(
+                "egress proxy bind host must be a loopback or unspecified IP literal"
+            ) from exc
+        if not (bind_address.is_loopback or bind_address.is_unspecified):
+            raise ValueError(
+                "egress proxy may bind only to loopback or an unspecified interface"
+            )
         if not self.username or any(ord(ch) < 33 or ord(ch) > 126 for ch in self.username):
             raise ValueError("egress proxy username must be printable ASCII")
         if (
@@ -231,7 +243,7 @@ class SafeEgressProxy:
             literal = ipaddress.ip_address(host)
         except ValueError:
             return await self._resolve_public_hostname(host, port)
-        if not literal.is_global:
+        if not is_public_routable_ip(str(literal)):
             raise ProxyPolicyError("non-public IP destinations are forbidden")
         return str(literal)
 
@@ -268,7 +280,7 @@ class SafeEgressProxy:
                 parsed.append(ipaddress.ip_address(address))
             except ValueError as exc:
                 raise ProxyPolicyError("invalid DNS response") from exc
-        if any(not address.is_global for address in parsed):
+        if any(not is_public_routable_ip(str(address)) for address in parsed):
             raise ProxyPolicyError("hostname resolves to a non-public address")
         return str(parsed[0])
 

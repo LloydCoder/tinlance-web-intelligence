@@ -39,6 +39,20 @@ def test_proxy_rejects_weak_secrets_and_invalid_limits() -> None:
             username="worker",
             password=TEST_CREDENTIAL,
         ).validate()
+    with pytest.raises(ValueError):
+        EgressProxyConfig(
+            host="192.0.2.10",
+            port=3128,
+            username="worker",
+            password=TEST_CREDENTIAL,
+        ).validate()
+    with pytest.raises(ValueError):
+        EgressProxyConfig(
+            host="egress-proxy.example.com",
+            port=3128,
+            username="worker",
+            password=TEST_CREDENTIAL,
+        ).validate()
 
 
 def test_proxy_authentication_requires_exact_single_basic_credential() -> None:
@@ -77,7 +91,17 @@ def test_proxy_protocol_and_destination_policy_fail_closed() -> None:
 def test_proxy_rejects_non_public_ip_literals() -> None:
     async def check() -> None:
         proxy = make_proxy()
-        for address in ("127.0.0.1", "10.0.0.1", "169.254.169.254", "::1", "fc00::1"):
+        for address in (
+            "127.0.0.1",
+            "10.0.0.1",
+            "169.254.169.254",
+            "192.0.2.1",
+            "198.18.0.1",
+            "240.0.0.1",
+            "::1",
+            "fc00::1",
+            "2001:db8::1",
+        ):
             with pytest.raises(ProxyPolicyError):
                 await proxy._resolve_public_ip(address, 443, "https")
         assert await proxy._resolve_public_ip("8.8.8.8", 443, "https") == "8.8.8.8"
