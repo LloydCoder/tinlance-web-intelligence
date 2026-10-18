@@ -48,7 +48,10 @@ def create_app(repository: SQLiteJobRepository, service_token: str) -> FastAPI:
                 return JSONResponse(status_code=400, content={"detail": "invalid content length"})
             if content_length < 0 or content_length > 3_500_000:
                 return JSONResponse(status_code=413, content={"detail": "request body too large"})
-        return await call_next(request)
+        response = await call_next(request)
+        if not isinstance(response, Response):
+            raise RuntimeError("internal middleware returned an invalid response")
+        return response
 
     def authorize(request: Request) -> None:
         values = request.headers.getlist("authorization")
@@ -73,7 +76,7 @@ def create_app(repository: SQLiteJobRepository, service_token: str) -> FastAPI:
         )
         if job is None:
             return Response(status_code=204)
-        if job.kind != "browser" or job.lease_owner != lease_token:
+        if job.kind != "browser":
             raise HTTPException(status_code=500, detail="invalid browser lease")
         body = {
             "job_id": job.job_id,
