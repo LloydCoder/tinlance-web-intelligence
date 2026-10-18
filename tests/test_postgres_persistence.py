@@ -6,6 +6,7 @@ import os
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from hashlib import sha256
 
 import pytest
@@ -19,6 +20,7 @@ from tinlance_web_intelligence.jobs.model import (
     JobStatus,
     LeaseLostError,
 )
+from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 from tinlance_web_intelligence.persistence.postgres_outbox import PostgresSourceEvidenceOutbox
 
@@ -211,3 +213,35 @@ def test_postgres_outbox_expired_lease_cannot_be_completed_by_stale_worker() -> 
         assert delivered.status == "delivered"
     finally:
         outbox.close()
+
+
+def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None:
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    store = PostgresArtifactStore(_DSN, max_bytes=1024)
+    tenant = f"artifact-tenant-{uuid.uuid4().hex}"
+    other_tenant = f"artifact-other-{uuid.uuid4().hex}"
+    now = datetime.now(UTC)
+    try:
+        first = store.put(
+            body=b"durable source bytes", content_type="text/html",
+            source_url="https://one.example/", captured_at=now, tenant_id=tenant,
+        )
+        second = store.put(
+            body=b"durable source bytes", content_type="text/html",
+            source_url="https://two.example/", captured_at=now, tenant_id=tenant,
+        )
+        other = store.put(
+            body=b"durable source bytes", content_type="text/html",
+            source_url="https://one.example/", captured_at=now, tenant_id=other_tenant,
+        )
+        assert first.sha256 == second.sha256 == other.sha256
+        assert store.get(first.sha256, tenant_id=tenant) == b"durable source bytes"
+        assert store.get(first.sha256, tenant_id=other_tenant) == b"durable source bytes"
+        assert store.count(tenant_id=tenant) == 2
+        assert store.count(tenant_id=other_tenant) == 1
+        assert store.get(first.sha256, tenant_id="unrelated-tenant") is None
+        assert store.get("invalid-digest", tenant_id=tenant) is None
+    finally:
+        store.close()
+        migration.close()
