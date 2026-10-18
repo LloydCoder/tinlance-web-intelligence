@@ -23,7 +23,9 @@ def _validate_dsn(dsn: str, *, production: bool) -> None:
         or not parsed.path.strip("/")
         or parsed.fragment
     ):
-        raise SystemExit("migration database URL must include PostgreSQL host, credentials and database")
+        raise SystemExit(
+            "migration database URL must include PostgreSQL host, credentials and database"
+        )
     if production and sslmode != "verify-full":
         raise SystemExit("production migration database requires sslmode=verify-full")
 
