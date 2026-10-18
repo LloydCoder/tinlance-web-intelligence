@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import secrets
 
-from tinlance_web_intelligence.browser.broker_api import create_app
 from fastapi.testclient import TestClient
 
+from tinlance_web_intelligence.browser.broker_api import create_app
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 BROKER_TOKEN = secrets.token_urlsafe(32)
