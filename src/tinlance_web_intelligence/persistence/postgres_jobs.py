@@ -8,6 +8,7 @@ import uuid
 from importlib.resources import files
 from typing import Any
 
+from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
@@ -34,7 +35,7 @@ class PostgresJobRepository:
         if not 1 <= max_attempts <= 10 or not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool or retry configuration")
         self._max_attempts = max_attempts
-        self._pool: ConnectionPool[dict[str, Any]] = ConnectionPool(
+        self._pool = ConnectionPool[Connection[dict[str, Any]]](
             conninfo=dsn, min_size=min_size, max_size=max_size,
             kwargs={"row_factory": dict_row, "connect_timeout": 5},
             timeout=10, open=True,
