@@ -33,7 +33,12 @@ def test_proxy_rejects_weak_secrets_and_invalid_limits() -> None:
             host="127.0.0.1", port=3128, username="worker", password=weak_value
         ).validate()
     with pytest.raises(ValueError):
-        EgressProxyConfig(host="127.0.0.1", port=70000, username="worker", password=TEST_PROXY_PASSWORD).validate()
+        EgressProxyConfig(
+            host="127.0.0.1",
+            port=70000,
+            username="worker",
+            password=TEST_CREDENTIAL,
+        ).validate()
 
 
 def test_proxy_authentication_requires_exact_single_basic_credential() -> None:
