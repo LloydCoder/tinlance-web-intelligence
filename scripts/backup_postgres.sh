@@ -4,6 +4,8 @@ umask 077
 
 : "${TWI_DATABASE_URL:?TWI_DATABASE_URL is required}"
 : "${TWI_BACKUP_DIR:?TWI_BACKUP_DIR must point to the approved encrypted backup mount}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$script_dir/check_database_tls.py"
 command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump is required" >&2; exit 127; }
 command -v sha256sum >/dev/null 2>&1 || { echo "sha256sum is required" >&2; exit 127; }
 
