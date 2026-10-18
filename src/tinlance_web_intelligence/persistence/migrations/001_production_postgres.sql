@@ -31,11 +31,11 @@ CREATE INDEX IF NOT EXISTS jobs_tenant_idx ON jobs(tenant_id, subject_id, create
 
 CREATE TABLE IF NOT EXISTS twi_source_evidence_outbox (
     event_id TEXT PRIMARY KEY,
-    tenant_ref CHAR(64) NOT NULL CHECK (tenant_ref ~ '^[0-9a-f]{64}$'),
-    subject_ref CHAR(64) NOT NULL CHECK (subject_ref ~ '^[0-9a-f]{64}$'),
+    tenant_ref CHAR(64) NOT NULL CHECK (length(btrim(tenant_ref)) = 64 AND tenant_ref ~ '^[0-9a-f]{64}'),
+    subject_ref CHAR(64) NOT NULL CHECK (length(btrim(subject_ref)) = 64 AND subject_ref ~ '^[0-9a-f]{64}'),
     idempotency_key TEXT NOT NULL,
     payload_json JSONB NOT NULL,
-    payload_sha256 CHAR(64) NOT NULL CHECK (payload_sha256 ~ '^[0-9a-f]{64}$'),
+    payload_sha256 CHAR(64) NOT NULL CHECK (length(btrim(payload_sha256)) = 64 AND payload_sha256 ~ '^[0-9a-f]{64}'),
     status TEXT NOT NULL CHECK (status IN ('pending', 'delivering', 'delivered', 'failed')),
     attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
     available_at DOUBLE PRECISION NOT NULL,
