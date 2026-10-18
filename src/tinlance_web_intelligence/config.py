@@ -112,7 +112,9 @@ class Settings:
                     "TWI_DATABASE_URL must be a PostgreSQL URL with host, credentials, and database"
                 )
             sslmode = query.get("sslmode", [""])[0]
-            if sslmode and sslmode not in {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}:
+            if sslmode and sslmode not in {
+                "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
+            }:
                 raise ConfigurationError("unsupported PostgreSQL sslmode")
             if self.environment == "production" and sslmode != "verify-full":
                 raise ConfigurationError("production PostgreSQL requires sslmode=verify-full")
