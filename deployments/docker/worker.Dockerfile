@@ -6,6 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY apps ./apps
-RUN pip install --no-cache-dir . && useradd --system --uid 10001 --create-home --home-dir /home/twi twi && chown -R twi:twi /app /home/twi
+RUN pip install --no-cache-dir '.[integration]' && useradd --system --uid 10001 --create-home --home-dir /home/twi twi && chown -R twi:twi /app /home/twi
 USER 10001:10001
 CMD ["python", "-m", "apps.worker.main"]
