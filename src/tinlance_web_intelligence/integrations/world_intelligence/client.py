@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import re
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import uuid
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
