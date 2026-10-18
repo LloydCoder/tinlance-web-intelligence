@@ -31,7 +31,14 @@ W4 adds a dedicated Playwright browser worker for bounded, read-only page captur
 
 The isolated Compose workflow is a security-test harness. It must verify the Compose topology, build all images, prove that the browser worker cannot reach the public Internet directly, and launch Chromium with its sandbox enabled. Python CI also runs lint, type checking, security lint, unit/contract tests and a browser runtime smoke test on Python 3.12 and 3.13.
 
-The workstream is not certified complete until the exact PR-head checks pass and the PR is merged. This baseline intentionally does not claim production deployment readiness.
+## Final verification and disposition
+
+- PR #12 was merged to `main` using squash merge as commit [9af6a77a83a8031d3aafb242c048b5fb2f5cb8eb](https://github.com/LloydCoder/tinlance-web-intelligence/commit/9af6a77a83a8031d3aafb242c048b5fb2f5cb8eb).
+- Exact PR-head CI run [39154470930](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39154470930) passed all three jobs: Python 3.12, Python 3.13, and browser container isolation.
+- Post-merge main CI run [39154598849](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39154598849) passed the same three jobs.
+- Branch push CI run [39154466728](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39154466728) also passed all three jobs.
+
+**Disposition:** W4 implementation gate is complete at repository/CI level. This does not certify a production deployment or claim that private-beta readiness has been achieved.
 
 ## Residual limitations
 
