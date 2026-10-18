@@ -45,6 +45,30 @@ services:
     security_opt: [no-new-privileges:true]
     restart: unless-stopped
 
+  browser-broker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set TWI_BROWSER_BROKER_TOKEN}
+    volumes:
+      - twi-data:/data
+    networks: [app_network, browser_control]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
   browser-worker:
     init: true
     build:
@@ -52,15 +76,16 @@ services:
       dockerfile: deployments/docker/browser.Dockerfile
     environment:
       TWI_ENV: ${TWI_ENV:-development}
-      TWI_DATABASE_PATH: /data/twi.sqlite3
       TWI_BROWSER_ENABLED: "true"
+      TWI_BROWSER_BROKER_URL: http://browser-broker:8081
+      TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set TWI_BROWSER_BROKER_TOKEN}
       TWI_BROWSER_PROXY_URL: http://egress-proxy:3128
       TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set TWI_BROWSER_PROXY_USERNAME}
       TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set TWI_BROWSER_PROXY_PASSWORD}
-    volumes:
-      - twi-data:/data
-    networks: [browser_internal]
+    networks: [browser_control, browser_egress]
     depends_on:
+      browser-broker:
+        condition: service_healthy
       egress-proxy:
         condition: service_healthy
     read_only: true
@@ -91,7 +116,7 @@ services:
       TWI_EGRESS_PROXY_IDLE_TIMEOUT_SECONDS: 15
       TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set TWI_BROWSER_PROXY_USERNAME}
       TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set TWI_BROWSER_PROXY_PASSWORD}
-    networks: [browser_internal, outbound]
+    networks: [browser_egress, outbound]
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=32m
@@ -109,7 +134,9 @@ services:
 
 networks:
   app_network: {}
-  browser_internal:
+  browser_control:
+    internal: true
+  browser_egress:
     internal: true
   outbound: {}
 
