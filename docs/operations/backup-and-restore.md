@@ -2,13 +2,13 @@
 
 ## Scope
 
-The production persistence backend stores job state and the World Intelligence evidence outbox in PostgreSQL. A database backup is sensitive operational data: it can contain tenant-scoped job payloads, results, source URLs, and evidence metadata.
+The production persistence backend stores job state, raw content-addressed artifacts, capture metadata, and the World Intelligence evidence outbox in PostgreSQL. A database backup is sensitive operational data: it can contain tenant-scoped job payloads, results, source URLs, raw response bytes, and evidence metadata.
 
 ## Backup requirements
 
 - Use a dedicated database role with only the required read privileges for backup.
 - Supply TWI_DATABASE_URL through the deployment secret manager. Production URLs must use TLS with sslmode=verify-full and a trusted CA.
-- Run scripts/backup_postgres.sh from an approved operations environment with pg_dump installed.
+- Run scripts/backup_postgres.sh from an approved operations environment with pg_dump and Python 3 installed. The script rejects URLs unless sslmode=verify-full is set.
 - Store encrypted backups outside the database failure domain. Restrict access, apply retention, and monitor backup age and failures.
 - Preserve the SHA-256 checksum and backup metadata with the backup; do not log the DSN or source data.
 - Keep a documented retention schedule and delete expired copies according to policy.
