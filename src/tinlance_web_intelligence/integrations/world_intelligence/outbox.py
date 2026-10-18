@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sqlite3
@@ -28,6 +29,7 @@ class OutboxEvent:
     payload: dict[str, Any]
     status: str
     attempts: int
+    lease_token: str | None
     request_id: str
     traceparent: str | None
     remote_evidence_id: str | None = None
@@ -81,8 +83,6 @@ class SQLiteSourceEvidenceOutbox:
     @staticmethod
     def _canonical_payload(payload: dict[str, Any]) -> tuple[str, str]:
         encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-        import hashlib
-
         return encoded, hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     @staticmethod
@@ -94,6 +94,7 @@ class SQLiteSourceEvidenceOutbox:
             payload=json.loads(row["payload_json"]),
             status=row["status"],
             attempts=row["attempts"],
+            lease_token=row["lease_owner"],
             request_id=row["request_id"],
             traceparent=row["traceparent"],
             remote_evidence_id=row["remote_evidence_id"],
@@ -194,6 +195,7 @@ class SQLiteSourceEvidenceOutbox:
                     connection.execute("COMMIT")
                     return None
                 event_id = row["event_id"]
+                lease_token = f"{worker_id}:{uuid.uuid4()}"
                 connection.execute(
                     """
                     UPDATE twi_source_evidence_outbox
@@ -201,7 +203,7 @@ class SQLiteSourceEvidenceOutbox:
                         lease_owner = ?, lease_until = ?, updated_at = ?, last_error_code = NULL
                     WHERE event_id = ?
                     """,
-                    (worker_id, now + lease_seconds, now, event_id),
+                    (lease_token, now + lease_seconds, now, event_id),
                 )
                 claimed = connection.execute(
                     "SELECT * FROM twi_source_evidence_outbox WHERE event_id = ?",
@@ -216,7 +218,7 @@ class SQLiteSourceEvidenceOutbox:
                     connection.execute("ROLLBACK")
                 raise
 
-    def complete(self, event_id: str, worker_id: str, remote_evidence_id: str) -> OutboxEvent:
+    def complete(self, event_id: str, lease_token: str, remote_evidence_id: str) -> OutboxEvent:
         now = time.time()
         with self._lock:
             cursor = self._connection.execute(
@@ -226,7 +228,7 @@ class SQLiteSourceEvidenceOutbox:
                     lease_owner = NULL, lease_until = NULL, updated_at = ?
                 WHERE event_id = ? AND status = 'delivering' AND lease_owner = ?
                 """,
-                (remote_evidence_id, now, now, event_id, worker_id),
+                (remote_evidence_id, now, now, event_id, lease_token),
             )
             if cursor.rowcount != 1:
                 raise OutboxLeaseLostError("outbox lease was lost before completion")
@@ -240,7 +242,7 @@ class SQLiteSourceEvidenceOutbox:
     def fail(
         self,
         event_id: str,
-        worker_id: str,
+        lease_token: str,
         *,
         error_code: str,
         retryable: bool,
@@ -255,7 +257,7 @@ class SQLiteSourceEvidenceOutbox:
                 SELECT attempts FROM twi_source_evidence_outbox
                 WHERE event_id = ? AND status = 'delivering' AND lease_owner = ?
                 """,
-                (event_id, worker_id),
+                (event_id, lease_token),
             ).fetchone()
             if row is None:
                 raise OutboxLeaseLostError("outbox lease was lost before failure handling")
@@ -270,7 +272,7 @@ class SQLiteSourceEvidenceOutbox:
                     last_error_code = ?, updated_at = ?
                 WHERE event_id = ? AND status = 'delivering' AND lease_owner = ?
                 """,
-                (status, now + delay, error_code, now, event_id, worker_id),
+                (status, now + delay, error_code, now, event_id, lease_token),
             )
             updated = self._connection.execute(
                 "SELECT * FROM twi_source_evidence_outbox WHERE event_id = ?", (event_id,)
