@@ -16,6 +16,8 @@ def test_platform_tool_catalog_has_unique_names_and_operations() -> None:
         "twi_job_read",
         "twi_job_cancel",
         "twi_research_verify",
+        "twi_world_intelligence_export",
+        "twi_world_intelligence_export_status",
     }
 
 
