@@ -19,6 +19,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+integration = [
+    "httpx==0.28.1",
+]
 browser = [
     "httpx==0.28.1",
     "playwright==1.64.0",
