@@ -33,7 +33,7 @@ def _principal(
         subject_id=subject_id,
         client_id="research-test-client",
         principal_type="user",
-        token_id=str(uuid.uuid4()),
+        token_id=uuid.uuid4().hex,
         scopes=scopes,
         roles=frozenset(),
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
