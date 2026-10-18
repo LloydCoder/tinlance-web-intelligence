@@ -113,6 +113,25 @@ BROWSER_SCHEMA: dict[str, Any] = {
     },
 }
 
+EXPORT_SOURCE_EVIDENCE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["claim_id", "statement", "job_id", "quote", "idempotency_key"],
+    "properties": {
+        "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+        "statement": {"type": "string", "minLength": 1, "maxLength": 500},
+        "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "quote": {"type": "string", "minLength": 8, "maxLength": 350},
+        "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{16,128}$"},
+    },
+}
+EXPORT_STATUS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["event_id"],
+    "properties": {"event_id": {"type": "string", "format": "uuid"}},
+}
+
 TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
     PlatformToolContract(
         name="twi_search",
@@ -186,6 +205,39 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         resource_pattern="twi://research/verification/*",
         required_scope="twi:research:verify",
         input_schema=VERIFY_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
+        open_world=False,
+    ),
+    PlatformToolContract(
+        name="twi_world_intelligence_export",
+        operation="twi.world_intelligence.export_source_evidence",
+        description=(
+            "Export a citation-verified claim as tenant-scoped candidate source evidence to "
+            "World Intelligence. This is a state-changing operation and never creates canonical "
+            "world state or asserts factual truth."
+        ),
+        capability="world-intelligence.source-evidence.export",
+        action="submit",
+        resource_pattern="world-intelligence://source-evidence/*",
+        required_scope="twi:observations:export",
+        input_schema=EXPORT_SOURCE_EVIDENCE_SCHEMA,
+        read_only=False,
+        consequential=True,
+        destructive=False,
+        open_world=False,
+        idempotency_argument="idempotency_key",
+    ),
+    PlatformToolContract(
+        name="twi_world_intelligence_export_status",
+        operation="twi.world_intelligence.export_status",
+        description="Read the status of a source-evidence export owned by the authenticated subject.",
+        capability="world-intelligence.source-evidence.read",
+        action="read",
+        resource_pattern="twi://world-intelligence/exports/{event_id}",
+        required_scope="twi:observations:export:read",
+        input_schema=EXPORT_STATUS_SCHEMA,
         read_only=True,
         consequential=False,
         destructive=False,
