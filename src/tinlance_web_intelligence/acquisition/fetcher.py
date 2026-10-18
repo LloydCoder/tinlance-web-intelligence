@@ -11,14 +11,20 @@ import aiohttp
 from tinlance_web_intelligence.acquisition.models import FetchResult
 from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.security.resolver import PublicOnlyResolver
-from tinlance_web_intelligence.security.url_validation import UnsafeURLError, ValidatedURL, validate_url
+from tinlance_web_intelligence.security.url_validation import (
+    UnsafeURLError,
+    ValidatedURL,
+    validate_url,
+)
 
 
 class FetchError(RuntimeError):
     """A request was rejected or could not be completed safely."""
 
 
-_SAFE_CROSS_ORIGIN_HEADERS = frozenset({"user-agent", "accept", "accept-encoding", "accept-language"})
+_SAFE_CROSS_ORIGIN_HEADERS = frozenset(
+    {"user-agent", "accept", "accept-encoding", "accept-language"}
+)
 _MANAGED_REQUEST_HEADERS = frozenset(
     {"host", "content-length", "transfer-encoding", "connection", "proxy-authorization"}
 )
@@ -54,13 +60,6 @@ class SafeHTTPFetcher:
             connect=min(5.0, self.settings.request_timeout_seconds),
             sock_read=self.settings.request_timeout_seconds,
         )
-        connector = aiohttp.TCPConnector(
-            resolver=PublicOnlyResolver(),
-            use_dns_cache=False,
-            limit=20,
-            limit_per_host=4,
-            force_close=True,
-        )
         request_headers = {
             "User-Agent": self.settings.user_agent,
             "Accept": "text/html, text/plain, application/json;q=0.9, */*;q=0.1",
@@ -72,6 +71,13 @@ class SafeHTTPFetcher:
                     raise FetchError("request attempted to override a transport-managed header")
                 request_headers[key] = value
         request_headers["Accept-Encoding"] = "identity"
+        connector = aiohttp.TCPConnector(
+            resolver=PublicOnlyResolver(),
+            use_dns_cache=False,
+            limit=20,
+            limit_per_host=4,
+            force_close=True,
+        )
         current = requested
         try:
             async with aiohttp.ClientSession(
