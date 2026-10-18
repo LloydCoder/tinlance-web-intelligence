@@ -43,13 +43,15 @@ def _client(
     repository: SQLiteJobRepository,
     principal: Principal | None = None,
 ) -> TestClient:
+    verifier = FakeVerifier(principal or _principal())
     app = create_app(
         settings=Settings.from_env(
             {"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}
         ),
         repository=repository,
-        verifier=FakeVerifier(principal or _principal()),
+        verifier=verifier,
     )
+    app.state.test_verifier = verifier
     return TestClient(app)
 
 
@@ -292,8 +294,9 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
         assert "secret-value" not in event.payload["source_url"]
         assert event.payload["tenant_ref"] == hashlib.sha256(b"tenant-a").hexdigest()
 
-        client.app.state.verifier = FakeVerifier(
-            _principal(subject_id="subject-b", scopes=frozenset({"twi:observations:export:read"}))
+        client.app.state.test_verifier.principal = _principal(
+            subject_id="subject-b",
+            scopes=frozenset({"twi:observations:export:read"}),
         )
         hidden = client.get(
             f"/v1/integrations/world-intelligence/exports/{payload['event_id']}",
