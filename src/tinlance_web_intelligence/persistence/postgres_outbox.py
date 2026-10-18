@@ -31,7 +31,7 @@ class PostgresSourceEvidenceOutbox:
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool configuration")
-        self._pool = ConnectionPool(
+        self._pool: ConnectionPool[dict[str, Any]] = ConnectionPool(
             conninfo=dsn, min_size=min_size, max_size=max_size,
             kwargs={"row_factory": dict_row, "connect_timeout": 5},
             timeout=10, open=True,
