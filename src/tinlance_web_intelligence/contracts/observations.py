@@ -47,7 +47,9 @@ class Observation:
     def validate(self) -> None:
         required = (self.observation_id, self.statement, self.extractor_version)
         if any(not value.strip() for value in required):
-            raise ContractError("observation_id, statement, and extractor_version must be non-empty")
+            raise ContractError(
+                "observation_id, statement, and extractor_version must be non-empty"
+            )
         self.source.validate()
         if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
             raise ContractError("observed_at must be timezone-aware")
