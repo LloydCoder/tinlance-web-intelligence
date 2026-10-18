@@ -24,3 +24,28 @@ def test_service_url_requires_https_and_no_userinfo() -> None:
     for value in ("http://platform.example", "https://user:pass@platform.example", "https:///missing"):
         with pytest.raises(ConfigurationError):
             validate_service_base_url(value)
+
+def test_browser_proxy_configuration_fails_closed() -> None:
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({"TWI_BROWSER_PROXY_URL": "http://proxy:3128"})
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            "TWI_BROWSER_PROXY_URL": "http://proxy:3128",
+            "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+            "TWI_BROWSER_PROXY_PASSWORD": "weak",
+        })
+    configured = Settings.from_env({
+        "TWI_BROWSER_PROXY_URL": "http://egress-proxy:3128",
+        "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+        "TWI_BROWSER_PROXY_PASSWORD": "correct-horse-battery-staple-2026",
+    })
+    assert configured.browser_proxy_url == "http://egress-proxy:3128"
+
+
+def test_browser_worker_requires_enabled_flag_and_authenticated_proxy() -> None:
+    from tinlance_web_intelligence.browser.service import BrowserService
+
+    with pytest.raises(ConfigurationError):
+        BrowserService(Settings.from_env({}))
+    with pytest.raises(ConfigurationError):
+        BrowserService(Settings.from_env({"TWI_BROWSER_ENABLED": "true"}))
