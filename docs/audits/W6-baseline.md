@@ -11,7 +11,7 @@
 
 ## W6 scope
 
-1. Promote job and evidence-outbox persistence to PostgreSQL with transactional idempotency and SKIP LOCKED leasing; keep schema DDL in an explicit migration job using a distinct production role.
+1. Promote job, evidence-outbox, and raw-artifact persistence to PostgreSQL with transactional idempotency, tenant-scoped content addressing, hash verification, and SKIP LOCKED leasing; keep schema DDL in an explicit migration job using a distinct production role.
 2. Fail closed in production unless a PostgreSQL URL with sslmode=verify-full is configured.
 3. Exercise multi-worker claims, idempotency conflicts, tenant isolation, lease ownership and outbox delivery against a real PostgreSQL service in CI.
 4. Update deployment, backup/restore, incident response and private-beta runbooks.
