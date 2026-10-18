@@ -10,6 +10,7 @@ from starlette.responses import Response
 from tinlance_web_intelligence.api.http.middleware import RequestBodyLimitMiddleware
 from tinlance_web_intelligence.api.http.routes.health import router as health_router
 from tinlance_web_intelligence.api.http.routes.jobs import router as jobs_router
+from tinlance_web_intelligence.api.http.routes.research import router as research_router
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
@@ -76,4 +77,5 @@ def create_app(
     app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=65_536)
     app.include_router(health_router)
     app.include_router(jobs_router)
+    app.include_router(research_router)
     return app
