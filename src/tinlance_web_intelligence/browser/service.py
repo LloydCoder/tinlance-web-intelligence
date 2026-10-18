@@ -60,7 +60,9 @@ class BrowserService:
             "TZ",
             "FONTCONFIG_PATH",
         }
-        environment = {key: values[key] for key in allowed if key in values}
+        environment: dict[str, str | float | bool] = {
+            key: values[key] for key in allowed if key in values
+        }
         temporary_directory = os.path.join(os.sep, "tmp")
         environment["HOME"] = temporary_directory
         environment["TMPDIR"] = temporary_directory
