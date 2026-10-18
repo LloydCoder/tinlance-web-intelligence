@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS twi_artifact_records (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (tenant_id, sha256, source_url_hash, captured_at),
     FOREIGN KEY (tenant_id, sha256)
-        REFERENCES twi_artifact_content(tenant_id, sha256) ON DELETE CASCADE
+        REFERENCES twi_artifact_content(tenant_id, sha256)
 );
 CREATE INDEX IF NOT EXISTS twi_artifact_records_tenant_time_idx
     ON twi_artifact_records(tenant_id, captured_at DESC);
