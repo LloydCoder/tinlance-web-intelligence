@@ -5,7 +5,6 @@ import argparse
 import os
 from datetime import UTC, datetime, timedelta
 
-from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 from scripts.check_database_tls import validate_database_url
 
@@ -21,12 +20,12 @@ def main() -> int:
     if args.apply and os.environ.get("TWI_CONFIRM_ARTIFACT_PRUNE") != "YES":
         parser.error("destructive pruning requires TWI_CONFIRM_ARTIFACT_PRUNE=YES")
 
-    settings = Settings.from_env(require_identity=False)
-    if not settings.database_url:
-        parser.error("TWI_DATABASE_URL is required for durable artifact pruning")
-    validate_database_url(settings.database_url)
+    dsn = os.environ.get("TWI_ARTIFACT_MAINTENANCE_DATABASE_URL")
+    if not dsn:
+        parser.error("TWI_ARTIFACT_MAINTENANCE_DATABASE_URL is required for artifact pruning")
+    validate_database_url(dsn)
     cutoff = datetime.now(UTC) - timedelta(days=args.retention_days)
-    store = PostgresArtifactStore(settings.database_url, max_bytes=settings.max_response_bytes)
+    store = PostgresArtifactStore(dsn)
     try:
         count = store.count_expired(cutoff, tenant_id=args.tenant_id)
         if not args.apply:
