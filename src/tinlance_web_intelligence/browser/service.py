@@ -8,7 +8,8 @@ import hashlib
 import os
 from contextlib import suppress
 from datetime import UTC, datetime
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from tinlance_web_intelligence.browser.policies import (
@@ -60,8 +61,9 @@ class BrowserService:
             "FONTCONFIG_PATH",
         }
         environment = {key: values[key] for key in allowed if key in values}
-        environment["HOME"] = "/tmp"
-        environment["TMPDIR"] = "/tmp"
+        temporary_directory = os.path.join(os.sep, "tmp")
+        environment["HOME"] = temporary_directory
+        environment["TMPDIR"] = temporary_directory
         return environment
 
     async def capture(
