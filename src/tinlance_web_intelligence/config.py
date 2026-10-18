@@ -31,6 +31,8 @@ class Settings:
     browser_proxy_password: str | None = None
     browser_broker_url: str | None = None
     browser_broker_token: str | None = None
+    world_intelligence_url: str | None = None
+    world_intelligence_token: str | None = None
 
     @classmethod
     def from_env(
@@ -61,6 +63,8 @@ class Settings:
                 browser_proxy_password=values.get("TWI_BROWSER_PROXY_PASSWORD") or None,
                 browser_broker_url=values.get("TWI_BROWSER_BROKER_URL") or None,
                 browser_broker_token=values.get("TWI_BROWSER_BROKER_TOKEN") or None,
+                world_intelligence_url=values.get("TWI_WORLD_INTELLIGENCE_URL") or None,
+                world_intelligence_token=values.get("TWI_WORLD_INTELLIGENCE_TOKEN") or None,
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
@@ -153,6 +157,48 @@ class Settings:
             ):
                 raise ConfigurationError(
                     "browser broker token must contain at least 32 non-padded characters"
+                )
+        world_intelligence_values = (
+            self.world_intelligence_url,
+            self.world_intelligence_token,
+        )
+        if any(world_intelligence_values) and not all(world_intelligence_values):
+            raise ConfigurationError(
+                "World Intelligence URL and service token must be configured together"
+            )
+        if self.world_intelligence_url is not None:
+            try:
+                wi_url = urlsplit(self.world_intelligence_url)
+                wi_port = wi_url.port
+            except ValueError as exc:
+                raise ConfigurationError("World Intelligence URL or port is malformed") from exc
+            local_http = (
+                self.environment in {"development", "test"}
+                and wi_url.scheme == "http"
+                and wi_url.hostname in {"localhost", "127.0.0.1", "world-intelligence"}
+            )
+            if (
+                (wi_url.scheme != "https" and not local_http)
+                or not wi_url.hostname
+                or wi_url.username is not None
+                or wi_url.password is not None
+                or wi_url.path not in {"", "/"}
+                or wi_url.query
+                or wi_url.fragment
+                or (wi_port is not None and not 1 <= wi_port <= 65535)
+            ):
+                raise ConfigurationError(
+                    "World Intelligence URL must be an HTTPS service origin "
+                    "(HTTP is allowed only for local development)"
+                )
+            if (
+                self.world_intelligence_token is None
+                or len(self.world_intelligence_token) < 32
+                or self.world_intelligence_token != self.world_intelligence_token.strip()
+            ):
+                raise ConfigurationError(
+                    "World Intelligence service token must contain at least 32 "
+                    "non-padded characters"
                 )
         if self.browser_proxy_url is not None:
             try:

@@ -1,3 +1,4 @@
+import secrets
 from pathlib import Path
 
 import pytest
@@ -71,3 +72,24 @@ def test_example_environment_file_has_valid_defaults() -> None:
         values[key] = value
     settings = Settings.from_env(values)
     assert settings.browser_enabled is False
+
+
+def test_world_intelligence_service_settings_fail_closed() -> None:
+    token = secrets.token_urlsafe(32)
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({"TWI_WORLD_INTELLIGENCE_URL": "https://wi.example"})
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            "TWI_WORLD_INTELLIGENCE_URL": "http://wi.example",
+            "TWI_WORLD_INTELLIGENCE_TOKEN": token,
+        })
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            "TWI_WORLD_INTELLIGENCE_URL": "https://wi.example/path",
+            "TWI_WORLD_INTELLIGENCE_TOKEN": token,
+        })
+    configured = Settings.from_env({
+        "TWI_WORLD_INTELLIGENCE_URL": "http://world-intelligence:8080",
+        "TWI_WORLD_INTELLIGENCE_TOKEN": token,
+    })
+    assert configured.world_intelligence_url == "http://world-intelligence:8080"

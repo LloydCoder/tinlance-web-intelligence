@@ -49,6 +49,42 @@ FETCH_SCHEMA: dict[str, Any] = {
         "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
     },
 }
+VERIFY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["claims"],
+    "properties": {
+        "claims": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["claim_id", "statement", "citations"],
+                "properties": {
+                    "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+                    "statement": {"type": "string", "minLength": 1, "maxLength": 500},
+                    "citations": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["job_id", "quote"],
+                            "properties": {
+                                "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+                                "quote": {"type": "string", "minLength": 8, "maxLength": 350},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
 JOB_ID_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -75,6 +111,37 @@ BROWSER_SCHEMA: dict[str, Any] = {
         "include_screenshot": {"type": "boolean", "default": False},
         "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
     },
+}
+
+EXPORT_SOURCE_EVIDENCE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "claim_id",
+        "statement",
+        "job_id",
+        "quote",
+        "idempotency_key",
+        "run_id",
+        "approval_id",
+        "intent_fingerprint",
+    ],
+    "properties": {
+        "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+        "statement": {"type": "string", "minLength": 1, "maxLength": 500},
+        "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "quote": {"type": "string", "minLength": 8, "maxLength": 350},
+        "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{16,128}$"},
+        "run_id": {"type": "string", "format": "uuid"},
+        "approval_id": {"type": "string", "format": "uuid"},
+        "intent_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    },
+}
+EXPORT_STATUS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["event_id"],
+    "properties": {"event_id": {"type": "string", "format": "uuid"}},
 }
 
 TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
@@ -138,6 +205,59 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         open_world=False,
     ),
     PlatformToolContract(
+        name="twi_research_verify",
+        operation="twi.research.verify",
+        description=(
+            "Verify that each research citation references an authorized successful TWI "
+            "fetch/browser job and that its quoted excerpt occurs in captured text; this "
+            "does not determine factual truth."
+        ),
+        capability="web.research.verify",
+        action="verify",
+        resource_pattern="twi://research/verification/*",
+        required_scope="twi:research:verify",
+        input_schema=VERIFY_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
+        open_world=False,
+    ),
+    PlatformToolContract(
+        name="twi_world_intelligence_export",
+        operation="twi.world_intelligence.export_source_evidence",
+        description=(
+            "Export a citation-verified claim as tenant-scoped candidate source evidence to "
+            "World Intelligence. This is a state-changing operation and never creates canonical "
+            "world state or asserts factual truth."
+        ),
+        capability="world-intelligence.source-evidence.export",
+        action="submit",
+        resource_pattern="world-intelligence://source-evidence/*",
+        required_scope="twi:observations:export",
+        input_schema=EXPORT_SOURCE_EVIDENCE_SCHEMA,
+        read_only=False,
+        consequential=True,
+        destructive=False,
+        open_world=False,
+        idempotency_argument="idempotency_key",
+    ),
+    PlatformToolContract(
+        name="twi_world_intelligence_export_status",
+        operation="twi.world_intelligence.export_status",
+        description=(
+            "Read the status of a source-evidence export owned by the authenticated subject."
+        ),
+        capability="world-intelligence.source-evidence.read",
+        action="read",
+        resource_pattern="twi://world-intelligence/exports/{event_id}",
+        required_scope="twi:observations:export:read",
+        input_schema=EXPORT_STATUS_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
+        open_world=False,
+    ),
+    PlatformToolContract(
         name="twi_job_cancel",
         operation="twi.jobs.cancel",
         description="Request cancellation of a job owned by the authenticated subject.",
@@ -147,7 +267,7 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         required_scope="twi:jobs:cancel",
         input_schema=JOB_ID_SCHEMA,
         read_only=False,
-        consequential=True,
+        consequential=False,
         destructive=False,
         open_world=False,
     ),

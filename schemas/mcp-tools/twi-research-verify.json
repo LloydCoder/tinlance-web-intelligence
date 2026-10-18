@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_research_verify",
+  "description": "Verify research citations against source text captured by authorized successful TWI fetch/browser jobs. This does not determine factual truth.",
+  "operation": "twi.research.verify",
+  "api": {
+    "method": "POST",
+    "path": "/v1/research/verify"
+  },
+  "authorization": {
+    "required_scope": "twi:research:verify",
+    "capability": "web.research.verify",
+    "action": "verify",
+    "resource_pattern": "twi://research/verification/*"
+  },
+  "governance": {
+    "read_only": true,
+    "consequential": false,
+    "destructive": false,
+    "open_world": false
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["claims"],
+    "properties": {
+      "claims": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 20,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["claim_id", "statement", "citations"],
+          "properties": {
+            "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+            "statement": {"type": "string", "minLength": 1, "maxLength": 500},
+            "citations": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["job_id", "quote"],
+                "properties": {
+                  "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+                  "quote": {"type": "string", "minLength": 8, "maxLength": 350}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

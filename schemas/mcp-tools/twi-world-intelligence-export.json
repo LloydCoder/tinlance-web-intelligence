@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_world_intelligence_export",
+  "description": "Export a citation-verified claim as tenant-scoped candidate source evidence to World Intelligence. This changes state but does not create canonical world state or assert truth.",
+  "operation": "twi.world_intelligence.export_source_evidence",
+  "api": {
+    "method": "POST",
+    "path": "/v1/integrations/world-intelligence/exports",
+    "idempotency_header": "Idempotency-Key",
+    "input_mapping": {
+      "body_fields": [
+        "claim_id",
+        "statement",
+        "job_id",
+        "quote"
+      ],
+      "headers": {
+        "Idempotency-Key": "$.idempotency_key"
+      }
+    }
+  },
+  "authorization": {
+    "required_scope": "twi:observations:export",
+    "capability": "world-intelligence.source-evidence.export",
+    "action": "submit",
+    "resource_pattern": "world-intelligence://source-evidence/*"
+  },
+  "governance": {
+    "read_only": false,
+    "consequential": true,
+    "destructive": false,
+    "open_world": false,
+    "idempotency_argument": "idempotency_key"
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "claim_id",
+      "statement",
+      "job_id",
+      "quote",
+      "idempotency_key",
+      "run_id",
+      "approval_id",
+      "intent_fingerprint"
+    ],
+    "properties": {
+      "claim_id": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+      },
+      "statement": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "job_id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "quote": {
+        "type": "string",
+        "minLength": 8,
+        "maxLength": 350
+      },
+      "idempotency_key": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._:-]{16,128}$"
+      },
+      "run_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "approval_id": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "intent_fingerprint": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    }
+  },
+  "platform_control_fields": [
+    "run_id",
+    "approval_id",
+    "intent_fingerprint"
+  ]
+}
