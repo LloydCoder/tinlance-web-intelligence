@@ -116,13 +116,25 @@ BROWSER_SCHEMA: dict[str, Any] = {
 EXPORT_SOURCE_EVIDENCE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["claim_id", "statement", "job_id", "quote", "idempotency_key"],
+    "required": [
+        "claim_id",
+        "statement",
+        "job_id",
+        "quote",
+        "idempotency_key",
+        "run_id",
+        "approval_id",
+        "intent_fingerprint",
+    ],
     "properties": {
         "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
         "statement": {"type": "string", "minLength": 1, "maxLength": 500},
         "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
         "quote": {"type": "string", "minLength": 8, "maxLength": 350},
         "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{16,128}$"},
+        "run_id": {"type": "string", "format": "uuid"},
+        "approval_id": {"type": "string", "format": "uuid"},
+        "intent_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     },
 }
 EXPORT_STATUS_SCHEMA: dict[str, Any] = {
