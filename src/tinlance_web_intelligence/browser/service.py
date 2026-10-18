@@ -6,9 +6,9 @@ import asyncio
 import base64
 import hashlib
 import os
+from collections.abc import Mapping
 from contextlib import suppress
 from datetime import UTC, datetime
-from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 

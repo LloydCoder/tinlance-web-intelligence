@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hmac
-import json
 import os
 import secrets
 from typing import Any
@@ -121,7 +120,13 @@ def main() -> None:
     service_token = os.environ.get("TWI_BROWSER_BROKER_TOKEN", "")
     repository = SQLiteJobRepository(settings.database_path)
     app = create_app(repository, service_token)
-    uvicorn.run(app, host="0.0.0.0", port=8081, access_log=False)
+    # This service is reachable only on the private broker networks in Compose.
+    uvicorn.run(
+        app,
+        host="0.0.0.0",  # noqa: S104 - container network isolation is the access boundary
+        port=8081,
+        access_log=False,
+    )
 
 
 if __name__ == "__main__":
