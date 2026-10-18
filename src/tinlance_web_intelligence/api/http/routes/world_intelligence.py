@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
@@ -55,10 +56,10 @@ def _request_id(request: Request) -> str:
     return value if re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", value) else str(uuid.uuid4())
 
 
-@router.post("/exports", status_code=202)
+@router.post("/exports")
 def export_source_evidence(
     request: Request, body: ExportSourceEvidenceRequest
-) -> dict[str, Any]:
+) -> JSONResponse:
     principal = _principal(request)
     _scope(principal, "twi:observations:export")
     idempotency_key = request.headers.get("Idempotency-Key", "")
@@ -130,12 +131,15 @@ def export_source_evidence(
         raise HTTPException(status_code=409, detail="idempotency key conflicts with another export") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="invalid idempotency key or export context") from exc
-    return {
-        "event_id": event.event_id,
-        "status": event.status,
-        "replayed": replayed,
-        "report_sha256": verification["report_sha256"],
-    }
+    return JSONResponse(
+        status_code=200 if replayed else 202,
+        content={
+            "event_id": event.event_id,
+            "status": event.status,
+            "replayed": replayed,
+            "report_sha256": verification["report_sha256"],
+        },
+    )
 
 
 @router.get("/exports/{event_id}")
