@@ -34,7 +34,7 @@ class PostgresJobRepository:
         if not 1 <= max_attempts <= 10 or not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool or retry configuration")
         self._max_attempts = max_attempts
-        self._pool = ConnectionPool(
+        self._pool: ConnectionPool[dict[str, Any]] = ConnectionPool(
             conninfo=dsn, min_size=min_size, max_size=max_size,
             kwargs={"row_factory": dict_row, "connect_timeout": 5},
             timeout=10, open=True,
