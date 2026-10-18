@@ -33,6 +33,7 @@ dev = [
     "mypy==2.4.0",
     "bandit==1.9.4",
     "httpx==0.28.1",
+    "httpx2==2.13.1",
     "playwright==1.64.0",
 ]
 
@@ -46,6 +47,9 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
+filterwarnings = [
+    "error:Using `httpx` with `starlette.testclient` is deprecated.*:starlette.exceptions.StarletteDeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100
