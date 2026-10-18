@@ -1,36 +1,30 @@
-"""Consume browser-only jobs in a dedicated worker process."""
+"""Consume browser-only jobs through the trusted broker, without database access."""
 
 from __future__ import annotations
 
-import os
-import time
+import asyncio
 
+from tinlance_web_intelligence.browser.broker_client import BrowserBrokerWorker
 from tinlance_web_intelligence.browser.service import BrowserService
 from tinlance_web_intelligence.config import Settings
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
-from tinlance_web_intelligence.jobs.worker import JobWorker
+
+
+async def _serve(worker: BrowserBrokerWorker) -> None:
+    try:
+        await worker.run_forever()
+    finally:
+        await worker.close()
 
 
 def main() -> None:
     settings = Settings.from_env(require_identity=False)
     if not settings.browser_enabled:
         raise RuntimeError("browser worker refuses to start unless TWI_BROWSER_ENABLED=true")
-    repository = SQLiteJobRepository(settings.database_path)
-    worker = JobWorker(
-        repository,
-        worker_id=os.environ.get("TWI_WORKER_ID", "browser-worker"),
-        browser_service=BrowserService(settings),
-        allowed_kinds=("browser",),
-        lease_seconds=90,
-    )
+    worker = BrowserBrokerWorker(settings, BrowserService(settings))
     try:
-        while True:
-            if not worker.run_once():
-                time.sleep(0.5)
+        asyncio.run(_serve(worker))
     except KeyboardInterrupt:
         pass
-    finally:
-        repository.close()
 
 
 if __name__ == "__main__":
