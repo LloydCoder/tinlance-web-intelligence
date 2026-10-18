@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.jobs.model import Job
 from tinlance_web_intelligence.integrations.world_intelligence.client import (
     redact_source_url,
     validate_traceparent,
@@ -72,7 +73,7 @@ def export_source_evidence(
     repository = request.app.state.repository
     read_any = "twi:jobs:read:any" in principal.scopes
 
-    def resolve_job(job_id: str):
+    def resolve_job(job_id: str) -> Job | None:
         return repository.get(
             job_id,
             tenant_id=principal.tenant_id,
