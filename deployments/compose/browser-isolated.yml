@@ -69,6 +69,30 @@ services:
       retries: 3
     restart: unless-stopped
 
+  browser-broker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set TWI_BROWSER_BROKER_TOKEN}
+    volumes:
+      - twi-data:/data
+    networks: [app_network, browser_control]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
   browser-worker:
     init: true
     build:
