@@ -19,12 +19,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+browser = [
+    "playwright==1.64.0",
+]
 dev = [
     "pytest==9.1.1",
     "ruff==0.17.0",
     "mypy==2.4.0",
     "bandit==1.9.4",
     "httpx==0.28.1",
+    "playwright==1.64.0",
 ]
 
 [tool.setuptools.packages.find]
