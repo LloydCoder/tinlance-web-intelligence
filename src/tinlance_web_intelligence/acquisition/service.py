@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from tinlance_web_intelligence.acquisition.fetcher import SafeHTTPFetcher
 from tinlance_web_intelligence.acquisition.models import AcquiredPage
 from tinlance_web_intelligence.artifacts.store import ArtifactStore, MemoryArtifactStore
@@ -19,6 +21,8 @@ class WebAcquisitionService:
         artifacts: ArtifactStore | None = None,
     ) -> None:
         self._fetcher = fetcher or SafeHTTPFetcher()
+        if artifacts is None and os.environ.get("TWI_ENV", "development").lower() == "production":
+            raise RuntimeError("production requires an explicit durable artifact store")
         self._artifacts = artifacts or MemoryArtifactStore()
 
     async def acquire_page(
