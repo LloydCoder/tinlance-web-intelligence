@@ -9,8 +9,8 @@ import time
 from tinlance_web_intelligence.acquisition.fetcher import SafeHTTPFetcher
 from tinlance_web_intelligence.acquisition.service import WebAcquisitionService
 from tinlance_web_intelligence.config import Settings
-from tinlance_web_intelligence.persistence.factory import create_job_repository
 from tinlance_web_intelligence.jobs.worker import JobWorker
+from tinlance_web_intelligence.persistence.factory import create_job_repository
 from tinlance_web_intelligence.search.brave import BraveSearchProvider
 
 
