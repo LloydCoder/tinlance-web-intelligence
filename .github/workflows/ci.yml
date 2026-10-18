@@ -81,6 +81,17 @@ jobs:
           else:
               raise SystemExit("browser worker can reach public Internet without the proxy")
           '
+      - name: Verify Chromium sandbox inside the browser container
+        run: |
+          docker compose -f deployments/compose/browser-isolated.yml run --rm --no-deps --entrypoint python browser-worker -c '
+          import asyncio
+          from playwright.async_api import async_playwright
+          async def main():
+              async with async_playwright() as playwright:
+                  browser = await playwright.chromium.launch(headless=True, chromium_sandbox=True)
+                  await browser.close()
+          asyncio.run(main())
+          '
       - name: Stop isolated stack
         if: always()
         run: docker compose -f deployments/compose/browser-isolated.yml down --volumes
