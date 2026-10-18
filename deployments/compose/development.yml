@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:-}
+      TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:-}
+      TWI_IDENTITY_JWKS_URL: ${TWI_IDENTITY_JWKS_URL:-}
+    volumes:
+      - twi-data:/data
+    ports:
+      - "8080:8080"
+    networks: [twi_app]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+    volumes:
+      - twi-data:/data
+    networks: [twi_app]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  world-intelligence-export-worker:
+    profiles: ["integrations"]
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    command: ["python", "-m", "apps.world_intelligence_export_worker.main"]
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_WORLD_INTELLIGENCE_URL: ${TWI_WORLD_INTELLIGENCE_URL:-}
+      TWI_WORLD_INTELLIGENCE_TOKEN: ${TWI_WORLD_INTELLIGENCE_TOKEN:-}
+      TWI_WORKER_ID: ${TWI_WORKER_ID:-twi-wi-export-worker}
+    volumes:
+      - twi-data:/data
+    networks: [twi_app]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  twi-data:
+
+networks:
+  twi_app:
+    internal: true
