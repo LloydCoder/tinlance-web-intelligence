@@ -82,7 +82,8 @@ class SafeEgressProxy:
     async def serve_forever(self) -> None:
         if self._server is None:
             await self.start()
-        assert self._server is not None
+        if self._server is None:
+            raise RuntimeError("egress proxy failed to start")
         async with self._server:
             await self._server.serve_forever()
 
@@ -134,7 +135,9 @@ class SafeEgressProxy:
                 except (OSError, TimeoutError):
                     await self._send_status(client_writer, 502, "Bad Gateway")
                     return
-                assert upstream_writer is not None
+                if upstream_writer is None:
+                    await self._send_status(client_writer, 502, "Bad Gateway")
+                    return
                 client_writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
                 await client_writer.drain()
                 await self._relay(
