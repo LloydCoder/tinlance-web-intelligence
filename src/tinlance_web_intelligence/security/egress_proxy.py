@@ -107,7 +107,7 @@ class SafeEgressProxy:
                     method, target, _version, headers = self._parse_request(raw)
                     self._authenticate(headers)
                     host, port = self._parse_target(method, target)
-                    ip = await self._resolve_public_ip(host, port, "https" if method == "CONNECT" else "http")
+                    ip = await self._resolve_public_ip(host, port, "https")
                 except ProxyAuthenticationError:
                     await self._send_status(
                         client_writer,
@@ -140,10 +140,14 @@ class SafeEgressProxy:
                 else:
                     safe_headers = [
                         (name, value) for name, value in headers
-                        if name.lower() not in {"proxy-authorization", "proxy-connection", "connection"}
+                        if name.lower()
+                        not in {"proxy-authorization", "proxy-connection", "connection"}
                     ]
                     host_header = f"{host}:{port}"
-                    request = f"GET {target} HTTP/1.1\r\nHost: {host_header}\r\nConnection: close\r\n"
+                    request = (
+                        f"GET {target} HTTP/1.1\r\n"
+                        f"Host: {host_header}\r\nConnection: close\r\n"
+                    )
                     request += "".join(f"{name}: {value}\r\n" for name, value in safe_headers)
                     client_writer.write(b"")
                     upstream_writer.write(request.encode("latin-1") + b"\r\n")
