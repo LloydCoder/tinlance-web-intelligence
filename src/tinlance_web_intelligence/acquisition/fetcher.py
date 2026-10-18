@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Mapping
 from urllib.parse import urljoin
 
 import aiohttp
@@ -78,7 +78,9 @@ class SafeHTTPFetcher:
                             raise FetchError(f"upstream returned HTTP {response.status}")
                         encoding = response.headers.get("Content-Encoding", "identity").lower()
                         if encoding not in {"", "identity"}:
-                            raise FetchError("compressed responses are not accepted by this fetcher")
+                            raise FetchError(
+                                "compressed responses are not accepted by this fetcher"
+                            )
                         declared = response.headers.get("Content-Length")
                         if declared is not None:
                             try:
@@ -96,7 +98,9 @@ class SafeHTTPFetcher:
                             for key in ("Content-Type", "ETag", "Last-Modified")
                             if key in response.headers
                         }
-                        content_type = response.headers.get("Content-Type", "application/octet-stream")
+                        content_type = response.headers.get(
+                            "Content-Type", "application/octet-stream"
+                        )
                         return FetchResult(
                             requested_url=requested.normalized,
                             final_url=current.normalized,
