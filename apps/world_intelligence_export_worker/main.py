@@ -8,9 +8,7 @@ from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.integrations.world_intelligence.client import (
     WorldIntelligenceEvidenceClient,
 )
-from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
-    SQLiteSourceEvidenceOutbox,
-)
+from tinlance_web_intelligence.persistence.factory import create_source_evidence_outbox
 from tinlance_web_intelligence.integrations.world_intelligence.worker import (
     WorldIntelligenceExportWorker,
 )
