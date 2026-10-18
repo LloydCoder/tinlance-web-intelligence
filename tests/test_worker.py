@@ -17,8 +17,8 @@ class FakeSearchProvider:
 
 
 class RetryableAcquisition:
-    async def acquire_page(self, url: str) -> None:
-        del url
+    async def acquire_page(self, url: str, *, tenant_id: str = "development") -> None:
+        del url, tenant_id
         raise FetchError("temporary upstream failure", retryable=True)
 
 
