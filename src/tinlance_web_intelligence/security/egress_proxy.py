@@ -134,24 +134,8 @@ class SafeEgressProxy:
                 except (OSError, TimeoutError):
                     await self._send_status(client_writer, 502, "Bad Gateway")
                     return
-                if method == "CONNECT":
-                    client_writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
-                    await client_writer.drain()
-                else:
-                    safe_headers = [
-                        (name, value) for name, value in headers
-                        if name.lower()
-                        not in {"proxy-authorization", "proxy-connection", "connection"}
-                    ]
-                    host_header = f"{host}:{port}"
-                    request = (
-                        f"GET {target} HTTP/1.1\r\n"
-                        f"Host: {host_header}\r\nConnection: close\r\n"
-                    )
-                    request += "".join(f"{name}: {value}\r\n" for name, value in safe_headers)
-                    client_writer.write(b"")
-                    upstream_writer.write(request.encode("latin-1") + b"\r\n")
-                    await upstream_writer.drain()
+                client_writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+                await client_writer.drain()
                 await self._relay(
                     client_reader, client_writer, upstream_reader, upstream_writer,
                     max_seconds=self.config.max_tunnel_seconds,
@@ -284,28 +268,42 @@ class SafeEgressProxy:
         client_writer: asyncio.StreamWriter,
         upstream_reader: asyncio.StreamReader,
         upstream_writer: asyncio.StreamWriter,
-        *, max_seconds: int,
+        *,
+        max_seconds: int,
+        max_bytes: int,
     ) -> None:
+        total_bytes = 0
+        byte_lock = asyncio.Lock()
+
         async def pipe(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            nonlocal total_bytes
             while True:
                 chunk = await asyncio.wait_for(reader.read(16_384), timeout=15)
                 if not chunk:
                     with suppress(OSError):
                         writer.write_eof()
                     return
+                async with byte_lock:
+                    total_bytes += len(chunk)
+                    if total_bytes > max_bytes:
+                        raise ProxyPolicyError("proxy tunnel exceeded byte limit")
                 writer.write(chunk)
                 await writer.drain()
+
         async with asyncio.timeout(max_seconds):
             tasks = [
                 asyncio.create_task(pipe(client_reader, upstream_writer)),
                 asyncio.create_task(pipe(upstream_reader, client_writer)),
             ]
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            _done, pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED
+            )
             for task in pending:
                 task.cancel()
             await asyncio.gather(*pending, return_exceptions=True)
-            for task in done:
-                task.result()
+            for task in tasks:
+                if task.done() and not task.cancelled():
+                    task.result()
 
     @staticmethod
     async def _send_status(
