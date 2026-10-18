@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from hashlib import sha256
 from typing import cast
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
