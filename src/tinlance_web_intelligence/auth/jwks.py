@@ -10,7 +10,6 @@ import jwt
 
 from tinlance_web_intelligence.auth.principal import Principal
 
-
 _ALLOWED_ALGORITHMS = frozenset({"RS256", "PS256", "ES256", "EdDSA"})
 _ALLOWED_PRINCIPAL_TYPES = frozenset({"user", "service", "agent", "workload"})
 

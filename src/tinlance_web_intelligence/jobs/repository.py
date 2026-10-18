@@ -19,7 +19,6 @@ from tinlance_web_intelligence.jobs.model import (
     LeaseLostError,
 )
 
-
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,

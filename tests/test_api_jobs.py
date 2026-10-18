@@ -9,13 +9,15 @@ from tinlance_web_intelligence.auth.principal import Principal
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
+TEST_JTI = "jti-test-01"
+
 
 class FakeVerifier:
     def __init__(self, principal: Principal) -> None:
         self.principal = principal
 
-    def verify(self, token: str) -> Principal:
-        if token != "valid-credential":
+    def verify(self, supplied: str) -> Principal:
+        if supplied != "valid-credential":
             raise PermissionError("invalid test credential")
         return self.principal
 
@@ -32,7 +34,7 @@ def principal(
         subject_id=subject_id,
         client_id="test-client",
         principal_type="user",
-        token_id="jti-test-01",
+        token_id=TEST_JTI,
         scopes=scopes,
         roles=frozenset(),
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
