@@ -135,6 +135,7 @@ class Settings:
                 or parsed_proxy.query
                 or parsed_proxy.fragment
                 or proxy_port is None
+                or not 1 <= proxy_port <= 65535
             ):
                 raise ConfigurationError(
                     "browser proxy must be an absolute HTTP(S) host:port URL"
