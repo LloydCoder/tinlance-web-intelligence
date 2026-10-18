@@ -52,3 +52,35 @@ jobs:
         env:
           TWI_RUN_BROWSER_INTEGRATION: "1"
         run: pytest -q tests/test_browser_runtime.py
+
+  browser-isolation:
+    name: Browser container isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TWI_BROWSER_PROXY_USERNAME: browser-worker
+      TWI_BROWSER_PROXY_PASSWORD: ci-only-browser-proxy-secret-2026
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate isolated Compose topology
+        run: docker compose -f deployments/compose/browser-isolated.yml config --quiet
+      - name: Build all isolated service images
+        run: docker compose -f deployments/compose/browser-isolated.yml build --parallel
+      - name: Start egress proxy
+        run: docker compose -f deployments/compose/browser-isolated.yml up -d --wait egress-proxy
+      - name: Verify browser network cannot bypass the proxy
+        run: |
+          docker compose -f deployments/compose/browser-isolated.yml run --rm --no-deps --entrypoint python browser-worker -c '
+          import socket
+          with socket.create_connection(("egress-proxy", 3128), timeout=3):
+              pass
+          try:
+              socket.create_connection(("1.1.1.1", 443), timeout=2)
+          except OSError:
+              print("direct public egress blocked; proxy path reachable")
+          else:
+              raise SystemExit("browser worker can reach public Internet without the proxy")
+          '
+      - name: Stop isolated stack
+        if: always()
+        run: docker compose -f deployments/compose/browser-isolated.yml down --volumes
