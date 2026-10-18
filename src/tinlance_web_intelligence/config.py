@@ -25,13 +25,14 @@ class Settings:
     def from_env(cls, env: dict[str, str] | None = None) -> Settings:
         values = os.environ if env is None else env
         try:
+            schemes = values.get("TWI_ALLOWED_SCHEMES", "https,http").split(",")
             settings = cls(
                 environment=values.get("TWI_ENV", "development").lower(),
                 log_level=values.get("TWI_LOG_LEVEL", "INFO").upper(),
                 max_response_bytes=int(values.get("TWI_MAX_RESPONSE_BYTES", "5000000")),
                 max_redirects=int(values.get("TWI_MAX_REDIRECTS", "5")),
                 request_timeout_seconds=float(values.get("TWI_REQUEST_TIMEOUT_SECONDS", "15")),
-                allowed_schemes=tuple(item.strip().lower() for item in values.get("TWI_ALLOWED_SCHEMES", "https,http").split(",") if item.strip()),
+                allowed_schemes=tuple(item.strip().lower() for item in schemes if item.strip()),
                 user_agent=values.get("TWI_USER_AGENT", "TinlanceWebIntelligence/0.1").strip(),
             )
         except (TypeError, ValueError) as exc:
@@ -50,7 +51,9 @@ class Settings:
             raise ConfigurationError("redirect limit must be between 0 and 10")
         if not 0.1 <= self.request_timeout_seconds <= 120:
             raise ConfigurationError("request timeout must be between 0.1 and 120 seconds")
-        if not self.allowed_schemes or any(scheme not in {"http", "https"} for scheme in self.allowed_schemes):
+        if not self.allowed_schemes or any(
+            scheme not in {"http", "https"} for scheme in self.allowed_schemes
+        ):
             raise ConfigurationError("only http and https schemes may be configured")
         if not self.user_agent or any(ord(ch) < 32 for ch in self.user_agent):
             raise ConfigurationError("user agent must be non-empty and contain no control chars")

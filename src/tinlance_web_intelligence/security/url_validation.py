@@ -29,10 +29,20 @@ def is_public_routable_ip(value: str) -> bool:
         address = ipaddress.ip_address(value)
     except ValueError:
         return False
-    return address.is_global and not (address.is_loopback or address.is_private or address.is_link_local or address.is_multicast or address.is_reserved or address.is_unspecified)
+    blocked = (
+        address.is_loopback,
+        address.is_private,
+        address.is_link_local,
+        address.is_multicast,
+        address.is_reserved,
+        address.is_unspecified,
+    )
+    return address.is_global and not any(blocked)
 
 
-def validate_url(value: str, *, allowed_schemes: tuple[str, ...] = ("https", "http")) -> ValidatedURL:
+def validate_url(
+    value: str, *, allowed_schemes: tuple[str, ...] = ("https", "http")
+) -> ValidatedURL:
     if not value or value != value.strip() or any(ord(ch) < 32 for ch in value):
         raise UnsafeURLError("URL must be non-empty, trimmed, and contain no control characters")
     try:
@@ -65,4 +75,5 @@ def validate_url(value: str, *, allowed_schemes: tuple[str, ...] = ("https", "ht
     netloc = f"[{hostname}]" if ":" in hostname else hostname
     if port is not None:
         netloc = f"{netloc}:{port}"
-    return ValidatedURL(urlunsplit((scheme, netloc, parsed.path or "/", parsed.query, "")), scheme, hostname, port)
+    normalized = urlunsplit((scheme, netloc, parsed.path or "/", parsed.query, ""))
+    return ValidatedURL(normalized, scheme, hostname, port)

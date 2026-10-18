@@ -35,7 +35,6 @@ ignore = ["S101"]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
-packages = ["tinlance_web_intelligence"]
 
 [tool.bandit]
 exclude_dirs = ["tests"]

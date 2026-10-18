@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from hashlib import sha256
 from typing import Any
 from urllib.parse import urlsplit
@@ -28,7 +28,10 @@ class SourceReference:
             raise ContractError("source URL must not contain userinfo")
         if self.retrieved_at.tzinfo is None or self.retrieved_at.utcoffset() is None:
             raise ContractError("retrieved_at must be timezone-aware")
-        if self.content_sha256 is not None and (len(self.content_sha256) != 64 or any(ch not in "0123456789abcdef" for ch in self.content_sha256)):
+        digest = self.content_sha256
+        if digest is not None and (
+            len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest)
+        ):
             raise ContractError("content_sha256 must be a lowercase SHA-256 hex digest")
 
 
@@ -42,7 +45,8 @@ class Observation:
     confidence: float | None = None
 
     def validate(self) -> None:
-        if not self.observation_id.strip() or not self.statement.strip() or not self.extractor_version.strip():
+        required = (self.observation_id, self.statement, self.extractor_version)
+        if any(not value.strip() for value in required):
             raise ContractError("observation_id, statement, and extractor_version must be non-empty")
         self.source.validate()
         if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
@@ -53,8 +57,10 @@ class Observation:
     def to_dict(self) -> dict[str, Any]:
         self.validate()
         payload = asdict(self)
-        payload["observed_at"] = self.observed_at.astimezone(timezone.utc).isoformat()
-        payload["source"]["retrieved_at"] = self.source.retrieved_at.astimezone(timezone.utc).isoformat()
+        payload["observed_at"] = self.observed_at.astimezone(UTC).isoformat()
+        payload["source"]["retrieved_at"] = (
+            self.source.retrieved_at.astimezone(UTC).isoformat()
+        )
         return payload
 
 
