@@ -23,7 +23,10 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 class PostgresSourceEvidenceOutbox:
     """Multi-replica-safe evidence outbox backed by PostgreSQL row-level locks."""
 
-    def __init__(self, dsn: str, *, min_size: int = 1, max_size: int = 10, auto_migrate: bool = False) -> None:
+    def __init__(
+        self, dsn: str, *, min_size: int = 1, max_size: int = 10,
+        auto_migrate: bool = False
+    ) -> None:
         if not dsn or dsn != dsn.strip():
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= min_size <= max_size <= 50:
@@ -40,7 +43,9 @@ class PostgresSourceEvidenceOutbox:
             self._verify_schema()
 
     def _apply_migrations(self) -> None:
-        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath("001_production_postgres.sql")
+        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
+            "001_production_postgres.sql"
+        )
         if not migration.is_file():
             self._pool.close()
             raise RuntimeError("production PostgreSQL migration file is missing")
@@ -55,7 +60,9 @@ class PostgresSourceEvidenceOutbox:
                 "to_regclass('twi_source_evidence_outbox') AS outbox, "
                 "to_regclass('twi_schema_migrations') AS migrations"
             ).fetchone()
-            if tables is None or any(tables[name] is None for name in ("jobs", "outbox", "migrations")):
+            if tables is None or any(
+                tables[name] is None for name in ("jobs", "outbox", "migrations")
+            ):
                 raise RuntimeError("PostgreSQL schema is missing; run the migration job")
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
