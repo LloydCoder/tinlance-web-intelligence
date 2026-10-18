@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import hashlib
+import os
 from contextlib import suppress
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
 from tinlance_web_intelligence.browser.policies import (
@@ -46,6 +47,23 @@ class BrowserService:
             "password": proxy_password,
         }
 
+    @staticmethod
+    def _browser_environment(source: Mapping[str, str] | None = None) -> dict[str, str]:
+        """Pass only non-secret runtime variables to the untrusted browser process."""
+        values = os.environ if source is None else source
+        allowed = {
+            "PATH",
+            "PLAYWRIGHT_BROWSERS_PATH",
+            "LANG",
+            "LC_ALL",
+            "TZ",
+            "FONTCONFIG_PATH",
+        }
+        environment = {key: values[key] for key in allowed if key in values}
+        environment["HOME"] = "/tmp"
+        environment["TMPDIR"] = "/tmp"
+        return environment
+
     async def capture(
         self,
         *,
@@ -79,6 +97,7 @@ class BrowserService:
                         headless=True,
                         chromium_sandbox=True,
                         proxy=self._proxy,
+                        env=self._browser_environment(),
                         args=[
                             "--disable-background-networking",
                             "--disable-extensions",
