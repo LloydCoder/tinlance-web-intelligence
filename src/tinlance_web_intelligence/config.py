@@ -29,6 +29,8 @@ class Settings:
     browser_proxy_url: str | None = None
     browser_proxy_username: str | None = None
     browser_proxy_password: str | None = None
+    browser_broker_url: str | None = None
+    browser_broker_token: str | None = None
 
     @classmethod
     def from_env(
@@ -57,6 +59,8 @@ class Settings:
                 browser_proxy_url=values.get("TWI_BROWSER_PROXY_URL") or None,
                 browser_proxy_username=values.get("TWI_BROWSER_PROXY_USERNAME") or None,
                 browser_proxy_password=values.get("TWI_BROWSER_PROXY_PASSWORD") or None,
+                browser_broker_url=values.get("TWI_BROWSER_BROKER_URL") or None,
+                browser_broker_token=values.get("TWI_BROWSER_BROKER_TOKEN") or None,
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
@@ -120,6 +124,36 @@ class Settings:
             raise ConfigurationError(
                 "browser proxy URL, username, and password must be configured together"
             )
+        broker_values = (self.browser_broker_url, self.browser_broker_token)
+        if any(broker_values) and not all(broker_values):
+            raise ConfigurationError(
+                "browser broker URL and service token must be configured together"
+            )
+        if self.browser_broker_url is not None:
+            try:
+                broker_url = urlsplit(self.browser_broker_url)
+                broker_port = broker_url.port
+            except ValueError as exc:
+                raise ConfigurationError("browser broker URL or port is malformed") from exc
+            if (
+                broker_url.scheme not in {"http", "https"}
+                or not broker_url.hostname
+                or broker_url.username is not None
+                or broker_url.password is not None
+                or broker_url.path not in {"", "/"}
+                or broker_url.query
+                or broker_url.fragment
+                or (broker_port is not None and not 1 <= broker_port <= 65535)
+            ):
+                raise ConfigurationError("browser broker URL must be an absolute HTTP(S) origin")
+            if (
+                self.browser_broker_token is None
+                or len(self.browser_broker_token) < 32
+                or self.browser_broker_token != self.browser_broker_token.strip()
+            ):
+                raise ConfigurationError(
+                    "browser broker token must contain at least 32 non-padded characters"
+                )
         if self.browser_proxy_url is not None:
             try:
                 parsed_proxy = urlsplit(self.browser_proxy_url)
