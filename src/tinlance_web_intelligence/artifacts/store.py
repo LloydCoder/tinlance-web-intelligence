@@ -107,9 +107,12 @@ class MemoryArtifactStore:
         for key in expired:
             del self._records[key]
         retained_content = {(record.tenant_id, record.sha256) for record in self._records.values()}
-        for key in list(self._content):
-            if (tenant_id is None or key[0] == tenant_id) and key not in retained_content:
-                del self._content[key]
+        for content_key in list(self._content):
+            if (
+                (tenant_id is None or content_key[0] == tenant_id)
+                and content_key not in retained_content
+            ):
+                del self._content[content_key]
         return len(expired)
 
     def close(self) -> None:
