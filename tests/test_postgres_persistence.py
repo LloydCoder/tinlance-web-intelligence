@@ -241,7 +241,8 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
         assert store.count(tenant_id=tenant) == 2
         assert store.count(tenant_id=other_tenant) == 1
         assert store.get(first.sha256, tenant_id="unrelated-tenant") is None
-        assert store.get("invalid-digest", tenant_id=tenant) is None
+        with pytest.raises(ValueError):
+            store.get("invalid-digest", tenant_id=tenant)
     finally:
         store.close()
         migration.close()
