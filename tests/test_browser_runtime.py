@@ -17,7 +17,10 @@ def test_chromium_launches_and_fresh_contexts_are_isolated() -> None:
                 second = await browser.new_context()
                 second_page = await second.new_page()
                 await second_page.goto("about:blank")
-                assert await second_page.evaluate("() => window.__twiIsolationProbe || null") is None
+                probe = await second_page.evaluate(
+                    "() => window.__twiIsolationProbe || null"
+                )
+                assert probe is None
                 await first.close()
                 await second.close()
             finally:
