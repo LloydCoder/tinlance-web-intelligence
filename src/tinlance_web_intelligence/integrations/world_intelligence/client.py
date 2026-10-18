@@ -11,7 +11,6 @@ import httpx
 
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import OutboxEvent
 
-
 _TRACEPARENT = re.compile(r"^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
 _SENSITIVE_QUERY_KEYS = {
     "access_token",
