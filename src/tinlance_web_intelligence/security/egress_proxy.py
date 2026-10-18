@@ -104,7 +104,7 @@ class SafeEgressProxy:
                     await self._send_status(client_writer, 431, "Request Header Fields Too Large")
                     return
                 try:
-                    method, target, version, headers = self._parse_request(raw)
+                    method, target, _version, headers = self._parse_request(raw)
                     self._authenticate(headers)
                     host, port = self._parse_target(method, target)
                     ip = await self._resolve_public_ip(host, port, "https" if method == "CONNECT" else "http")
@@ -203,7 +203,7 @@ class SafeEgressProxy:
             raise ProxyAuthenticationError("proxy authentication required")
         try:
             decoded = base64.b64decode(values[0][6:], validate=True).decode("utf-8")
-        except (ValueError, UnicodeDecodeError) as exc:
+        except ValueError as exc:
             raise ProxyAuthenticationError("invalid proxy credentials") from exc
         expected = f"{self.config.username}:{self.config.password}"
         if not hmac.compare_digest(decoded, expected):
