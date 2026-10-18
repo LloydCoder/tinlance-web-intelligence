@@ -8,12 +8,10 @@ from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.integrations.world_intelligence.client import (
     WorldIntelligenceEvidenceClient,
 )
-from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
-    SQLiteSourceEvidenceOutbox,
-)
 from tinlance_web_intelligence.integrations.world_intelligence.worker import (
     WorldIntelligenceExportWorker,
 )
+from tinlance_web_intelligence.persistence.factory import create_source_evidence_outbox
 
 
 def main() -> None:
@@ -23,7 +21,7 @@ def main() -> None:
             "World Intelligence export worker requires TWI_WORLD_INTELLIGENCE_URL and "
             "TWI_WORLD_INTELLIGENCE_TOKEN"
         )
-    outbox = SQLiteSourceEvidenceOutbox(settings.database_path)
+    outbox = create_source_evidence_outbox(settings)
     client = WorldIntelligenceEvidenceClient(
         settings.world_intelligence_url,
         settings.world_intelligence_token,

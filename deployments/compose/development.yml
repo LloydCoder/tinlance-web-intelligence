@@ -1,24 +1,66 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: twi
+      POSTGRES_USER: twi
+      POSTGRES_PASSWORD: ${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}
+    volumes:
+      - twi-postgres:/var/lib/postgresql/data
+    networks: [twi_app]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twi -d twi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    command: ["python", "-m", "apps.migrate.main"]
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_URL: postgresql://twi:${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}@postgres:5432/twi?sslmode=disable
+      TWI_MIGRATION_DATABASE_URL: ${TWI_MIGRATION_DATABASE_URL:-postgresql://twi:${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}@postgres:5432/twi?sslmode=disable}
+    networks: [twi_app]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
   api:
     build:
       context: ../..
       dockerfile: deployments/docker/api.Dockerfile
     environment:
       TWI_ENV: ${TWI_ENV:-development}
-      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_DATABASE_URL: postgresql://twi:${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}@postgres:5432/twi?sslmode=disable
       TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:-}
       TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:-}
       TWI_IDENTITY_JWKS_URL: ${TWI_IDENTITY_JWKS_URL:-}
-    volumes:
-      - twi-data:/data
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8000"
     networks: [twi_app]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/ready', timeout=2).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2).read()"]
       interval: 10s
       timeout: 3s
       retries: 5
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     restart: unless-stopped
 
   worker:
@@ -27,13 +69,17 @@ services:
       dockerfile: deployments/docker/worker.Dockerfile
     environment:
       TWI_ENV: ${TWI_ENV:-development}
-      TWI_DATABASE_PATH: /data/twi.sqlite3
-    volumes:
-      - twi-data:/data
-    networks: [twi_app]
+      TWI_DATABASE_URL: postgresql://twi:${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}@postgres:5432/twi?sslmode=disable
+      TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
+    networks: [twi_app, twi_outbound]
     depends_on:
-      api:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     restart: unless-stopped
 
   world-intelligence-export-worker:
@@ -44,20 +90,23 @@ services:
     command: ["python", "-m", "apps.world_intelligence_export_worker.main"]
     environment:
       TWI_ENV: ${TWI_ENV:-development}
-      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_DATABASE_URL: postgresql://twi:${TWI_POSTGRES_PASSWORD:?Set a URL-safe TWI_POSTGRES_PASSWORD}@postgres:5432/twi?sslmode=disable
       TWI_WORLD_INTELLIGENCE_URL: ${TWI_WORLD_INTELLIGENCE_URL:-}
       TWI_WORLD_INTELLIGENCE_TOKEN: ${TWI_WORLD_INTELLIGENCE_TOKEN:-}
       TWI_WORKER_ID: ${TWI_WORKER_ID:-twi-wi-export-worker}
-    volumes:
-      - twi-data:/data
     networks: [twi_app, twi_outbound]
     depends_on:
-      api:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     restart: unless-stopped
 
 volumes:
-  twi-data:
+  twi-postgres:
 
 networks:
   twi_app:

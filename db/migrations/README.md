@@ -1,5 +1,5 @@
 # Database migrations
 
-W3 initializes the durable single-node SQLite job store in SQLiteJobRepository. W4 includes a transactional runtime migration that rebuilds the W3 jobs table to allow the browser kind while preserving existing rows and recreating indexes. This migration is covered by tests/test_jobs_migration.py.
+The PostgreSQL schema is versioned at db/migrations/001_production_postgres.sql and packaged at src/tinlance_web_intelligence/persistence/migrations/001_production_postgres.sql for installed deployments. The copies must remain byte-identical; scripts/check_migration_sync.py and CI enforce this.
 
-This is not a production multi-replica schema strategy. W6 must introduce versioned PostgreSQL migrations, schema-upgrade verification in CI, rollback procedures, and a tested backup/restore path before production readiness can be claimed.
+The adapter applies only idempotent CREATE TABLE/INDEX statements and records schema version 1. Future migrations must be append-only, versioned, reviewed, and tested against both a fresh database and a prior-version fixture. Do not run destructive migrations automatically on service startup.

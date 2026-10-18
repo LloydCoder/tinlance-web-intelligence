@@ -13,14 +13,14 @@ from tinlance_web_intelligence.acquisition.service import (
 )
 from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
 
 
 class JobWorker:
     def __init__(
         self,
-        repository: SQLiteJobRepository,
+        repository: JobRepository,
         *,
         worker_id: str,
         acquisition: WebAcquisitionService | None = None,
@@ -88,7 +88,9 @@ class JobWorker:
                 "results": [asdict(item) for item in results],
             }
         if job.kind == "fetch":
-            page = asyncio.run(self.acquisition.acquire_page(job.payload["url"]))
+            page = asyncio.run(
+                self.acquisition.acquire_page(job.payload["url"], tenant_id=job.tenant_id)
+            )
             return {
                 "source_url": page.fetch.final_url,
                 "retrieved_at": page.fetch.retrieved_at.isoformat(),

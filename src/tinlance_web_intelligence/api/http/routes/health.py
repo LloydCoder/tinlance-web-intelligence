@@ -14,6 +14,7 @@ def liveness() -> dict[str, str]:
 @router.get("/health/ready", response_model=None)
 def readiness(request: Request) -> JSONResponse | dict[str, str]:
     repository = request.app.state.repository
-    if not repository.ping():
+    outbox = request.app.state.evidence_outbox
+    if not repository.ping() or not outbox.ping():
         return JSONResponse(status_code=503, content={"status": "not_ready"})
     return {"status": "ready"}

@@ -1,4 +1,4 @@
-.PHONY: install lint test typecheck security check
+.PHONY: install lint test typecheck security migration-check shell-check check
 
 install:
 	python -m pip install -r requirements-dev.txt
@@ -14,6 +14,12 @@ typecheck:
 	mypy src tests
 
 security:
-	bandit -q -r src
+	bandit -q -r src apps
 
-check: lint typecheck security test
+migration-check:
+	python scripts/check_migration_sync.py
+
+shell-check:
+	bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
+
+check: lint typecheck security test migration-check shell-check

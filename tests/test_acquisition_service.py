@@ -2,6 +2,8 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Any, cast
 
+import pytest
+
 from tinlance_web_intelligence.acquisition.models import FetchResult
 from tinlance_web_intelligence.acquisition.service import WebAcquisitionService
 from tinlance_web_intelligence.artifacts.store import MemoryArtifactStore
@@ -29,3 +31,16 @@ def test_acquisition_service_records_artifact_and_extracts_text() -> None:
     assert "Source-backed text." in result.extracted.text
     assert result.artifact_id == f"sha256:{result.content_sha256}"
     assert store.get(result.content_sha256) is not None
+
+
+@pytest.mark.parametrize("environment", ["staging", "production"])
+def test_non_dev_requires_explicit_durable_artifact_store(
+    monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    monkeypatch.setenv("TWI_ENV", environment)
+    with pytest.raises(RuntimeError, match="durable artifact store"):
+        WebAcquisitionService(cast(Any, FakeFetcher()))
+    with pytest.raises(RuntimeError, match="durable artifact store"):
+        WebAcquisitionService(
+            cast(Any, FakeFetcher()), MemoryArtifactStore()
+        )

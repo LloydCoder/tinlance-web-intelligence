@@ -16,6 +16,7 @@ dependencies = [
     "uvicorn==0.54.0",
     "PyJWT==2.10.1",
     "cryptography==50.0.2",
+    "psycopg[binary,pool]==3.3.6",
 ]
 
 [project.optional-dependencies]
@@ -35,11 +36,15 @@ dev = [
     "playwright==1.64.0",
 ]
 
+[tool.setuptools.package-data]
+"tinlance_web_intelligence.persistence.migrations" = ["*.sql"]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-ra --strict-markers"
 
 [tool.ruff]
