@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from hashlib import sha256
-
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from hashlib import sha256
+from typing import cast
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
@@ -285,7 +286,7 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
         assert status.status_code == 200
         assert status.json()["status"] == "pending"
 
-        event = client.app.state.evidence_outbox.get(
+        event = cast(FastAPI, client.app).state.evidence_outbox.get(
             payload["event_id"],
             sha256(b"tenant-a").hexdigest(),
             sha256(b"subject-a").hexdigest(),
@@ -295,7 +296,7 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
         assert "secret-value" not in event.payload["source_url"]
         assert event.payload["tenant_ref"] == sha256(b"tenant-a").hexdigest()
 
-        client.app.state.test_verifier.principal = _principal(
+        cast(FastAPI, client.app).state.test_verifier.principal = _principal(
             subject_id="subject-b",
             scopes=frozenset({"twi:observations:export:read"}),
         )
