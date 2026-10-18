@@ -19,7 +19,9 @@ def test_w3_database_migrates_to_browser_job_kind_without_losing_jobs(tmp_path: 
             kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch')),
             payload_json TEXT NOT NULL,
             payload_fingerprint TEXT NOT NULL,
-            status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
+            status TEXT NOT NULL CHECK (
+                status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')
+            ),
             result_json TEXT,
             error_code TEXT,
             created_at TEXT NOT NULL,
