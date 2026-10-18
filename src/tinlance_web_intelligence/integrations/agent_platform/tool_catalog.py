@@ -255,7 +255,7 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         required_scope="twi:jobs:cancel",
         input_schema=JOB_ID_SCHEMA,
         read_only=False,
-        consequential=True,
+        consequential=False,
         destructive=False,
         open_world=False,
     ),
