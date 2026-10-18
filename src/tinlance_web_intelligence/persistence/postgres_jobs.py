@@ -193,7 +193,9 @@ class PostgresJobRepository:
             ).fetchone()
             return self._to_job(claimed) if claimed is not None else None
 
-    def _owned_running_job(self, conn: Any, job_id: str, worker_id: str) -> dict[str, Any]:
+    def _owned_running_job(
+        self, conn: Connection[dict[str, Any]], job_id: str, worker_id: str
+    ) -> dict[str, Any]:
         row = conn.execute(
             """SELECT * FROM jobs WHERE job_id=%s AND status='running' AND lease_owner=%s
                AND lease_until >= %s FOR UPDATE""",
