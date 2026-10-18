@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     subject_id TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch')),
+    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser')),
     payload_json TEXT NOT NULL,
     payload_fingerprint TEXT NOT NULL,
     status TEXT NOT NULL CHECK (
@@ -88,7 +88,7 @@ class SQLiteJobRepository:
         payload: dict[str, typing.Any],
         idempotency_key: str,
     ) -> Job:
-        if kind not in {"search", "fetch"}:
+        if kind not in {"search", "fetch", "browser"}:
             raise ValueError("unsupported job kind")
         if not tenant_id or not subject_id or not idempotency_key:
             raise ValueError("tenant, subject, and idempotency key are required")
@@ -157,9 +157,11 @@ class SQLiteJobRepository:
                 ).fetchone()
         return self._to_job(row) if row is not None else None
 
-    def claim_next(self, worker_id: str, *, lease_seconds: int = 60) -> Job | None:
+    def claim_next(self, worker_id: str, *, lease_seconds: int = 60, allowed_kinds: tuple[str, ...] | None = None) -> Job | None:
         if not worker_id or not 5 <= lease_seconds <= 3600:
             raise ValueError("worker ID and a 5–3600 second lease are required")
+        if allowed_kinds is not None and (not allowed_kinds or any(kind not in {"search", "fetch", "browser"} for kind in allowed_kinds)):
+            raise ValueError("allowed_kinds must contain supported job kinds")
         now = time.time()
         timestamp = _now()
         with self._lock:
@@ -183,10 +185,16 @@ class SQLiteJobRepository:
                         WHERE status='running' AND lease_until < ? AND attempts < max_attempts""",
                     (now, timestamp, now),
                 )
+                kind_clause = ""
+                params: tuple[object, ...] = (now,)
+                if allowed_kinds is not None:
+                    placeholders = ",".join("?" for _ in allowed_kinds)
+                    kind_clause = f" AND kind IN ({placeholders})"
+                    params = (now, *allowed_kinds)
                 row = self._connection.execute(
                     """SELECT * FROM jobs WHERE status='queued' AND available_at <= ?
-                        AND cancel_requested=0 ORDER BY created_at, job_id LIMIT 1""",
-                    (now,),
+                        AND cancel_requested=0""" + kind_clause + " ORDER BY created_at, job_id LIMIT 1",
+                    params,
                 ).fetchone()
                 if row is None:
                     self._connection.commit()
