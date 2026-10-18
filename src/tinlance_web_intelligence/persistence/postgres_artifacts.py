@@ -52,7 +52,12 @@ class PostgresArtifactStore:
         self, *, body: bytes, content_type: str, source_url: str,
         captured_at: datetime, tenant_id: str = "development"
     ) -> ArtifactRecord:
-        if not tenant_id or tenant_id != tenant_id.strip() or "\\x00" in tenant_id or len(tenant_id) > 256:
+        if (
+            not tenant_id
+            or tenant_id != tenant_id.strip()
+            or "\x00" in tenant_id
+            or len(tenant_id) > 256
+        ):
             raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
         if len(body) > self._max_bytes:
             raise ValueError("artifact exceeds configured byte limit")
@@ -134,8 +139,6 @@ class PostgresArtifactStore:
     def count_expired(self, cutoff: datetime, *, tenant_id: str | None = None) -> int:
         if cutoff.tzinfo is None or cutoff.utcoffset() is None:
             raise ValueError("cutoff must be timezone-aware")
-        # RESTRICT on the capture FK makes concurrent writes fail closed rather than
-        # allowing retention to cascade-delete a newly committed capture.
         with self._pool.connection() as conn:
             if tenant_id is None:
                 row = conn.execute(
@@ -154,6 +157,8 @@ class PostgresArtifactStore:
         """Delete expired capture records and only content no longer referenced."""
         if cutoff.tzinfo is None or cutoff.utcoffset() is None:
             raise ValueError("cutoff must be timezone-aware")
+        # RESTRICT on the capture FK makes concurrent writes fail closed rather than
+        # allowing retention to cascade-delete a newly committed capture.
         with self._pool.connection() as conn:
             if tenant_id is None:
                 result = conn.execute(
