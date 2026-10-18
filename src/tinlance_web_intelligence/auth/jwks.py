@@ -25,7 +25,7 @@ class PlatformTokenVerifier:
         jwks_url: str,
         algorithms: tuple[str, ...] = ("RS256", "ES256", "EdDSA"),
         leeway_seconds: int = 60,
-        jwks_timeout_seconds: float = 5.0,
+        jwks_timeout_seconds: int = 5,
     ) -> None:
         for value, label in ((issuer, "issuer"), (jwks_url, "JWKS URL")):
             parsed = urlsplit(value)

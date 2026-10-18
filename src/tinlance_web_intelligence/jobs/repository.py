@@ -321,10 +321,13 @@ class SQLiteJobRepository:
             self._connection.close()
 
     def _owned_running_job(self, job_id: str, worker_id: str) -> sqlite3.Row:
-        row = self._connection.execute(
-            "SELECT * FROM jobs WHERE job_id=? AND status='running' AND lease_owner=?",
-            (job_id, worker_id),
-        ).fetchone()
+        row = typing.cast(
+            sqlite3.Row | None,
+            self._connection.execute(
+                "SELECT * FROM jobs WHERE job_id=? AND status='running' AND lease_owner=?",
+                (job_id, worker_id),
+            ).fetchone(),
+        )
         if row is None:
             raise LeaseLostError("worker no longer owns the running job")
         return row
