@@ -97,6 +97,7 @@ def export_source_evidence(
         raise HTTPException(status_code=422, detail="quote must match captured source text")
     source = citation["source"]
     quote = _normalized_text(body.quote)
+    redacted_source_url = redact_source_url(source["url"])
     payload = {
         "schema_version": "1.0.0",
         "source_system": "tinlance-web-intelligence",
@@ -104,7 +105,8 @@ def export_source_evidence(
         "source_job_id": body.job_id,
         "claim_id": body.claim_id,
         "statement": _normalized_text(body.statement),
-        "source_url": redact_source_url(source["url"]),
+        "source_url": redacted_source_url,
+        "source_url_redacted": redacted_source_url != source["url"],
         "retrieved_at": source["retrieved_at"],
         "media_type": source["media_type"][:128],
         "artifact_sha256": source["content_sha256"],
