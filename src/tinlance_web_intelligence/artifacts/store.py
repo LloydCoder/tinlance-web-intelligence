@@ -32,6 +32,10 @@ class ArtifactStore(Protocol):
 
     def count(self, *, tenant_id: str = "development") -> int: ...
 
+    def count_expired(self, cutoff: datetime, *, tenant_id: str | None = None) -> int: ...
+
+    def prune_before(self, cutoff: datetime, *, tenant_id: str | None = None) -> int: ...
+
     def close(self) -> None: ...
 
 
@@ -79,6 +83,29 @@ class MemoryArtifactStore:
     def count(self, *, tenant_id: str = "development") -> int:
         """Return capture-record count for one tenant; bytes may be deduplicated."""
         return sum(1 for key in self._records if key[0] == tenant_id)
+
+    def count_expired(self, cutoff: datetime, *, tenant_id: str | None = None) -> int:
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        return sum(
+            1 for record in self._records.values()
+            if record.captured_at < cutoff and (tenant_id is None or record.tenant_id == tenant_id)
+        )
+
+    def prune_before(self, cutoff: datetime, *, tenant_id: str | None = None) -> int:
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        expired = [
+            key for key, record in self._records.items()
+            if record.captured_at < cutoff and (tenant_id is None or record.tenant_id == tenant_id)
+        ]
+        for key in expired:
+            del self._records[key]
+        retained_content = {(record.tenant_id, record.sha256) for record in self._records.values()}
+        for key in list(self._content):
+            if (tenant_id is None or key[0] == tenant_id) and key not in retained_content:
+                del self._content[key]
+        return len(expired)
 
     def close(self) -> None:
         """Match the durable store lifecycle interface; no resource needs closing."""
