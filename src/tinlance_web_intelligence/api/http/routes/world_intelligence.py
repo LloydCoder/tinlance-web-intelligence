@@ -12,7 +12,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
-from tinlance_web_intelligence.jobs.model import Job
 from tinlance_web_intelligence.integrations.world_intelligence.client import (
     redact_source_url,
     validate_traceparent,
@@ -20,6 +19,7 @@ from tinlance_web_intelligence.integrations.world_intelligence.client import (
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
 )
+from tinlance_web_intelligence.jobs.model import Job
 from tinlance_web_intelligence.research.verification import (
     CitationInput,
     CitationNotFoundError,
