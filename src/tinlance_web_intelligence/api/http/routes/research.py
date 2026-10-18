@@ -22,19 +22,19 @@ router = APIRouter(prefix="/v1/research", tags=["research"])
 class CitationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     job_id: str = Field(min_length=1, max_length=64)
-    quote: str = Field(min_length=8, max_length=1000)
+    quote: str = Field(min_length=8, max_length=350)
 
 
 class ClaimRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     claim_id: str = Field(pattern=r"^[A-Za-z0-9._:-]{1,64}$")
-    statement: str = Field(min_length=1, max_length=1000)
-    citations: list[CitationRequest] = Field(min_length=1, max_length=10)
+    statement: str = Field(min_length=1, max_length=500)
+    citations: list[CitationRequest] = Field(min_length=1, max_length=4)
 
 
 class VerifyResearchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    claims: list[ClaimRequest] = Field(min_length=1, max_length=50)
+    claims: list[ClaimRequest] = Field(min_length=1, max_length=20)
 
 
 def _principal(request: Request) -> Principal:
