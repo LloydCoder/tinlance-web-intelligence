@@ -6,7 +6,7 @@ import os
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
 import pytest
@@ -235,11 +235,21 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
             body=b"durable source bytes", content_type="text/html",
             source_url="https://one.example/", captured_at=now, tenant_id=other_tenant,
         )
-        assert first.sha256 == second.sha256 == other.sha256
+        old = store.put(
+            body=b"durable source bytes", content_type="text/html",
+            source_url="https://one.example/", captured_at=now - timedelta(days=45),
+            tenant_id=tenant,
+        )
+        assert first.sha256 == second.sha256 == other.sha256 == old.sha256
         assert store.get(first.sha256, tenant_id=tenant) == b"durable source bytes"
         assert store.get(first.sha256, tenant_id=other_tenant) == b"durable source bytes"
-        assert store.count(tenant_id=tenant) == 2
+        assert store.count(tenant_id=tenant) == 3
         assert store.count(tenant_id=other_tenant) == 1
+        cutoff = now - timedelta(days=30)
+        assert store.count_expired(cutoff, tenant_id=tenant) == 1
+        assert store.prune_before(cutoff, tenant_id=tenant) == 1
+        assert store.count(tenant_id=tenant) == 2
+        assert store.get(first.sha256, tenant_id=tenant) == b"durable source bytes"
         assert store.get(first.sha256, tenant_id="unrelated-tenant") is None
         with pytest.raises(ValueError):
             store.get("invalid-digest", tenant_id=tenant)
