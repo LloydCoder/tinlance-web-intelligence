@@ -46,7 +46,9 @@ class PostgresJobRepository:
             self._verify_schema()
 
     def _apply_migrations(self) -> None:
-        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath("001_production_postgres.sql")
+        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
+            "001_production_postgres.sql"
+        )
         if not migration.is_file():
             self._pool.close()
             raise RuntimeError("production PostgreSQL migration file is missing")
@@ -62,7 +64,9 @@ class PostgresJobRepository:
                 "to_regclass('twi_source_evidence_outbox') AS outbox, "
                 "to_regclass('twi_schema_migrations') AS migrations"
             ).fetchone()
-            if tables is None or any(tables[name] is None for name in ("jobs", "outbox", "migrations")):
+            if tables is None or any(
+                tables[name] is None for name in ("jobs", "outbox", "migrations")
+            ):
                 raise RuntimeError("PostgreSQL schema is missing; run the migration job")
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
@@ -244,12 +248,14 @@ class PostgresJobRepository:
                 return None
             if row["status"] == "queued":
                 updated = conn.execute(
-                    "UPDATE jobs SET status='cancelled', updated_at=now() WHERE job_id=%s RETURNING *",
+                    """UPDATE jobs SET status='cancelled', updated_at=now()
+                       WHERE job_id=%s RETURNING *""",
                     (job_id,),
                 ).fetchone()
             elif row["status"] == "running":
                 updated = conn.execute(
-                    "UPDATE jobs SET cancel_requested=TRUE, updated_at=now() WHERE job_id=%s RETURNING *",
+                    """UPDATE jobs SET cancel_requested=TRUE, updated_at=now()
+                       WHERE job_id=%s RETURNING *""",
                     (job_id,),
                 ).fetchone()
             else:
