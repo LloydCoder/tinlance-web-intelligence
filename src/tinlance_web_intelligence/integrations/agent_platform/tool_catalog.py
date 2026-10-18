@@ -57,25 +57,25 @@ VERIFY_SCHEMA: dict[str, Any] = {
         "claims": {
             "type": "array",
             "minItems": 1,
-            "maxItems": 50,
+            "maxItems": 20,
             "items": {
                 "type": "object",
                 "additionalProperties": False,
                 "required": ["claim_id", "statement", "citations"],
                 "properties": {
                     "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
-                    "statement": {"type": "string", "minLength": 1, "maxLength": 1000},
+                    "statement": {"type": "string", "minLength": 1, "maxLength": 500},
                     "citations": {
                         "type": "array",
                         "minItems": 1,
-                        "maxItems": 10,
+                        "maxItems": 4,
                         "items": {
                             "type": "object",
                             "additionalProperties": False,
                             "required": ["job_id", "quote"],
                             "properties": {
                                 "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
-                                "quote": {"type": "string", "minLength": 8, "maxLength": 1000},
+                                "quote": {"type": "string", "minLength": 8, "maxLength": 350},
                             },
                         },
                     },
