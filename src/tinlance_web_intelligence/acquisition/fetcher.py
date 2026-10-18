@@ -18,15 +18,16 @@ class FetchError(RuntimeError):
     """A request was rejected or could not be completed safely."""
 
 
-_SENSITIVE_REDIRECT_HEADERS = frozenset(
-    {"authorization", "proxy-authorization", "cookie", "x-subscription-token", "x-api-key", "api-key"}
+_SAFE_CROSS_ORIGIN_HEADERS = frozenset({"user-agent", "accept", "accept-encoding", "accept-language"})
+_MANAGED_REQUEST_HEADERS = frozenset(
+    {"host", "content-length", "transfer-encoding", "connection", "proxy-authorization"}
 )
 
 
 def headers_for_redirect(
     headers: Mapping[str, str], previous: ValidatedURL, target: ValidatedURL
 ) -> dict[str, str]:
-    """Strip credentials when a redirect crosses an origin boundary."""
+    """Strip all non-safe headers when a redirect crosses an origin boundary."""
     previous_port = previous.port or (443 if previous.scheme == "https" else 80)
     target_port = target.port or (443 if target.scheme == "https" else 80)
     previous_origin = (previous.scheme, previous.hostname, previous_port)
@@ -34,8 +35,9 @@ def headers_for_redirect(
     if previous_origin == target_origin:
         return dict(headers)
     return {
-        key: value for key, value in headers.items()
-        if key.lower() not in _SENSITIVE_REDIRECT_HEADERS
+        key: value
+        for key, value in headers.items()
+        if key.lower() in _SAFE_CROSS_ORIGIN_HEADERS
     }
 
 
@@ -65,7 +67,10 @@ class SafeHTTPFetcher:
             "Accept-Encoding": "identity",
         }
         if headers:
-            request_headers.update(headers)
+            for key, value in headers.items():
+                if key.lower() in _MANAGED_REQUEST_HEADERS:
+                    raise FetchError("request attempted to override a transport-managed header")
+                request_headers[key] = value
         request_headers["Accept-Encoding"] = "identity"
         current = requested
         try:

@@ -1,4 +1,12 @@
-from tinlance_web_intelligence.acquisition.fetcher import headers_for_redirect
+import asyncio
+
+import pytest
+
+from tinlance_web_intelligence.acquisition.fetcher import (
+    FetchError,
+    SafeHTTPFetcher,
+    headers_for_redirect,
+)
 from tinlance_web_intelligence.security.url_validation import validate_url
 
 
@@ -22,3 +30,12 @@ def test_redirect_strips_credentials_on_scheme_or_port_change() -> None:
     downgrade = validate_url("http://api.example.com/search")
     headers = {"Authorization": "Bearer secret", "X-API-Key": "secret"}
     assert headers_for_redirect(headers, source, downgrade) == {}
+
+
+def test_transport_managed_headers_cannot_be_overridden() -> None:
+    with pytest.raises(FetchError):
+        asyncio.run(
+            SafeHTTPFetcher().fetch(
+                "https://example.com", headers={"Host": "attacker.example"}
+            )
+        )
