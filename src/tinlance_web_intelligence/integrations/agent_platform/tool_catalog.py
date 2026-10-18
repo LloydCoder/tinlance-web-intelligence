@@ -49,6 +49,42 @@ FETCH_SCHEMA: dict[str, Any] = {
         "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
     },
 }
+VERIFY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["claims"],
+    "properties": {
+        "claims": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["claim_id", "statement", "citations"],
+                "properties": {
+                    "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+                    "statement": {"type": "string", "minLength": 1, "maxLength": 1000},
+                    "citations": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 10,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["job_id", "quote"],
+                            "properties": {
+                                "job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+                                "quote": {"type": "string", "minLength": 8, "maxLength": 1000},
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
 JOB_ID_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -132,6 +168,24 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         resource_pattern="twi://jobs/{job_id}",
         required_scope="twi:jobs:read",
         input_schema=JOB_ID_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
+        open_world=False,
+    ),
+    PlatformToolContract(
+        name="twi_research_verify",
+        operation="twi.research.verify",
+        description=(
+            "Verify that each research citation references an authorized successful TWI "
+            "fetch/browser job and that its quoted excerpt occurs in captured text; this "
+            "does not determine factual truth."
+        ),
+        capability="web.research.verify",
+        action="verify",
+        resource_pattern="twi://research/verification/*",
+        required_scope="twi:research:verify",
+        input_schema=VERIFY_SCHEMA,
         read_only=True,
         consequential=False,
         destructive=False,
