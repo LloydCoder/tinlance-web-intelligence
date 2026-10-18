@@ -53,8 +53,13 @@ class MemoryArtifactStore:
         self, *, body: bytes, content_type: str, source_url: str,
         captured_at: datetime, tenant_id: str = "development"
     ) -> ArtifactRecord:
-        if not tenant_id or len(tenant_id) > 256:
-            raise ValueError("tenant_id must contain 1 to 256 characters")
+        if (
+            not tenant_id
+            or tenant_id != tenant_id.strip()
+            or "\x00" in tenant_id
+            or len(tenant_id) > 256
+        ):
+            raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
         if len(body) > self._max_bytes:
             raise ValueError("artifact exceeds configured byte limit")
         if captured_at.tzinfo is None or captured_at.utcoffset() is None:
