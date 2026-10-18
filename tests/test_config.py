@@ -135,3 +135,18 @@ def test_production_requires_postgres_with_verified_tls() -> None:
 def test_invalid_postgres_urls_are_rejected(database_url: str) -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env({"TWI_DATABASE_URL": database_url})
+
+
+def test_staging_requires_postgres_with_verified_tls() -> None:
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({"TWI_ENV": "staging"})
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            "TWI_ENV": "staging",
+            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
+        })
+    configured = Settings.from_env({
+        "TWI_ENV": "staging",
+        "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
+    })
+    assert configured.environment == "staging"
