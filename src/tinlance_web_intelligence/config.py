@@ -111,9 +111,15 @@ class Settings:
                 )
         if self.brave_api_key is not None and not self.brave_api_key.strip():
             raise ConfigurationError("Brave Search API key must be non-empty when configured")
-        proxy_values = (self.browser_proxy_url, self.browser_proxy_username, self.browser_proxy_password)
+        proxy_values = (
+            self.browser_proxy_url,
+            self.browser_proxy_username,
+            self.browser_proxy_password,
+        )
         if any(proxy_values) and not all(proxy_values):
-            raise ConfigurationError("browser proxy URL, username, and password must be configured together")
+            raise ConfigurationError(
+                "browser proxy URL, username, and password must be configured together"
+            )
         if self.browser_proxy_url is not None:
             try:
                 parsed_proxy = urlsplit(self.browser_proxy_url)
@@ -130,16 +136,25 @@ class Settings:
                 or parsed_proxy.fragment
                 or proxy_port is None
             ):
-                raise ConfigurationError("browser proxy must be an absolute HTTP(S) host:port URL")
-            if not self.browser_proxy_username or self.browser_proxy_username != self.browser_proxy_username.strip():
-                raise ConfigurationError("browser proxy username must be non-empty and normalized")
+                raise ConfigurationError(
+                    "browser proxy must be an absolute HTTP(S) host:port URL"
+                )
+            if (
+                not self.browser_proxy_username
+                or self.browser_proxy_username != self.browser_proxy_username.strip()
+            ):
+                raise ConfigurationError(
+                    "browser proxy username must be non-empty and normalized"
+                )
             if (
                 self.browser_proxy_password is None
                 or len(self.browser_proxy_password) < 24
                 or self.browser_proxy_password != self.browser_proxy_password.strip()
                 or any(ord(ch) < 33 or ord(ch) > 126 for ch in self.browser_proxy_password)
             ):
-                raise ConfigurationError("browser proxy password must be at least 24 printable ASCII characters")
+                raise ConfigurationError(
+                    "browser proxy password must be at least 24 printable ASCII characters"
+                )
 
 
 def validate_service_base_url(value: str) -> str:
