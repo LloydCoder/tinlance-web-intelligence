@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import unittest
+from typing import Any
 from unittest.mock import patch
 
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
     OutboxLeaseLostError,
+    OutboxEvent,
     SQLiteSourceEvidenceOutbox,
 )
 
@@ -29,7 +31,12 @@ class SourceEvidenceOutboxTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.outbox.close()
 
-    def enqueue(self, *, key: str = "source-evidence-idempotency-0001", payload=None):
+    def enqueue(
+        self,
+        *,
+        key: str = "source-evidence-idempotency-0001",
+        payload: dict[str, Any] | None = None,
+    ) -> tuple[OutboxEvent, bool]:
         return self.outbox.enqueue(
             tenant_ref=self.tenant_ref,
             subject_ref=self.subject_ref,
