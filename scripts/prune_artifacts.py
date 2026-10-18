@@ -6,12 +6,16 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
-from scripts.check_database_tls import validate_database_url
+from check_database_tls import validate_database_url
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--retention-days", type=int, default=int(os.environ.get("TWI_ARTIFACT_RETENTION_DAYS", "30")))
+    parser.add_argument(
+        "--retention-days",
+        type=int,
+        default=int(os.environ.get("TWI_ARTIFACT_RETENTION_DAYS", "30")),
+    )
     parser.add_argument("--tenant-id", help="Limit pruning to one tenant; default covers all tenants")
     parser.add_argument("--apply", action="store_true", help="Delete expired records and unreferenced bytes")
     args = parser.parse_args()
