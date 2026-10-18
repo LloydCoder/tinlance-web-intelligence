@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
-    OutboxLeaseLostError,
     OutboxEvent,
+    OutboxLeaseLostError,
     SQLiteSourceEvidenceOutbox,
 )
 
