@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -32,7 +33,7 @@ def _principal(
         subject_id=subject_id,
         client_id="research-test-client",
         principal_type="user",
-        token_id="research-test-jti",
+        token_id=str(uuid.uuid4()),
         scopes=scopes,
         roles=frozenset(),
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
@@ -287,12 +288,12 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
         event = client.app.state.evidence_outbox.get(
             payload["event_id"],
             sha256(b"tenant-a").hexdigest(),
-            hashlib.sha256(b"subject-a").hexdigest(),
+            sha256(b"subject-a").hexdigest(),
         )
         assert event is not None
         assert event.payload["source_url_redacted"] is True
         assert "secret-value" not in event.payload["source_url"]
-        assert event.payload["tenant_ref"] == hashlib.sha256(b"tenant-a").hexdigest()
+        assert event.payload["tenant_ref"] == sha256(b"tenant-a").hexdigest()
 
         client.app.state.test_verifier.principal = _principal(
             subject_id="subject-b",
