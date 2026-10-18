@@ -119,7 +119,7 @@ class SafeEgressProxy:
                 except ProxyProtocolError:
                     await self._send_status(client_writer, 400, "Bad Request")
                     return
-                except (ProxyPolicyError, ValueError):
+                except ValueError:
                     await self._send_status(client_writer, 403, "Forbidden")
                     return
                 try:
