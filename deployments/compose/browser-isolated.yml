@@ -64,6 +64,7 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=256m
     cap_drop: [ALL]
+    cap_add: [SYS_CHROOT]
     security_opt:
       - no-new-privileges:true
       - seccomp=${PWD}/deployments/security/chromium-seccomp.json
