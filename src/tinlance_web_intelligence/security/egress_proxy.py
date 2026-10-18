@@ -134,6 +134,7 @@ class SafeEgressProxy:
                 except (OSError, TimeoutError):
                     await self._send_status(client_writer, 502, "Bad Gateway")
                     return
+                assert upstream_writer is not None
                 client_writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
                 await client_writer.drain()
                 await self._relay(
@@ -249,7 +250,13 @@ class SafeEgressProxy:
             )
         except (OSError, TimeoutError) as exc:
             raise ProxyPolicyError("destination DNS lookup failed") from exc
-        addresses = sorted({item[4][0].split("%", 1)[0] for item in infos})
+        address_values: set[str] = set()
+        for item in infos:
+            raw_address = item[4][0]
+            if not isinstance(raw_address, str):
+                raise ProxyPolicyError("invalid DNS response")
+            address_values.add(raw_address.split("%", 1)[0])
+        addresses = sorted(address_values)
         if not addresses:
             raise ProxyPolicyError("destination has no addresses")
         parsed: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
