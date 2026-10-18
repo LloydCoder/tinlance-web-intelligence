@@ -81,6 +81,10 @@ jobs:
           else:
               raise SystemExit("browser worker can reach public Internet without the proxy")
           '
+      - name: Configure host user-namespace support for Chromium sandbox
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
       - name: Verify Chromium sandbox inside the browser container
         run: |
           docker compose -f deployments/compose/browser-isolated.yml run --rm --no-deps --entrypoint python browser-worker -c '
