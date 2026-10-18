@@ -13,9 +13,10 @@ TWI provides a versioned internal HTTP API for durable search/fetch jobs and pub
 - `twi.jobs.create_fetch` → `POST /v1/jobs` with `kind=fetch` and `Idempotency-Key`.
 - `twi.jobs.read` → `GET /v1/jobs/{job_id}`.
 - `twi.jobs.cancel` → `POST /v1/jobs/{job_id}/cancel`.
+- `twi.research.verify` → `POST /v1/research/verify`; requires `twi:research:verify` and only verifies citation provenance and exact excerpt matches against successful, caller-accessible TWI fetch/browser jobs. It does not establish factual truth.
 
 The Platform adapter must map MCP tool names to these operations, apply Platform policy and scope decisions, and preserve the operation's idempotency semantics. It must not treat caller-supplied `tenant_id` or `subject_id` as trusted identity.
 
 ## Status
 
-The TWI API and tool catalog are implemented in W3. The catalog alone does not mean the tools are registered in the Platform repository; cross-repository registration and TSIC conformance are W5 gates.
+The durable job API and acquisition tools were established in W3/W4. W5 adds a citation-verification operation that checks claims against captured source text and scopes every referenced job to the authenticated tenant and subject. The catalog alone does not mean the tools are registered in the Platform repository; cross-repository registration and TSIC conformance remain W5 gates.
