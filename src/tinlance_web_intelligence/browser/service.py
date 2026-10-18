@@ -114,6 +114,12 @@ class BrowserService:
                         await route.continue_(headers=headers)
 
                     await context.route("**/*", route_request)
+                    context.route_web_socket(
+                        "**/*",
+                        lambda websocket: websocket.close(
+                            code=1008, reason="WebSocket access is disabled"
+                        ),
+                    )
                     page = await context.new_page()
                     page.on("popup", lambda popup: asyncio.create_task(popup.close()))
                     response = await page.goto(
