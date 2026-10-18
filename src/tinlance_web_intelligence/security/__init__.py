@@ -1,0 +1,1 @@
+"""Security policy primitives; network egress controls are deployment responsibilities too."""
