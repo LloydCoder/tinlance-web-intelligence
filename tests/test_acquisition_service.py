@@ -33,7 +33,14 @@ def test_acquisition_service_records_artifact_and_extracts_text() -> None:
     assert store.get(result.content_sha256) is not None
 
 
-def test_production_requires_explicit_durable_artifact_store(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TWI_ENV", "production")
+@pytest.mark.parametrize("environment", ["staging", "production"])
+def test_non_dev_requires_explicit_durable_artifact_store(
+    monkeypatch: pytest.MonkeyPatch, environment: str
+) -> None:
+    monkeypatch.setenv("TWI_ENV", environment)
     with pytest.raises(RuntimeError, match="durable artifact store"):
         WebAcquisitionService(cast(Any, FakeFetcher()))
+    with pytest.raises(RuntimeError, match="durable artifact store"):
+        WebAcquisitionService(
+            cast(Any, FakeFetcher()), MemoryArtifactStore()
+        )
