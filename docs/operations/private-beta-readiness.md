@@ -1,4 +1,7 @@
-# Private-beta readiness checklist
+# Private-beta readiness
+
+**Current release state: NOT CERTIFIED.** The repository implementation is merged and CI-verified, but every checklist item below requires evidence from the target deployment. Do not infer private-beta readiness from green repository CI alone.
+ checklist
 
 Private beta is a deployment-specific decision, not a repository label. Every item must link to evidence for the exact release candidate and environment.
 
