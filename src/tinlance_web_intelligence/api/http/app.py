@@ -23,7 +23,6 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 
-
 def create_app(
     *,
     settings: Settings | None = None,
