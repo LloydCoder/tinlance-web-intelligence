@@ -1,9 +1,9 @@
 """Fail-closed tests for the explicit PostgreSQL migration runner."""
 from __future__ import annotations
 
-import pytest
-
 from apps.migrate.main import _validate_dsn, main
+
+import pytest
 
 
 def test_production_migration_dsn_requires_verified_tls() -> None:
@@ -32,7 +32,9 @@ def test_production_migration_requires_a_separate_ddl_role(monkeypatch: pytest.M
         main()
 
 
-def test_production_migration_requires_dedicated_migration_url(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_production_migration_requires_dedicated_migration_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("TWI_ENV", "production")
     monkeypatch.setenv(
         "TWI_DATABASE_URL",
