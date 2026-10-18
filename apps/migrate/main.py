@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 from importlib.resources import files
+from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from psycopg.rows import dict_row
