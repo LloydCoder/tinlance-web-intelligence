@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import datetime
+import hashlib
 import json
+import pathlib
 import sqlite3
 import threading
 import time
-from datetime import UTC, datetime
-from hashlib import sha256
-from pathlib import Path
-from typing import Any
-from uuid import uuid4
+import typing
+import uuid
 
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS jobs (
     kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch')),
     payload_json TEXT NOT NULL,
     payload_fingerprint TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
+    status TEXT NOT NULL CHECK (
+        status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')
+    ),
     result_json TEXT,
     error_code TEXT,
     created_at TEXT NOT NULL,
@@ -46,9 +48,11 @@ CREATE INDEX IF NOT EXISTS jobs_claim_idx ON jobs(status, available_at, created_
 CREATE INDEX IF NOT EXISTS jobs_tenant_idx ON jobs(tenant_id, subject_id, created_at);
 """
 
+_ALLOWED_ERROR_CODE_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_-")
+
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat()
+    return datetime.datetime.now(datetime.UTC).isoformat()
 
 
 class SQLiteJobRepository:
@@ -60,7 +64,9 @@ class SQLiteJobRepository:
         if not 1 <= max_attempts <= 10:
             raise ValueError("max_attempts must be between 1 and 10")
         if database_path != ":memory:":
-            Path(database_path).expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+            pathlib.Path(database_path).expanduser().resolve().parent.mkdir(
+                parents=True, exist_ok=True
+            )
         self._lock = threading.RLock()
         self._max_attempts = max_attempts
         self._connection = sqlite3.connect(
@@ -80,7 +86,7 @@ class SQLiteJobRepository:
         tenant_id: str,
         subject_id: str,
         kind: str,
-        payload: dict[str, Any],
+        payload: dict[str, typing.Any],
         idempotency_key: str,
     ) -> Job:
         if kind not in {"search", "fetch"}:
@@ -88,7 +94,7 @@ class SQLiteJobRepository:
         if not tenant_id or not subject_id or not idempotency_key:
             raise ValueError("tenant, subject, and idempotency key are required")
         serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
-        fingerprint = sha256(f"{kind}\0{serialized}".encode("utf-8")).hexdigest()
+        fingerprint = hashlib.sha256(f"{kind}\0{serialized}".encode()).hexdigest()
         now = _now()
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -104,7 +110,7 @@ class SQLiteJobRepository:
                         )
                     self._connection.commit()
                     return self._to_job(existing)
-                job_id = str(uuid4())
+                job_id = str(uuid.uuid4())
                 self._connection.execute(
                     """INSERT INTO jobs (
                         job_id, tenant_id, subject_id, kind, payload_json, payload_fingerprint,
@@ -112,8 +118,17 @@ class SQLiteJobRepository:
                         idempotency_key
                     ) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, 0, ?, ?, ?)""",
                     (
-                        job_id, tenant_id, subject_id, kind, serialized, fingerprint,
-                        now, now, self._max_attempts, time.time(), idempotency_key,
+                        job_id,
+                        tenant_id,
+                        subject_id,
+                        kind,
+                        serialized,
+                        fingerprint,
+                        now,
+                        now,
+                        self._max_attempts,
+                        time.time(),
+                        idempotency_key,
                     ),
                 )
                 row = self._connection.execute(
@@ -152,8 +167,9 @@ class SQLiteJobRepository:
             self._connection.execute("BEGIN IMMEDIATE")
             try:
                 self._connection.execute(
-                    """UPDATE jobs SET status='cancelled', lease_owner=NULL, lease_until=NULL,
-                        updated_at=? WHERE status='running' AND lease_until < ? AND cancel_requested=1""",
+                    """UPDATE jobs SET status='cancelled', lease_owner=NULL,
+                        lease_until=NULL, updated_at=?
+                        WHERE status='running' AND lease_until < ? AND cancel_requested=1""",
                     (timestamp, now),
                 )
                 self._connection.execute(
@@ -193,7 +209,9 @@ class SQLiteJobRepository:
                     self._connection.rollback()
                 raise
 
-    def complete(self, job_id: str, worker_id: str, result: dict[str, Any]) -> Job:
+    def complete(
+        self, job_id: str, worker_id: str, result: dict[str, typing.Any]
+    ) -> Job:
         serialized = json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False)
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")
@@ -225,7 +243,12 @@ class SQLiteJobRepository:
         error_code: str,
         retryable: bool,
     ) -> Job:
-        if not error_code or len(error_code) > 64 or any(ch not in "abcdefghijklmnopqrstuvwxyz0123456789_-" for ch in error_code):
+        invalid_code = (
+            not error_code
+            or len(error_code) > 64
+            or any(ch not in _ALLOWED_ERROR_CODE_CHARS for ch in error_code)
+        )
+        if invalid_code:
             error_code = "worker_error"
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")

@@ -74,7 +74,10 @@ def create_job(
     required_scope = "twi:search" if body.kind == "search" else "twi:fetch"
     _require_scope(principal, required_scope)
     if not _IDEMPOTENCY_PATTERN.fullmatch(idempotency_key):
-        raise HTTPException(status_code=422, detail="Idempotency-Key contains unsupported characters")
+        raise HTTPException(
+            status_code=422,
+            detail="Idempotency-Key contains unsupported characters",
+        )
     payload = _normalize_payload(body.kind, body.payload)
     repository: SQLiteJobRepository = request.app.state.repository
     try:
@@ -90,6 +93,8 @@ def create_job(
             status_code=409,
             detail="Idempotency-Key conflicts with an existing request",
         ) from exc
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="job payload is not JSON-compatible") from exc
     return _public_job(job)
 
 

@@ -7,7 +7,10 @@ from dataclasses import asdict
 from typing import Any
 
 from tinlance_web_intelligence.acquisition.fetcher import FetchError, SafeHTTPFetcher
-from tinlance_web_intelligence.acquisition.service import UnsupportedMediaType, WebAcquisitionService
+from tinlance_web_intelligence.acquisition.service import (
+    UnsupportedMediaType,
+    WebAcquisitionService,
+)
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
@@ -58,7 +61,10 @@ class JobWorker:
             query = job.payload["query"]
             limit = job.payload["limit"]
             results = asyncio.run(self.search_provider.search(query, limit=limit))
-            return {"provider": self.search_provider.name, "results": [asdict(item) for item in results]}
+            return {
+                "provider": self.search_provider.name,
+                "results": [asdict(item) for item in results],
+            }
         if job.kind == "fetch":
             page = asyncio.run(self.acquisition.acquire_page(job.payload["url"]))
             return {

@@ -7,7 +7,6 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import jwt
-from jwt import PyJWKClient
 
 from tinlance_web_intelligence.auth.principal import Principal
 
@@ -53,7 +52,7 @@ class PlatformTokenVerifier:
         self._audience = audience
         self._algorithms = algorithms
         self._leeway = leeway_seconds
-        self._keys = PyJWKClient(
+        self._keys = jwt.PyJWKClient(
             jwks_url,
             cache_jwk_set=True,
             lifespan=300,

@@ -15,8 +15,8 @@ class FakeVerifier:
         self.principal = principal
 
     def verify(self, token: str) -> Principal:
-        if token != "valid-test-token":
-            raise PermissionError("invalid test token")
+        if token != "valid-credential":
+            raise PermissionError("invalid test credential")
         return self.principal
 
 
@@ -32,7 +32,7 @@ def principal(
         subject_id=subject_id,
         client_id="test-client",
         principal_type="user",
-        token_id="token-test-01",
+        token_id="jti-test-01",
         scopes=scopes,
         roles=frozenset(),
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
@@ -67,7 +67,7 @@ def test_health_is_public_but_jobs_require_bearer_token() -> None:
 def test_job_create_replay_read_and_idempotency_conflict() -> None:
     client, repo = client_for()
     headers = {
-        "Authorization": "Bearer valid-test-token",
+        "Authorization": "Bearer valid-credential",
         "Idempotency-Key": "request-key-000001",
     }
     payload = {"kind": "search", "payload": {"query": "  example   query ", "limit": 5}}
@@ -79,7 +79,7 @@ def test_job_create_replay_read_and_idempotency_conflict() -> None:
     assert first.json()["payload"]["query"] == "example query"
     read = client.get(
         f"/v1/jobs/{first.json()['job_id']}",
-        headers={"Authorization": "Bearer valid-test-token"},
+        headers={"Authorization": "Bearer valid-credential"},
     )
     assert read.status_code == 200
     conflict = client.post(
@@ -98,7 +98,7 @@ def test_tenant_and_subject_scoping_prevents_job_disclosure() -> None:
         "/v1/jobs",
         json={"kind": "search", "payload": {"query": "example"}},
         headers={
-            "Authorization": "Bearer valid-test-token",
+            "Authorization": "Bearer valid-credential",
             "Idempotency-Key": "request-key-000001",
         },
     )
@@ -109,7 +109,7 @@ def test_tenant_and_subject_scoping_prevents_job_disclosure() -> None:
     )
     response = other_client.get(
         f"/v1/jobs/{created.json()['job_id']}",
-        headers={"Authorization": "Bearer valid-test-token"},
+        headers={"Authorization": "Bearer valid-credential"},
     )
     assert response.status_code == 404
     repository.close()
@@ -121,7 +121,7 @@ def test_scope_and_url_policy_are_enforced_before_queueing() -> None:
         "/v1/jobs",
         json={"kind": "search", "payload": {"query": "example"}},
         headers={
-            "Authorization": "Bearer valid-test-token",
+            "Authorization": "Bearer valid-credential",
             "Idempotency-Key": "request-key-000001",
         },
     )
@@ -134,7 +134,7 @@ def test_scope_and_url_policy_are_enforced_before_queueing() -> None:
         "/v1/jobs",
         json={"kind": "fetch", "payload": {"url": "http://127.0.0.1/"}},
         headers={
-            "Authorization": "Bearer valid-test-token",
+            "Authorization": "Bearer valid-credential",
             "Idempotency-Key": "request-key-000002",
         },
     )
@@ -143,7 +143,7 @@ def test_scope_and_url_policy_are_enforced_before_queueing() -> None:
         "/v1/jobs",
         content=b"x" * 70_000,
         headers={
-            "Authorization": "Bearer valid-test-token",
+            "Authorization": "Bearer valid-credential",
             "Idempotency-Key": "request-key-000003",
             "Content-Type": "application/json",
         },
