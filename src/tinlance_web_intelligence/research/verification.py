@@ -101,8 +101,8 @@ def verify_research_report(
     """Verify citation provenance and exact excerpt matches against scoped TWI jobs."""
     if not claims:
         raise ValueError("at least one claim is required")
-    if len(claims) > 50:
-        raise ValueError("at most 50 claims are allowed")
+    if len(claims) > 20:
+        raise ValueError("at most 20 claims are allowed")
     claim_ids = [claim.claim_id for claim in claims]
     if len(claim_ids) != len(set(claim_ids)):
         raise ValueError("claim_id values must be unique")
@@ -112,10 +112,14 @@ def verify_research_report(
     canonical_claims: list[dict[str, Any]] = []
 
     for claim in claims:
+        if not claim.claim_id or len(claim.claim_id) > 64:
+            raise ValueError("claim_id must contain 1 to 64 characters")
+        if not claim.statement.strip() or len(claim.statement) > 500:
+            raise ValueError("claim statement must contain 1 to 500 characters")
         if not claim.citations:
             raise ValueError("every claim must contain at least one citation")
-        if len(claim.citations) > 10:
-            raise ValueError("at most 10 citations are allowed per claim")
+        if len(claim.citations) > 4:
+            raise ValueError("at most 4 citations are allowed per claim")
         checked_citations: list[dict[str, Any]] = []
         matched_count = 0
         canonical_citations: list[dict[str, Any]] = []
@@ -129,6 +133,8 @@ def verify_research_report(
                     )
                 evidence = _evidence_from_job(job)
                 evidence_by_job[citation.job_id] = evidence
+            if len(citation.quote) < 8 or len(citation.quote) > 350:
+                raise ValueError("citation quote must contain 8 to 350 characters")
             quote = _normalized_text(citation.quote)
             captured_text = _normalized_text(evidence["text"])
             matched = bool(quote) and quote in captured_text
