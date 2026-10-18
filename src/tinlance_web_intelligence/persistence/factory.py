@@ -35,6 +35,6 @@ def create_artifact_store(settings: Settings) -> ArtifactStore:
     """Use durable, tenant-scoped PostgreSQL artifacts in production."""
     if settings.database_url:
         return PostgresArtifactStore(settings.database_url, max_bytes=settings.max_response_bytes)
-    if settings.environment == "production":
-        raise ValueError("production requires PostgreSQL artifact storage")
+    if settings.environment in {"staging", "production"}:
+        raise ValueError("staging and production require PostgreSQL artifact storage")
     return MemoryArtifactStore(max_bytes=settings.max_response_bytes)
