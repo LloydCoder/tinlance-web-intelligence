@@ -18,7 +18,7 @@ jobs:
   quality:
     name: Python quality and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +39,64 @@ jobs:
       - name: Type check
         run: mypy src tests
       - name: Security lint
-        run: bandit -q -r src
+        run: bandit -q -r src apps
+      - name: Install Chromium for isolated browser smoke test
+        run: python -m playwright install --with-deps chromium
       - name: Unit and contract tests
         run: pytest -q
+      - name: Configure runner user-namespace sandbox prerequisites
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
+      - name: Chromium runtime smoke test
+        env:
+          TWI_RUN_BROWSER_INTEGRATION: "1"
+        run: pytest -q tests/test_browser_runtime.py
+
+  browser-isolation:
+    name: Browser container isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TWI_BROWSER_PROXY_USERNAME: browser-worker
+      TWI_BROWSER_PROXY_PASSWORD: ci-only-browser-proxy-secret-2026
+      TWI_BROWSER_BROKER_TOKEN: ci-only-browser-broker-token-placeholder-2026
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate isolated Compose topology
+        run: docker compose -f deployments/compose/browser-isolated.yml config --quiet
+      - name: Build all isolated service images
+        run: docker compose -f deployments/compose/browser-isolated.yml build --parallel
+      - name: Start egress proxy
+        run: docker compose -f deployments/compose/browser-isolated.yml up -d --wait egress-proxy
+      - name: Verify browser network cannot bypass the proxy
+        run: |
+          docker compose -f deployments/compose/browser-isolated.yml run --rm --no-deps --entrypoint python browser-worker -c '
+          import socket
+          with socket.create_connection(("egress-proxy", 3128), timeout=3):
+              pass
+          try:
+              socket.create_connection(("1.1.1.1", 443), timeout=2)
+          except OSError:
+              print("direct public egress blocked; proxy path reachable")
+          else:
+              raise SystemExit("browser worker can reach public Internet without the proxy")
+          '
+      - name: Configure host user-namespace support for Chromium sandbox
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
+      - name: Verify Chromium sandbox inside the browser container
+        run: |
+          docker compose -f deployments/compose/browser-isolated.yml run --rm --no-deps --entrypoint python browser-worker -c '
+          import asyncio
+          from playwright.async_api import async_playwright
+          async def main():
+              async with async_playwright() as playwright:
+                  browser = await playwright.chromium.launch(headless=True, chromium_sandbox=True)
+                  await browser.close()
+          asyncio.run(main())
+          '
+      - name: Stop isolated stack
+        if: always()
+        run: docker compose -f deployments/compose/browser-isolated.yml down --volumes

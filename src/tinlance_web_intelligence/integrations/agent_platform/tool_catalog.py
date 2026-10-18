@@ -55,6 +55,27 @@ JOB_ID_SCHEMA: dict[str, Any] = {
     "required": ["job_id"],
     "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 64}},
 }
+BROWSER_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["url", "idempotency_key"],
+    "properties": {
+        "url": {"type": "string", "format": "uri", "maxLength": 4096},
+        "wait_until": {
+            "type": "string",
+            "enum": ["domcontentloaded", "load"],
+            "default": "domcontentloaded",
+        },
+        "timeout_ms": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 30000,
+            "default": 15000,
+        },
+        "include_screenshot": {"type": "boolean", "default": False},
+        "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
+    },
+}
 
 TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
     PlatformToolContract(
@@ -81,6 +102,21 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         resource_pattern="web://fetch/*",
         required_scope="twi:fetch",
         input_schema=FETCH_SCHEMA,
+        read_only=False,
+        consequential=False,
+        destructive=False,
+        open_world=True,
+        idempotency_argument="idempotency_key",
+    ),
+    PlatformToolContract(
+        name="twi_browser_navigate",
+        operation="twi.jobs.create_browser",
+        description="Capture a public web page in a fresh isolated read-only browser context.",
+        capability="web.browser.navigate",
+        action="navigate",
+        resource_pattern="web://browser/*",
+        required_scope="twi:browser",
+        input_schema=BROWSER_SCHEMA,
         read_only=False,
         consequential=False,
         destructive=False,

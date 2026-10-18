@@ -11,6 +11,7 @@ from tinlance_web_intelligence.acquisition.service import (
     UnsupportedMediaType,
     WebAcquisitionService,
 )
+from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
@@ -24,20 +25,30 @@ class JobWorker:
         worker_id: str,
         acquisition: WebAcquisitionService | None = None,
         search_provider: SearchProvider | None = None,
+        browser_service: BrowserService | None = None,
+        allowed_kinds: tuple[str, ...] = ("search", "fetch"),
         lease_seconds: int = 180,
     ) -> None:
         self.repository = repository
         self.worker_id = worker_id
+        self.allowed_kinds = allowed_kinds
         self.acquisition = acquisition or WebAcquisitionService(SafeHTTPFetcher())
         self.search_provider = search_provider
+        self.browser_service = browser_service
         self.lease_seconds = lease_seconds
 
     def run_once(self) -> bool:
-        job = self.repository.claim_next(self.worker_id, lease_seconds=self.lease_seconds)
+        job = self.repository.claim_next(
+            self.worker_id,
+            lease_seconds=self.lease_seconds,
+            allowed_kinds=self.allowed_kinds,
+        )
         if job is None:
             return False
         try:
             result = self._execute(job)
+        except BrowserCaptureError as exc:
+            self._fail(job, exc.error_code, exc.retryable)
         except FetchError as exc:
             self._fail(job, "upstream_failure", bool(getattr(exc, "retryable", False)))
         except SearchProviderError as exc:
@@ -55,6 +66,17 @@ class JobWorker:
         return True
 
     def _execute(self, job: Job) -> dict[str, Any]:
+        if job.kind == "browser":
+            if self.browser_service is None:
+                raise BrowserCaptureError("browser_not_configured")
+            return asyncio.run(
+                self.browser_service.capture(
+                    url=job.payload["url"],
+                    wait_until=job.payload["wait_until"],
+                    timeout_ms=job.payload["timeout_ms"],
+                    include_screenshot=job.payload["include_screenshot"],
+                )
+            )
         if job.kind == "search":
             if self.search_provider is None:
                 raise SearchProviderError("search provider is not configured")

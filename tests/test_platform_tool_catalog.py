@@ -9,7 +9,13 @@ def test_platform_tool_catalog_has_unique_names_and_operations() -> None:
     operations = [tool.operation for tool in TWI_PLATFORM_TOOLS]
     assert len(names) == len(set(names))
     assert len(operations) == len(set(operations))
-    assert set(names) == {"twi_search", "twi_fetch", "twi_job_read", "twi_job_cancel"}
+    assert set(names) == {
+        "twi_search",
+        "twi_fetch",
+        "twi_browser_navigate",
+        "twi_job_read",
+        "twi_job_cancel",
+    }
 
 
 def test_json_tool_manifests_match_python_catalog() -> None:

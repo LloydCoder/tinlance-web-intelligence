@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     subject_id TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch')),
+    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser')),
     payload_json TEXT NOT NULL,
     payload_fingerprint TEXT NOT NULL,
     status TEXT NOT NULL CHECK (
@@ -78,6 +78,59 @@ class SQLiteJobRepository:
             self._connection.execute("PRAGMA journal_mode = WAL")
             self._connection.execute("PRAGMA synchronous = FULL")
         self._connection.executescript(_SCHEMA)
+        self._migrate_browser_job_kind()
+
+    def _migrate_browser_job_kind(self) -> None:
+        """Transactionally rebuild a W3 schema to permit browser jobs."""
+        row = self._connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='jobs'"
+        ).fetchone()
+        if row is None or "'browser'" in (row["sql"] or ""):
+            return
+        with self._lock:
+            self._connection.execute("BEGIN IMMEDIATE")
+            try:
+                self._connection.execute("DROP INDEX IF EXISTS jobs_claim_idx")
+                self._connection.execute("DROP INDEX IF EXISTS jobs_tenant_idx")
+                self._connection.execute("ALTER TABLE jobs RENAME TO jobs_w3_migration")
+                self._connection.execute(
+                    """CREATE TABLE jobs (
+                        job_id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        subject_id TEXT NOT NULL,
+                        kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser')),
+                        payload_json TEXT NOT NULL,
+                        payload_fingerprint TEXT NOT NULL,
+                        status TEXT NOT NULL CHECK (
+                            status IN ('queued', 'running', 'succeeded', 'failed', 'cancelled')
+                        ),
+                        result_json TEXT,
+                        error_code TEXT,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        attempts INTEGER NOT NULL DEFAULT 0,
+                        max_attempts INTEGER NOT NULL DEFAULT 3,
+                        available_at REAL NOT NULL,
+                        lease_owner TEXT,
+                        lease_until REAL,
+                        cancel_requested INTEGER NOT NULL DEFAULT 0,
+                        idempotency_key TEXT NOT NULL,
+                        UNIQUE (tenant_id, subject_id, idempotency_key)
+                    )"""
+                )
+                self._connection.execute("INSERT INTO jobs SELECT * FROM jobs_w3_migration")
+                self._connection.execute("DROP TABLE jobs_w3_migration")
+                self._connection.execute(
+                    "CREATE INDEX jobs_claim_idx ON jobs(status, available_at, created_at)"
+                )
+                self._connection.execute(
+                    "CREATE INDEX jobs_tenant_idx ON jobs(tenant_id, subject_id, created_at)"
+                )
+                self._connection.commit()
+            except Exception:
+                if self._connection.in_transaction:
+                    self._connection.rollback()
+                raise
 
     def create(
         self,
@@ -88,7 +141,7 @@ class SQLiteJobRepository:
         payload: dict[str, typing.Any],
         idempotency_key: str,
     ) -> Job:
-        if kind not in {"search", "fetch"}:
+        if kind not in {"search", "fetch", "browser"}:
             raise ValueError("unsupported job kind")
         if not tenant_id or not subject_id or not idempotency_key:
             raise ValueError("tenant, subject, and idempotency key are required")
@@ -157,9 +210,22 @@ class SQLiteJobRepository:
                 ).fetchone()
         return self._to_job(row) if row is not None else None
 
-    def claim_next(self, worker_id: str, *, lease_seconds: int = 60) -> Job | None:
+    def claim_next(
+        self,
+        worker_id: str,
+        *,
+        lease_seconds: int = 60,
+        allowed_kinds: tuple[str, ...] | None = None,
+    ) -> Job | None:
         if not worker_id or not 5 <= lease_seconds <= 3600:
             raise ValueError("worker ID and a 5–3600 second lease are required")
+        if allowed_kinds is not None and (
+            not allowed_kinds
+            or len(allowed_kinds) > 3
+            or len(set(allowed_kinds)) != len(allowed_kinds)
+            or any(kind not in {"search", "fetch", "browser"} for kind in allowed_kinds)
+        ):
+            raise ValueError("allowed_kinds must contain unique supported job kinds")
         now = time.time()
         timestamp = _now()
         with self._lock:
@@ -183,11 +249,33 @@ class SQLiteJobRepository:
                         WHERE status='running' AND lease_until < ? AND attempts < max_attempts""",
                     (now, timestamp, now),
                 )
-                row = self._connection.execute(
-                    """SELECT * FROM jobs WHERE status='queued' AND available_at <= ?
-                        AND cancel_requested=0 ORDER BY created_at, job_id LIMIT 1""",
-                    (now,),
-                ).fetchone()
+                query_all = (
+                    """SELECT * FROM jobs
+                       WHERE status='queued' AND available_at <= ?
+                         AND cancel_requested=0
+                       ORDER BY created_at, job_id LIMIT 1"""
+                )
+                query_by_kind = {
+                    1: """SELECT * FROM jobs
+                          WHERE status='queued' AND available_at <= ?
+                            AND cancel_requested=0 AND kind IN (?)
+                          ORDER BY created_at, job_id LIMIT 1""",
+                    2: """SELECT * FROM jobs
+                          WHERE status='queued' AND available_at <= ?
+                            AND cancel_requested=0 AND kind IN (?, ?)
+                          ORDER BY created_at, job_id LIMIT 1""",
+                    3: """SELECT * FROM jobs
+                          WHERE status='queued' AND available_at <= ?
+                            AND cancel_requested=0 AND kind IN (?, ?, ?)
+                          ORDER BY created_at, job_id LIMIT 1""",
+                }
+                if allowed_kinds is None:
+                    query = query_all
+                    params: tuple[object, ...] = (now,)
+                else:
+                    query = query_by_kind[len(allowed_kinds)]
+                    params = (now, *allowed_kinds)
+                row = self._connection.execute(query, params).fetchone()
                 if row is None:
                     self._connection.commit()
                     return None

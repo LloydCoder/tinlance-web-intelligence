@@ -25,10 +25,21 @@ class Settings:
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
     brave_api_key: str | None = None
+    browser_enabled: bool = False
+    browser_proxy_url: str | None = None
+    browser_proxy_username: str | None = None
+    browser_proxy_password: str | None = None
+    browser_broker_url: str | None = None
+    browser_broker_token: str | None = None
 
     @classmethod
-    def from_env(cls, env: dict[str, str] | None = None) -> Settings:
+    def from_env(
+        cls, env: dict[str, str] | None = None, *, require_identity: bool = True
+    ) -> Settings:
         values = os.environ if env is None else env
+        browser_enabled_raw = values.get("TWI_BROWSER_ENABLED", "false").strip().lower()
+        if browser_enabled_raw not in {"true", "false"}:
+            raise ConfigurationError("TWI_BROWSER_ENABLED must be true or false")
         try:
             schemes = values.get("TWI_ALLOWED_SCHEMES", "https,http").split(",")
             settings = cls(
@@ -44,13 +55,19 @@ class Settings:
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
                 brave_api_key=values.get("TWI_BRAVE_SEARCH_API_KEY") or None,
+                browser_enabled=browser_enabled_raw == "true",
+                browser_proxy_url=values.get("TWI_BROWSER_PROXY_URL") or None,
+                browser_proxy_username=values.get("TWI_BROWSER_PROXY_USERNAME") or None,
+                browser_proxy_password=values.get("TWI_BROWSER_PROXY_PASSWORD") or None,
+                browser_broker_url=values.get("TWI_BROWSER_BROKER_URL") or None,
+                browser_broker_token=values.get("TWI_BROWSER_BROKER_TOKEN") or None,
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
-        settings.validate()
+        settings.validate(require_identity=require_identity)
         return settings
 
-    def validate(self) -> None:
+    def validate(self, *, require_identity: bool = True) -> None:
         if self.environment not in {"development", "test", "staging", "production"}:
             raise ConfigurationError("TWI_ENV must be development, test, staging, or production")
         if self.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -74,7 +91,7 @@ class Settings:
             raise ConfigurationError(
                 "identity issuer, audience, and JWKS URL must be configured together"
             )
-        if self.environment == "production" and not all(identity_values):
+        if require_identity and self.environment == "production" and not all(identity_values):
             raise ConfigurationError(
                 "production requires Platform identity issuer, audience, and JWKS URL"
             )
@@ -98,6 +115,81 @@ class Settings:
                 )
         if self.brave_api_key is not None and not self.brave_api_key.strip():
             raise ConfigurationError("Brave Search API key must be non-empty when configured")
+        proxy_values = (
+            self.browser_proxy_url,
+            self.browser_proxy_username,
+            self.browser_proxy_password,
+        )
+        if any(proxy_values) and not all(proxy_values):
+            raise ConfigurationError(
+                "browser proxy URL, username, and password must be configured together"
+            )
+        broker_values = (self.browser_broker_url, self.browser_broker_token)
+        if any(broker_values) and not all(broker_values):
+            raise ConfigurationError(
+                "browser broker URL and service token must be configured together"
+            )
+        if self.browser_broker_url is not None:
+            try:
+                broker_url = urlsplit(self.browser_broker_url)
+                broker_port = broker_url.port
+            except ValueError as exc:
+                raise ConfigurationError("browser broker URL or port is malformed") from exc
+            if (
+                broker_url.scheme not in {"http", "https"}
+                or not broker_url.hostname
+                or broker_url.username is not None
+                or broker_url.password is not None
+                or broker_url.path not in {"", "/"}
+                or broker_url.query
+                or broker_url.fragment
+                or (broker_port is not None and not 1 <= broker_port <= 65535)
+            ):
+                raise ConfigurationError("browser broker URL must be an absolute HTTP(S) origin")
+            if (
+                self.browser_broker_token is None
+                or len(self.browser_broker_token) < 32
+                or self.browser_broker_token != self.browser_broker_token.strip()
+            ):
+                raise ConfigurationError(
+                    "browser broker token must contain at least 32 non-padded characters"
+                )
+        if self.browser_proxy_url is not None:
+            try:
+                parsed_proxy = urlsplit(self.browser_proxy_url)
+                proxy_port = parsed_proxy.port
+            except ValueError as exc:
+                raise ConfigurationError("browser proxy URL or port is malformed") from exc
+            if (
+                parsed_proxy.scheme not in {"http", "https"}
+                or not parsed_proxy.hostname
+                or parsed_proxy.username is not None
+                or parsed_proxy.password is not None
+                or parsed_proxy.path not in {"", "/"}
+                or parsed_proxy.query
+                or parsed_proxy.fragment
+                or proxy_port is None
+                or not 1 <= proxy_port <= 65535
+            ):
+                raise ConfigurationError(
+                    "browser proxy must be an absolute HTTP(S) host:port URL"
+                )
+            if (
+                not self.browser_proxy_username
+                or self.browser_proxy_username != self.browser_proxy_username.strip()
+            ):
+                raise ConfigurationError(
+                    "browser proxy username must be non-empty and normalized"
+                )
+            if (
+                self.browser_proxy_password is None
+                or len(self.browser_proxy_password) < 24
+                or self.browser_proxy_password != self.browser_proxy_password.strip()
+                or any(ord(ch) < 33 or ord(ch) > 126 for ch in self.browser_proxy_password)
+            ):
+                raise ConfigurationError(
+                    "browser proxy password must be at least 24 printable ASCII characters"
+                )
 
 
 def validate_service_base_url(value: str) -> str:

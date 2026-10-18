@@ -6,7 +6,8 @@ The API is intended for trusted internal callers using Platform-issued access to
 
 - `GET /health/live` — liveness probe; no sensitive details.
 - `GET /health/ready` — readiness probe backed by the durable job repository.
-- `POST /v1/jobs` — create an idempotent `search` or `fetch` job. Requires `Idempotency-Key` and the `twi:search` or `twi:fetch` scope. Returns `202 Accepted`.
+- `POST /v1/jobs` — create an idempotent `search`, `fetch`, or `browser` job. Requires `Idempotency-Key` and the matching `twi:search`, `twi:fetch`, or `twi:browser` scope. Returns `202 Accepted`.
+- Browser jobs accept only HTTPS public URLs, `wait_until=domcontentloaded|load`, a 1–30 second timeout, and an optional bounded JPEG screenshot. The isolated worker permits only GET/HEAD page requests, blocks service workers and downloads, and uses an authenticated CONNECT-only egress proxy. Browser interactions with external side effects are not supported.
 - `GET /v1/jobs/{job_id}` — read a job in the caller's tenant. Requires `twi:jobs:read`; `twi:jobs:read:any` permits tenant-scoped administrative reads.
 - `POST /v1/jobs/{job_id}/cancel` — request cancellation of a caller-owned job. Requires `twi:jobs:cancel`.
 

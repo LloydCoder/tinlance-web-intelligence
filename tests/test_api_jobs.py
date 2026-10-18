@@ -26,7 +26,7 @@ def principal(
     tenant_id: str = "tenant-a",
     subject_id: str = "subject-a",
     scopes: frozenset[str] = frozenset(
-        {"twi:search", "twi:fetch", "twi:jobs:read", "twi:jobs:cancel"}
+        {"twi:search", "twi:fetch", "twi:browser", "twi:jobs:read", "twi:jobs:cancel"}
     ),
 ) -> Principal:
     return Principal(
@@ -45,10 +45,15 @@ def client_for(
     *,
     principal_value: Principal | None = None,
     repository: SQLiteJobRepository | None = None,
+    browser_enabled: bool = False,
 ) -> tuple[TestClient, SQLiteJobRepository]:
     repo = repository or SQLiteJobRepository(":memory:")
     app = create_app(
-        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        settings=Settings.from_env({
+            "TWI_ENV": "test",
+            "TWI_DATABASE_PATH": ":memory:",
+            "TWI_BROWSER_ENABLED": "true" if browser_enabled else "false",
+        }),
         repository=repo,
         verifier=FakeVerifier(principal_value or principal()),
     )
@@ -152,6 +157,57 @@ def test_scope_and_url_policy_are_enforced_before_queueing() -> None:
     )
     assert oversized.status_code == 413
     fetch_repo.close()
+
+
+
+def test_browser_job_is_scope_gated_bounded_and_disabled_by_default() -> None:
+    client, repo = client_for(browser_enabled=True)
+    headers = {
+        "Authorization": "Bearer valid-credential",
+        "Idempotency-Key": "browser-request-0001",
+    }
+    response = client.post(
+        "/v1/jobs",
+        json={"kind": "browser", "payload": {
+            "url": "https://example.com", "wait_until": "load",
+            "timeout_ms": 10000, "include_screenshot": True,
+        }},
+        headers=headers,
+    )
+    assert response.status_code == 202
+    assert response.json()["payload"] == {
+        "url": "https://example.com/", "wait_until": "load",
+        "timeout_ms": 10000, "include_screenshot": True,
+    }
+    invalid = client.post(
+        "/v1/jobs",
+        json={"kind": "browser", "payload": {
+            "url": "https://example.com", "timeout_ms": 999999,
+        }},
+        headers={"Authorization": "Bearer valid-credential",
+                 "Idempotency-Key": "browser-request-0002"},
+    )
+    assert invalid.status_code == 422
+    repo.close()
+    denied, denied_repo = client_for(
+        principal_value=principal(scopes=frozenset({"twi:search"})),
+        browser_enabled=True,
+    )
+    forbidden = denied.post(
+        "/v1/jobs", json={"kind": "browser", "payload": {"url": "https://example.com"}},
+        headers={"Authorization": "Bearer valid-credential",
+                 "Idempotency-Key": "browser-request-0003"},
+    )
+    assert forbidden.status_code == 403
+    denied_repo.close()
+    disabled, disabled_repo = client_for()
+    unavailable = disabled.post(
+        "/v1/jobs", json={"kind": "browser", "payload": {"url": "https://example.com"}},
+        headers={"Authorization": "Bearer valid-credential",
+                 "Idempotency-Key": "browser-request-0004"},
+    )
+    assert unavailable.status_code == 503
+    disabled_repo.close()
 
 
 def test_production_fails_closed_without_platform_identity_configuration() -> None:
