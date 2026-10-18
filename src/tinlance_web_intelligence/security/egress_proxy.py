@@ -162,8 +162,8 @@ class SafeEgressProxy:
         if len(request_line) != 3 or request_line[2] != "HTTP/1.1":
             raise ProxyProtocolError("only HTTP/1.1 proxy requests are supported")
         method, target, version = request_line
-        if method not in {"CONNECT", "GET"}:
-            raise ProxyProtocolError("only CONNECT and GET are supported")
+        if method != "CONNECT":
+            raise ProxyProtocolError("only HTTPS CONNECT tunnels are supported")
         headers: list[tuple[str, str]] = []
         seen: set[str] = set()
         for line in lines[1:]:
@@ -206,12 +206,7 @@ class SafeEgressProxy:
             if not raw_port.isdigit() or int(raw_port) != 443 or not host:
                 raise ProxyPolicyError("CONNECT is permitted only on port 443")
             return host.rstrip(".").lower(), 443
-        parsed = urlsplit(target)
-        if parsed.scheme != "http" or not parsed.hostname or parsed.port not in (None, 80):
-            raise ProxyPolicyError("absolute HTTP GET requests are permitted only on port 80")
-        if parsed.username is not None or parsed.password is not None or parsed.fragment:
-            raise ProxyPolicyError("invalid HTTP proxy target")
-        return parsed.hostname.rstrip(".").lower(), 80
+        raise ProxyPolicyError("only HTTPS CONNECT tunnels are supported")
 
     async def _resolve_public_ip(self, host: str, port: int, scheme: str) -> str:
         try:
