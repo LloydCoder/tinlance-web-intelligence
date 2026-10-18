@@ -7,6 +7,7 @@ time, revalidate every redirect, and enforce network egress restrictions.
 from __future__ import annotations
 
 import ipaddress
+import socket
 from dataclasses import dataclass
 from urllib.parse import urlsplit, urlunsplit
 
@@ -40,11 +41,27 @@ def is_public_routable_ip(value: str) -> bool:
     return address.is_global and not any(blocked)
 
 
+def _legacy_ipv4_literal(hostname: str) -> ipaddress.IPv4Address | None:
+    """Recognize legacy inet_aton forms such as integer, octal, and short IPv4 forms."""
+    try:
+        packed = socket.inet_aton(hostname)
+    except OSError:
+        return None
+    return ipaddress.IPv4Address(packed)
+
+
 def validate_url(
     value: str, *, allowed_schemes: tuple[str, ...] = ("https", "http")
 ) -> ValidatedURL:
-    if not value or value != value.strip() or any(ord(ch) < 32 for ch in value):
-        raise UnsafeURLError("URL must be non-empty, trimmed, and contain no control characters")
+    if (
+        not value
+        or value != value.strip()
+        or "\\" in value
+        or any(ord(ch) < 32 for ch in value)
+    ):
+        raise UnsafeURLError(
+            "URL must be trimmed, contain no backslashes, and contain no control characters"
+        )
     try:
         parsed = urlsplit(value)
         port = parsed.port
@@ -67,7 +84,7 @@ def validate_url(
     try:
         literal = ipaddress.ip_address(hostname)
     except ValueError:
-        literal = None
+        literal = _legacy_ipv4_literal(hostname)
     if literal is not None and not is_public_routable_ip(str(literal)):
         raise UnsafeURLError("non-public IP destinations are forbidden")
     if port is not None and not 1 <= port <= 65535:
