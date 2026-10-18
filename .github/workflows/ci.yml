@@ -44,5 +44,11 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Unit and contract tests
         run: pytest -q
+      - name: Configure runner user-namespace sandbox prerequisites
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo sysctl -w kernel.unprivileged_userns_clone=1 || true
       - name: Chromium runtime smoke test
+        env:
+          TWI_RUN_BROWSER_INTEGRATION: "1"
         run: pytest -q tests/test_browser_runtime.py
