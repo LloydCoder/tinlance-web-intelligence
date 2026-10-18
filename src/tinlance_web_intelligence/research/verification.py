@@ -136,6 +136,8 @@ def verify_research_report(
             if len(citation.quote) < 8 or len(citation.quote) > 350:
                 raise ValueError("citation quote must contain 8 to 350 characters")
             quote = _normalized_text(citation.quote)
+            if not quote:
+                raise ValueError("citation quote must contain non-whitespace text")
             captured_text = _normalized_text(evidence["text"])
             matched = bool(quote) and quote in captured_text
             matched_count += int(matched)
@@ -156,6 +158,8 @@ def verify_research_report(
                 "quote": quote,
                 "quote_match": matched,
                 "content_sha256": evidence["content_sha256"],
+                "source_url": evidence["source_url"],
+                "retrieved_at": evidence["retrieved_at"],
             })
         claim_status = (
             "all_citations_match_captured_text"
