@@ -6,7 +6,7 @@ import ipaddress
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
+from tinlance_web_intelligence.security.url_validation import validate_url
 
 MAX_BROWSER_REQUESTS = 200
 MAX_BROWSER_TEXT_CHARS = 100_000
@@ -41,7 +41,7 @@ def validate_browser_resource_url(value: str) -> str:
         if parsed.port not in (None, 443):
             raise BrowserPolicyError("HTTPS is permitted only on port 443")
         return urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.query, ""))
-    except (UnsafeURLError, ValueError) as exc:
+    except ValueError as exc:
         if isinstance(exc, BrowserPolicyError):
             raise
         raise BrowserPolicyError("URL rejected by browser acquisition policy") from exc
