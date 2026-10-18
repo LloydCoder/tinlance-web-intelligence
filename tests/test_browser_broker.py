@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import secrets
 
 from apps.browser_broker.main import create_app
+from fastapi.testclient import TestClient
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
-BROKER_TOKEN = "test-browser-broker-token-with-sufficient-entropy-2026"
+BROKER_TOKEN = secrets.token_urlsafe(32)
 
 
 def _repository_with_jobs() -> SQLiteJobRepository:
