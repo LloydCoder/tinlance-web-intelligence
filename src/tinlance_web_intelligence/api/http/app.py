@@ -17,10 +17,11 @@ from tinlance_web_intelligence.api.http.routes.world_intelligence import (
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     SQLiteSourceEvidenceOutbox,
 )
+from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+
 
 
 def create_app(
