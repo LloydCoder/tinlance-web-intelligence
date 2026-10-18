@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_search",
+  "description": "Submit a bounded web search and return a durable job reference.",
+  "operation": "twi.jobs.create_search",
+  "api": { "method": "POST", "path": "/v1/jobs", "kind": "search", "idempotency_header": "Idempotency-Key" },
+  "authorization": { "required_scope": "twi:search", "capability": "web.search", "action": "submit", "resource_pattern": "web://search/*" },
+  "governance": { "read_only": false, "consequential": false, "destructive": false, "open_world": true, "idempotency_argument": "idempotency_key" },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["query", "idempotency_key"],
+    "properties": {
+      "query": { "type": "string", "minLength": 1, "maxLength": 400 },
+      "limit": { "type": "integer", "minimum": 1, "maximum": 20, "default": 10 },
+      "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256 }
+    }
+  }
+}

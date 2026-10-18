@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_fetch",
+  "description": "Submit a policy-checked public web fetch and return a durable job reference.",
+  "operation": "twi.jobs.create_fetch",
+  "api": { "method": "POST", "path": "/v1/jobs", "kind": "fetch", "idempotency_header": "Idempotency-Key" },
+  "authorization": { "required_scope": "twi:fetch", "capability": "web.fetch", "action": "submit", "resource_pattern": "web://fetch/*" },
+  "governance": { "read_only": false, "consequential": false, "destructive": false, "open_world": true, "idempotency_argument": "idempotency_key" },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["url", "idempotency_key"],
+    "properties": {
+      "url": { "type": "string", "format": "uri", "maxLength": 4096 },
+      "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256 }
+    }
+  }
+}

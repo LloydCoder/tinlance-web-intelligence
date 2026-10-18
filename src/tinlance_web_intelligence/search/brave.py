@@ -36,7 +36,9 @@ class BraveSearchProvider:
                 },
             )
         except FetchError as exc:
-            raise SearchProviderError("search provider request failed") from exc
+            raise SearchProviderError(
+                "search provider request failed", retryable=exc.retryable
+            ) from exc
         if response.content_type != "application/json":
             raise SearchProviderError("search provider returned an unexpected content type")
         try:

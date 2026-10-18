@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_job_read",
+  "description": "Read a job owned by the authenticated subject in the current tenant.",
+  "operation": "twi.jobs.read",
+  "api": { "method": "GET", "path": "/v1/jobs/{job_id}" },
+  "authorization": { "required_scope": "twi:jobs:read", "capability": "web.job.read", "action": "read", "resource_pattern": "twi://jobs/{job_id}" },
+  "governance": { "read_only": true, "consequential": false, "destructive": false, "open_world": false },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["job_id"],
+    "properties": { "job_id": { "type": "string", "minLength": 1, "maxLength": 64 } }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_job_cancel",
+  "description": "Request cancellation of a job owned by the authenticated subject.",
+  "operation": "twi.jobs.cancel",
+  "api": { "method": "POST", "path": "/v1/jobs/{job_id}/cancel" },
+  "authorization": { "required_scope": "twi:jobs:cancel", "capability": "web.job.cancel", "action": "cancel", "resource_pattern": "twi://jobs/{job_id}" },
+  "governance": { "read_only": false, "consequential": true, "destructive": false, "open_world": false },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["job_id"],
+    "properties": { "job_id": { "type": "string", "minLength": 1, "maxLength": 64 } }
+  }
+}

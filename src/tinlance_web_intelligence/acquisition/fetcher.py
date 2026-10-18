@@ -21,6 +21,10 @@ from tinlance_web_intelligence.security.url_validation import (
 class FetchError(RuntimeError):
     """A request was rejected or could not be completed safely."""
 
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+
 
 _SAFE_CROSS_ORIGIN_HEADERS = frozenset(
     {"user-agent", "accept", "accept-encoding", "accept-language"}
@@ -110,7 +114,10 @@ class SafeHTTPFetcher:
                             current = target
                             continue
                         if not 200 <= response.status < 300:
-                            raise FetchError(f"upstream returned HTTP {response.status}")
+                            retryable = response.status in {408, 425, 429} or response.status >= 500
+                            raise FetchError(
+                                f"upstream returned HTTP {response.status}", retryable=retryable
+                            )
                         encoding = response.headers.get("Content-Encoding", "identity").lower()
                         if encoding not in {"", "identity"}:
                             raise FetchError(
@@ -146,5 +153,5 @@ class SafeHTTPFetcher:
                             headers=safe_headers,
                         )
         except (aiohttp.ClientError, TimeoutError) as exc:
-            raise FetchError("upstream request failed") from exc
+            raise FetchError("upstream request failed", retryable=True) from exc
         raise FetchError("request did not produce a response")
