@@ -41,10 +41,8 @@ jobs:
       - name: Security lint
         run: bandit -q -r src
       - name: Install Chromium for isolated browser smoke test
-        if: matrix.python-version == '3.12'
         run: python -m playwright install --with-deps chromium
       - name: Unit and contract tests
         run: pytest -q
       - name: Chromium runtime smoke test
-        if: matrix.python-version == '3.12'
         run: pytest -q tests/test_browser_runtime.py
