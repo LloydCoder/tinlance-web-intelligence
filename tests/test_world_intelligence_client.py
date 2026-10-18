@@ -11,12 +11,13 @@ from tinlance_web_intelligence.integrations.world_intelligence.client import (
     redact_source_url,
 )
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
+    OutboxEvent,
     SQLiteSourceEvidenceOutbox,
 )
 
 
 class WorldIntelligenceClientTests(unittest.TestCase):
-    def _claimed_event(self):
+    def _claimed_event(self) -> tuple[SQLiteSourceEvidenceOutbox, OutboxEvent]:
         outbox = SQLiteSourceEvidenceOutbox(":memory:")
         event, _ = outbox.enqueue(
             tenant_ref="a" * 64,
