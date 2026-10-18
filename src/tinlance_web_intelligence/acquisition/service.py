@@ -21,8 +21,11 @@ class WebAcquisitionService:
         artifacts: ArtifactStore | None = None,
     ) -> None:
         self._fetcher = fetcher or SafeHTTPFetcher()
-        if artifacts is None and os.environ.get("TWI_ENV", "development").lower() == "production":
-            raise RuntimeError("production requires an explicit durable artifact store")
+        environment = os.environ.get("TWI_ENV", "development").lower()
+        if environment in {"staging", "production"} and (
+            artifacts is None or isinstance(artifacts, MemoryArtifactStore)
+        ):
+            raise RuntimeError("staging and production require a durable artifact store")
         self._artifacts = artifacts or MemoryArtifactStore()
 
     async def acquire_page(
