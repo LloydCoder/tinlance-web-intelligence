@@ -2,11 +2,11 @@
 
 Evidence-first web discovery, retrieval, extraction, and monitoring for the Tinlance ecosystem.
 
-> **Status:** workstreams are implemented serially. Repository presence and passing tests do not imply a production deployment or production readiness.
+> **Status:** W1 foundation work is in progress. A passing test suite is not a production deployment or a production-readiness claim.
 
 ## Scope
 
-TWI owns web search and retrieval adapters, safe HTTP acquisition, isolated browser work, content extraction, acquisition artifacts, provenance for collection activities, and source-backed observations. It exports observations to Tinlance World Intelligence through versioned contracts.
+TWI owns web search and retrieval adapters, safe HTTP acquisition, isolated browser work, content extraction, acquisition artifacts, collection provenance, and source-backed observations. It exports observations to Tinlance World Intelligence through versioned contracts.
 
 ## Authority boundaries
 
@@ -24,10 +24,10 @@ TWI is a service/product layer, not an authority plane. It must not bypass Platf
 Requires Python 3.12+.
 
 ```bash
-python -m pip install -e '.[dev]'
+make install
 make check
 ```
 
-The initial phase establishes contracts, configuration, security invariants, and CI before adding network-capable acquisition. Never run arbitrary external URLs in privileged environments.
+Network-capable acquisition must not be enabled until connection-time DNS/IP validation, redirect revalidation, and deployment egress controls are implemented and tested.
 
 See [docs/roadmap/phases.md](docs/roadmap/phases.md) and [docs/architecture/component-boundaries.md](docs/architecture/component-boundaries.md).

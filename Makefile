@@ -1,7 +1,8 @@
 .PHONY: install lint test typecheck security check
 
 install:
-	python -m pip install -e '.[dev]'
+	python -m pip install -r requirements-dev.txt
+	python -m pip install --no-deps -e .
 
 lint:
 	ruff check .
