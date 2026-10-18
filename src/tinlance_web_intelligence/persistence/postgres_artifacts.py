@@ -12,7 +12,6 @@ from psycopg_pool import ConnectionPool
 
 from tinlance_web_intelligence.artifacts.store import ArtifactRecord
 
-
 _DIGEST = re.compile(r"^[0-9a-f]{64}")
 
 
@@ -76,7 +75,8 @@ class PostgresArtifactStore:
                 raise RuntimeError("content-address collision or stored artifact integrity failure")
             row = conn.execute(
                 "INSERT INTO twi_artifact_records "
-                "(tenant_id, sha256, source_url_hash, source_url, captured_at, content_type, byte_size) "
+                "(tenant_id, sha256, source_url_hash, source_url, captured_at, "
+                "content_type, byte_size) "
                 "VALUES (%s, %s, %s, %s, %s, %s, %s) "
                 "ON CONFLICT (tenant_id, sha256, source_url_hash, captured_at) DO NOTHING "
                 "RETURNING tenant_id, sha256, byte_size, content_type, source_url, captured_at",
