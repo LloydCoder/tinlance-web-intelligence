@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools==75.8.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tinlance-web-intelligence"
+version = "0.1.0"
+description = "Evidence-first web acquisition and intelligence services for the Tinlance ecosystem"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Tinlance Limited" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5", "ruff==0.11.2", "mypy==1.15.0", "bandit==1.8.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+ignore = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
