@@ -61,7 +61,9 @@ class SQLiteSourceEvidenceOutbox:
                 idempotency_key TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
                 payload_sha256 TEXT NOT NULL CHECK (length(payload_sha256) = 64),
-                status TEXT NOT NULL CHECK (status IN ('pending','delivering','delivered','failed')),
+                status TEXT NOT NULL CHECK (
+                    status IN ('pending', 'delivering', 'delivered', 'failed')
+                ),
                 attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
                 available_at REAL NOT NULL,
                 lease_owner TEXT,
@@ -146,8 +148,9 @@ class SQLiteSourceEvidenceOutbox:
                 connection.execute(
                     """
                     INSERT INTO twi_source_evidence_outbox (
-                        event_id, tenant_ref, subject_ref, idempotency_key, payload_json, payload_sha256,
-                        status, attempts, available_at, request_id, traceparent, created_at, updated_at
+                        event_id, tenant_ref, subject_ref, idempotency_key, payload_json,
+                        payload_sha256, status, attempts, available_at, request_id,
+                        traceparent, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?, ?, ?)
                     """,
                     (
