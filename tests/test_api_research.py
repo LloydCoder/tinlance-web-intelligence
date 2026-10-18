@@ -53,7 +53,11 @@ def _client(
     return TestClient(app)
 
 
-def _completed_fetch(repository: SQLiteJobRepository) -> str:
+def _completed_fetch(
+    repository: SQLiteJobRepository,
+    *,
+    source_url: str = "https://example.com/news",
+) -> str:
     created = repository.create(
         tenant_id="tenant-a",
         subject_id="subject-a",
@@ -68,7 +72,7 @@ def _completed_fetch(repository: SQLiteJobRepository) -> str:
         created.job_id,
         "research-test-worker",
         {
-            "source_url": "https://example.com/news",
+            "source_url": source_url,
             "retrieved_at": "2026-10-18T12:00:00+00:00",
             "content_type": "text/html",
             "content_sha256": sha256(b"raw-html-artifact").hexdigest(),
@@ -224,5 +228,123 @@ def test_research_verification_requires_bearer_auth_and_rejects_extra_fields() -
             json={"claims": [], "tenant_id": "attacker-controlled"},
         )
         assert invalid.status_code == 422
+    finally:
+        repository.close()
+
+
+def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    try:
+        job_id = _completed_fetch(
+            repository,
+            source_url="https://example.com/news?topic=product&access_token=secret-value",
+        )
+        scopes = frozenset({
+            "twi:research:verify",
+            "twi:observations:export",
+            "twi:observations:export:read",
+        })
+        client = _client(repository, _principal(scopes=scopes))
+        request_body = {
+            "claim_id": "product-launch",
+            "statement": "The company launched a new product in October 2026.",
+            "job_id": job_id,
+            "quote": "launched its new product in October 2026",
+        }
+        headers = {
+            "Authorization": "Bearer valid-credential",
+            "Idempotency-Key": "wi-export-idempotency-0001",
+            "traceparent": "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
+        }
+        first = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers=headers,
+            json=request_body,
+        )
+        assert first.status_code == 202
+        payload = first.json()
+        assert payload["status"] == "pending"
+        assert payload["replayed"] is False
+
+        replay = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers=headers,
+            json=request_body,
+        )
+        assert replay.status_code == 200
+        assert replay.json()["event_id"] == payload["event_id"]
+        assert replay.json()["replayed"] is True
+
+        status = client.get(
+            f"/v1/integrations/world-intelligence/exports/{payload['event_id']}",
+            headers={"Authorization": "Bearer valid-credential"},
+        )
+        assert status.status_code == 200
+        assert status.json()["status"] == "pending"
+
+        event = client.app.state.evidence_outbox.get(
+            payload["event_id"],
+            hashlib.sha256(b"tenant-a").hexdigest(),
+            hashlib.sha256(b"subject-a").hexdigest(),
+        )
+        assert event is not None
+        assert event.payload["source_url_redacted"] is True
+        assert "secret-value" not in event.payload["source_url"]
+        assert event.payload["tenant_ref"] == hashlib.sha256(b"tenant-a").hexdigest()
+
+        other_subject = _client(
+            repository,
+            _principal(subject_id="subject-b", scopes=frozenset({"twi:observations:export:read"})),
+        )
+        hidden = other_subject.get(
+            f"/v1/integrations/world-intelligence/exports/{payload['event_id']}",
+            headers={"Authorization": "Bearer valid-credential"},
+        )
+        assert hidden.status_code == 404
+    finally:
+        repository.close()
+
+
+def test_world_intelligence_export_rejects_unmatched_quote_and_conflicting_key() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    try:
+        job_id = _completed_fetch(repository)
+        scopes = frozenset({"twi:observations:export", "twi:observations:export:read"})
+        client = _client(repository, _principal(scopes=scopes))
+        headers = {
+            "Authorization": "Bearer valid-credential",
+            "Idempotency-Key": "wi-export-idempotency-0002",
+        }
+        unmatched = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers=headers,
+            json={
+                "claim_id": "unsupported",
+                "statement": "A claim that is not quoted.",
+                "job_id": job_id,
+                "quote": "a quote absent from captured text",
+            },
+        )
+        assert unmatched.status_code == 422
+
+        body = {
+            "claim_id": "product-launch",
+            "statement": "The company launched a new product in October 2026.",
+            "job_id": job_id,
+            "quote": "launched its new product in October 2026",
+        }
+        first = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers=headers,
+            json=body,
+        )
+        assert first.status_code == 202
+        changed = {**body, "statement": "A different statement."}
+        conflict = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers=headers,
+            json=changed,
+        )
+        assert conflict.status_code == 409
     finally:
         repository.close()
