@@ -22,6 +22,7 @@ Private beta is a deployment-specific decision, not a repository label. Every it
 ## Reliability and operations
 
 - [ ] Raw artifact bytes and capture metadata are stored durably in tenant-scoped PostgreSQL tables; reads verify SHA-256 integrity and access is tenant-isolated.
+- [ ] Artifact retention interval and maintenance-role permissions are configured; dry-run results are reviewed and destructive runs require explicit confirmation.
 - [ ] PostgreSQL multi-worker claim tests pass; retries, lease expiry, cancellation and idempotency are verified.
 - [ ] Metrics, traces, structured logs, alert thresholds and on-call ownership are configured in the target environment.
 - [ ] Backup encryption, retention, alerting and a witnessed restore drill are verified.
