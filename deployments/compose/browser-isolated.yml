@@ -1,0 +1,110 @@
+name: twi-browser-isolation
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_BROWSER_ENABLED: ${TWI_BROWSER_ENABLED:-false}
+      TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:-}
+      TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:-}
+      TWI_IDENTITY_JWKS_URL: ${TWI_IDENTITY_JWKS_URL:-}
+      TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
+    volumes:
+      - twi-data:/data
+    networks: [app_network]
+    ports:
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
+    volumes:
+      - twi-data:/data
+    networks: [app_network]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  browser-worker:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/browser.Dockerfile
+    environment:
+      TWI_ENV: ${TWI_ENV:-development}
+      TWI_DATABASE_PATH: /data/twi.sqlite3
+      TWI_BROWSER_ENABLED: "true"
+      TWI_BROWSER_PROXY_URL: http://egress-proxy:3128
+      TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set TWI_BROWSER_PROXY_USERNAME}
+      TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set TWI_BROWSER_PROXY_PASSWORD}
+    volumes:
+      - twi-data:/data
+    networks: [browser_internal]
+    depends_on:
+      egress-proxy:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 256
+    shm_size: 256mb
+    restart: unless-stopped
+
+  egress-proxy:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/egress-proxy.Dockerfile
+    environment:
+      TWI_EGRESS_PROXY_HOST: 0.0.0.0
+      TWI_EGRESS_PROXY_PORT: 3128
+      TWI_EGRESS_PROXY_MAX_CONNECTIONS: 100
+      TWI_EGRESS_PROXY_MAX_BYTES: 25000000
+      TWI_EGRESS_PROXY_MAX_TUNNEL_SECONDS: 120
+      TWI_EGRESS_PROXY_IDLE_TIMEOUT_SECONDS: 15
+      TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set TWI_BROWSER_PROXY_USERNAME}
+      TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set TWI_BROWSER_PROXY_PASSWORD}
+    networks: [browser_internal, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',3128),2); s.close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  app_network: {}
+  browser_internal:
+    internal: true
+  outbound: {}
+
+volumes:
+  twi-data:
