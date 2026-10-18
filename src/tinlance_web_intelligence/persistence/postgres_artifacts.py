@@ -8,8 +8,9 @@ from typing import Any
 
 from psycopg import Connection
 from psycopg.rows import dict_row
-from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
+
+from tinlance_web_intelligence.artifacts.store import ArtifactRecord
 
 
 _DIGEST = re.compile(r"^[0-9a-f]{64}")
@@ -51,7 +52,7 @@ class PostgresArtifactStore:
     def put(
         self, *, body: bytes, content_type: str, source_url: str,
         captured_at: datetime, tenant_id: str = "development"
-    ):
+    ) -> ArtifactRecord:
         if not tenant_id or len(tenant_id) > 256:
             raise ValueError("tenant_id must contain 1 to 256 characters")
         if len(body) > self._max_bytes:
@@ -90,9 +91,8 @@ class PostgresArtifactStore:
                 ).fetchone()
             if row is None:
                 raise RuntimeError("artifact capture record could not be persisted")
-            from tinlance_web_intelligence.artifacts.store import ArtifactRecord
             return ArtifactRecord(
-                artifact_id=f"sha256:{row['sha256']}",
+                artifact_id=f"sha256:{digest}",
                 tenant_id=row["tenant_id"],
                 sha256=row["sha256"].strip(),
                 byte_size=row["byte_size"],
