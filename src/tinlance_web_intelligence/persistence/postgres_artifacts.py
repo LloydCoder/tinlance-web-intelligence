@@ -127,5 +127,50 @@ class PostgresArtifactStore:
             ).fetchone()
             return int(row["count"]) if row is not None else 0
 
+    def count_expired(self, cutoff: datetime, *, tenant_id: str | None = None) -> int:
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        with self._pool.connection() as conn:
+            if tenant_id is None:
+                row = conn.execute(
+                    "SELECT count(*) AS count FROM twi_artifact_records WHERE captured_at < %s",
+                    (cutoff,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT count(*) AS count FROM twi_artifact_records "
+                    "WHERE captured_at < %s AND tenant_id=%s",
+                    (cutoff, tenant_id),
+                ).fetchone()
+            return int(row["count"]) if row is not None else 0
+
+    def prune_before(self, cutoff: datetime, *, tenant_id: str | None = None) -> int:
+        """Delete expired capture records and only content no longer referenced."""
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        with self._pool.connection() as conn:
+            if tenant_id is None:
+                result = conn.execute(
+                    "DELETE FROM twi_artifact_records WHERE captured_at < %s",
+                    (cutoff,),
+                )
+                conn.execute(
+                    "DELETE FROM twi_artifact_content AS content WHERE NOT EXISTS "
+                    "(SELECT 1 FROM twi_artifact_records AS record "
+                    "WHERE record.tenant_id=content.tenant_id AND record.sha256=content.sha256)"
+                )
+            else:
+                result = conn.execute(
+                    "DELETE FROM twi_artifact_records WHERE captured_at < %s AND tenant_id=%s",
+                    (cutoff, tenant_id),
+                )
+                conn.execute(
+                    "DELETE FROM twi_artifact_content AS content WHERE content.tenant_id=%s "
+                    "AND NOT EXISTS (SELECT 1 FROM twi_artifact_records AS record "
+                    "WHERE record.tenant_id=content.tenant_id AND record.sha256=content.sha256)",
+                    (tenant_id,),
+                )
+            return result.rowcount
+
     def close(self) -> None:
         self._pool.close()
