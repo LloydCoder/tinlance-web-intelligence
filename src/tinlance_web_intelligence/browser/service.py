@@ -49,7 +49,9 @@ class BrowserService:
         }
 
     @staticmethod
-    def _browser_environment(source: Mapping[str, str] | None = None) -> dict[str, str]:
+    def _browser_environment(
+        source: Mapping[str, str] | None = None,
+    ) -> dict[str, str | float | bool]:
         """Pass only non-secret runtime variables to the untrusted browser process."""
         values = os.environ if source is None else source
         allowed = {
