@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ipaddress
+from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
@@ -48,7 +49,7 @@ def validate_browser_resource_url(value: str) -> str:
         raise BrowserPolicyError("URL rejected by browser acquisition policy") from exc
 
 
-def normalize_browser_payload(payload: dict[str, object]) -> dict[str, object]:
+def normalize_browser_payload(payload: dict[str, object]) -> dict[str, Any]:
     allowed = {"url", "wait_until", "timeout_ms", "include_screenshot"}
     if set(payload) - allowed:
         raise BrowserPolicyError("unsupported browser payload field")
