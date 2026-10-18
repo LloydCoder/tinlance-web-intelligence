@@ -25,10 +25,19 @@ class Settings:
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
     brave_api_key: str | None = None
+    browser_enabled: bool = False
+    browser_proxy_url: str | None = None
+    browser_proxy_username: str | None = None
+    browser_proxy_password: str | None = None
 
     @classmethod
-    def from_env(cls, env: dict[str, str] | None = None) -> Settings:
+    def from_env(
+        cls, env: dict[str, str] | None = None, *, require_identity: bool = True
+    ) -> Settings:
         values = os.environ if env is None else env
+        browser_enabled_raw = values.get("TWI_BROWSER_ENABLED", "false").strip().lower()
+        if browser_enabled_raw not in {"true", "false"}:
+            raise ConfigurationError("TWI_BROWSER_ENABLED must be true or false")
         try:
             schemes = values.get("TWI_ALLOWED_SCHEMES", "https,http").split(",")
             settings = cls(
@@ -44,13 +53,17 @@ class Settings:
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
                 brave_api_key=values.get("TWI_BRAVE_SEARCH_API_KEY") or None,
+                browser_enabled=browser_enabled_raw == "true",
+                browser_proxy_url=values.get("TWI_BROWSER_PROXY_URL") or None,
+                browser_proxy_username=values.get("TWI_BROWSER_PROXY_USERNAME") or None,
+                browser_proxy_password=values.get("TWI_BROWSER_PROXY_PASSWORD") or None,
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
-        settings.validate()
+        settings.validate(require_identity=require_identity)
         return settings
 
-    def validate(self) -> None:
+    def validate(self, *, require_identity: bool = True) -> None:
         if self.environment not in {"development", "test", "staging", "production"}:
             raise ConfigurationError("TWI_ENV must be development, test, staging, or production")
         if self.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -74,7 +87,7 @@ class Settings:
             raise ConfigurationError(
                 "identity issuer, audience, and JWKS URL must be configured together"
             )
-        if self.environment == "production" and not all(identity_values):
+        if require_identity and self.environment == "production" and not all(identity_values):
             raise ConfigurationError(
                 "production requires Platform identity issuer, audience, and JWKS URL"
             )
