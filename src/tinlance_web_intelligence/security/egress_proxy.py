@@ -35,6 +35,7 @@ class EgressProxyConfig:
     max_connections: int = 100
     max_header_bytes: int = 16_384
     max_tunnel_seconds: int = 120
+    max_tunnel_bytes: int = 25000000
     idle_timeout_seconds: int = 15
 
     def validate(self) -> None:
@@ -54,6 +55,8 @@ class EgressProxyConfig:
             raise ValueError("max header bytes must be between 1024 and 65536")
         if not 1 <= self.max_tunnel_seconds <= 600 or not 1 <= self.idle_timeout_seconds <= 60:
             raise ValueError("proxy tunnel and idle timeouts are outside permitted limits")
+        if not 1024 <= self.max_tunnel_bytes <= 100000000:
+            raise ValueError("proxy tunnel byte limit must be between 1024 and 100000000")
 
 
 class SafeEgressProxy:
@@ -140,8 +143,9 @@ class SafeEgressProxy:
                 await self._relay(
                     client_reader, client_writer, upstream_reader, upstream_writer,
                     max_seconds=self.config.max_tunnel_seconds,
+                    max_bytes=self.config.max_tunnel_bytes,
                 )
-            except (ConnectionError, OSError, asyncio.TimeoutError):
+            except (ConnectionError, OSError, asyncio.TimeoutError, ProxyPolicyError):
                 return
             finally:
                 if upstream_writer is not None:
@@ -288,6 +292,7 @@ def config_from_env() -> EgressProxyConfig:
         max_connections=int(os.environ.get("TWI_EGRESS_PROXY_MAX_CONNECTIONS", "100")),
         max_tunnel_seconds=int(os.environ.get("TWI_EGRESS_PROXY_MAX_TUNNEL_SECONDS", "120")),
         idle_timeout_seconds=int(os.environ.get("TWI_EGRESS_PROXY_IDLE_TIMEOUT_SECONDS", "15")),
+        max_tunnel_bytes=int(os.environ.get("TWI_EGRESS_PROXY_MAX_BYTES", "25000000")),
     )
     config.validate()
     return config
