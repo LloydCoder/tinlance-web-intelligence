@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from scripts.check_database_tls import validate_database_url
 
 
