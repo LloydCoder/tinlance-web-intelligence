@@ -9,6 +9,7 @@ TWI provides a versioned internal HTTP API for durable search/fetch jobs and pub
 ## Operations
 
 - `twi.jobs.create_search` → `POST /v1/jobs` with `kind=search` and `Idempotency-Key`.
+- `twi.jobs.create_browser` → `POST /v1/jobs` with `kind=browser`, the `Idempotency-Key` header, and `twi:browser` scope. The Platform adapter must apply open-world acquisition policy; TWI does not replace Platform authorization or approval.
 - `twi.jobs.create_fetch` → `POST /v1/jobs` with `kind=fetch` and `Idempotency-Key`.
 - `twi.jobs.read` → `GET /v1/jobs/{job_id}`.
 - `twi.jobs.cancel` → `POST /v1/jobs/{job_id}/cancel`.
