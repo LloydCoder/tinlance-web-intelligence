@@ -20,6 +20,11 @@ class Settings:
     request_timeout_seconds: float = 15.0
     allowed_schemes: tuple[str, ...] = ("https", "http")
     user_agent: str = "TinlanceWebIntelligence/0.1"
+    database_path: str = "./var/twi.sqlite3"
+    identity_issuer: str | None = None
+    identity_audience: str | None = None
+    identity_jwks_url: str | None = None
+    brave_api_key: str | None = None
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> Settings:
@@ -34,6 +39,11 @@ class Settings:
                 request_timeout_seconds=float(values.get("TWI_REQUEST_TIMEOUT_SECONDS", "15")),
                 allowed_schemes=tuple(item.strip().lower() for item in schemes if item.strip()),
                 user_agent=values.get("TWI_USER_AGENT", "TinlanceWebIntelligence/0.1").strip(),
+                database_path=values.get("TWI_DATABASE_PATH", "./var/twi.sqlite3").strip(),
+                identity_issuer=values.get("TWI_IDENTITY_ISSUER") or None,
+                identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
+                identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
+                brave_api_key=values.get("TWI_BRAVE_SEARCH_API_KEY") or None,
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
@@ -57,10 +67,41 @@ class Settings:
             raise ConfigurationError("only http and https schemes may be configured")
         if not self.user_agent or any(ord(ch) < 32 for ch in self.user_agent):
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
+        if not self.database_path or "\x00" in self.database_path:
+            raise ConfigurationError("database path must be non-empty")
+        identity_values = (self.identity_issuer, self.identity_audience, self.identity_jwks_url)
+        if any(identity_values) and not all(identity_values):
+            raise ConfigurationError(
+                "identity issuer, audience, and JWKS URL must be configured together"
+            )
+        if self.environment == "production" and not all(identity_values):
+            raise ConfigurationError(
+                "production requires Platform identity issuer, audience, and JWKS URL"
+            )
+        if self.identity_audience is not None and (
+            not self.identity_audience or self.identity_audience != self.identity_audience.strip()
+        ):
+            raise ConfigurationError("identity audience must be non-empty and normalized")
+        for value in (self.identity_issuer, self.identity_jwks_url):
+            if value is None:
+                continue
+            parsed = urlsplit(value)
+            if (
+                parsed.scheme != "https"
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.fragment
+            ):
+                raise ConfigurationError(
+                    "identity issuer and JWKS URL must be absolute HTTPS URLs"
+                )
+        if self.brave_api_key is not None and not self.brave_api_key.strip():
+            raise ConfigurationError("Brave Search API key must be non-empty when configured")
 
 
 def validate_service_base_url(value: str) -> str:
-    """Validate a configured service URL; this does not replace request authentication."""
+    """Validate a configured HTTPS service endpoint; it is not a credential check."""
     parsed = urlsplit(value)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
         raise ConfigurationError("service base URL must be HTTPS with a hostname and no userinfo")

@@ -23,3 +23,7 @@ class SearchProvider(Protocol):
 
 class SearchProviderError(RuntimeError):
     """Provider configuration or response could not be used safely."""
+
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message)
+        self.retryable = retryable

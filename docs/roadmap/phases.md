@@ -5,11 +5,11 @@ Workstreams are executed serially. A workstream is complete only after implement
 | Workstream | Scope | Status |
 | --- | --- | --- |
 | W1 | Foundation, contracts, configuration, security invariants, CI | Merged; CI green on Python 3.12 and 3.13 |
-| W2 | Search, safe fetch, extraction, source-backed results and artifact references | In progress |
-| W3 | Durable task API and remote MCP | Not started |
+| W2 | Search, safe fetch, extraction, source-backed results and artifact references | Merged; CI green on Python 3.12 and 3.13 |
+| W3 | Durable task API, authenticated job lifecycle, Platform MCP operation contracts | In progress |
 | W4 | Isolated browser workers | Not started |
-| W5 | Verified web agent and governed workflows | Not started |
-| W6 | Private beta, operations, security, performance, release and TSIC conformance | Not started |
+| W5 | Verified web agent and governed workflows, World Intelligence and TSIC integration | Not started |
+| W6 | Private beta, operations, security, performance, release and conformance | Not started |
 
 ## Global exit gates
 
