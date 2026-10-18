@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from tinlance_web_intelligence.artifacts.store import MemoryArtifactStore
 
@@ -35,3 +35,21 @@ def test_memory_artifacts_are_tenant_scoped() -> None:
     assert store.get(record.sha256, tenant_id="tenant-b") is None
     assert store.count(tenant_id="tenant-a") == 1
     assert store.count(tenant_id="tenant-b") == 0
+
+
+def test_artifact_retention_prunes_only_expired_capture_records() -> None:
+    store = MemoryArtifactStore()
+    now = datetime(2026, 10, 18, tzinfo=UTC)
+    old = store.put(
+        body=b"shared content", content_type="text/html", source_url="https://one.example/",
+        captured_at=now - timedelta(days=45), tenant_id="tenant-a",
+    )
+    store.put(
+        body=b"shared content", content_type="text/html", source_url="https://one.example/",
+        captured_at=now, tenant_id="tenant-a",
+    )
+    cutoff = now - timedelta(days=30)
+    assert store.count_expired(cutoff, tenant_id="tenant-a") == 1
+    assert store.prune_before(cutoff, tenant_id="tenant-a") == 1
+    assert store.count(tenant_id="tenant-a") == 1
+    assert store.get(old.sha256, tenant_id="tenant-a") == b"shared content"
