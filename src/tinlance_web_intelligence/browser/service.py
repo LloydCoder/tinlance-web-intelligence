@@ -114,7 +114,7 @@ class BrowserService:
                         await route.continue_(headers=headers)
 
                     await context.route("**/*", route_request)
-                    context.route_web_socket(
+                    await context.route_web_socket(
                         "**/*",
                         lambda websocket: websocket.close(
                             code=1008, reason="WebSocket access is disabled"
