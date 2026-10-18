@@ -97,7 +97,9 @@ class WorldIntelligenceClientTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             WorldIntelligenceEvidenceClient("http://world-intelligence.example", "x" * 40)
         with self.assertRaises(ValueError):
-            WorldIntelligenceEvidenceClient("https://user:pass@world-intelligence.example", "x" * 40)
+            WorldIntelligenceEvidenceClient(
+                "https://user:pass@world-intelligence.example", "x" * 40
+            )
 
     def test_source_url_redacts_sensitive_query_values(self) -> None:
         result = redact_source_url(
