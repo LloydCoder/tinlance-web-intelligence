@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import os
+
+import pytest
 
 
+@pytest.mark.skipif(
+    os.environ.get("TWI_RUN_BROWSER_INTEGRATION") != "1",
+    reason="browser sandbox smoke test runs in its dedicated CI step",
+)
 def test_chromium_launches_and_fresh_contexts_are_isolated() -> None:
     from playwright.async_api import async_playwright
 
