@@ -232,7 +232,9 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
     PlatformToolContract(
         name="twi_world_intelligence_export_status",
         operation="twi.world_intelligence.export_status",
-        description="Read the status of a source-evidence export owned by the authenticated subject.",
+        description=(
+            "Read the status of a source-evidence export owned by the authenticated subject."
+        ),
         capability="world-intelligence.source-evidence.read",
         action="read",
         resource_pattern="twi://world-intelligence/exports/{event_id}",
