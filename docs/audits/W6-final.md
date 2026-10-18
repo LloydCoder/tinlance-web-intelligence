@@ -13,11 +13,13 @@
 
 ## Merge and CI evidence
 
-- W6 implementation PR [#15](https://github.com/LloydCoder/tinlance-web-intelligence/pull/15) merged as 18b2fa081c9b51846041e4cb17eb5c699441952c.
+- W6 implementation PR [#15](https://github.com/LloydCoder/tinlance-web-intelligence/pull/15) merged as `18b2fa081c9b51846041e4cb17eb5c699441952c`.
 - W6 PR-head CI run [#429](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39164232284) passed on the exact PR head.
 - Post-merge main CI run [#430](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39164413530) passed on the merge commit.
-- W5 TWI PR [#14](https://github.com/LloydCoder/tinlance-web-intelligence/pull/14), Platform PR [#139](https://github.com/LloydCoder/tinlance-agent-platform/pull/139), and TSIC PRs [#81](https://github.com/LloydCoder/tinlance-system-integration/pull/81) and [#82](https://github.com/LloydCoder/tinlance-system-integration/pull/82) are merged. The stale conflicting TSIC PR #80 was closed after its unique schema work was incorporated into #82. Post-merge CI/conformance workflows passed in all three repositories.
-- The W6 CI run executes unit, contract, PostgreSQL integration, security-lint, and Chromium smoke checks on Python 3.12 and 3.13, plus the isolated-browser container job. This closeout installs httpx2 for the current Starlette TestClient implementation and makes its legacy-httpx deprecation warning an error so it cannot silently return.
+- W6 closeout PR [#16](https://github.com/LloydCoder/tinlance-web-intelligence/pull/16) merged as `5f42dff6198b43262d2e6f442f0d58c6440266b7`. It pins the current TestClient compatibility dependency and turns the legacy httpx deprecation warning into an error.
+- Latest verified main CI run [#433](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39164858519) passed on the exact current main commit. All three jobs passed: Python 3.12 quality/tests, Python 3.13 quality/tests, and browser container isolation.
+- W5 TWI PR [#14](https://github.com/LloydCoder/tinlance-web-intelligence/pull/14), Platform PR [#139](https://github.com/LloydCoder/tinlance-agent-platform/pull/139), and TSIC PRs [#81](https://github.com/LloydCoder/tinlance-system-integration/pull/81) and [#82](https://github.com/LloydCoder/tinlance-system-integration/pull/82) are merged. The stale conflicting TSIC PR #80 was closed after its unique schema work was incorporated into #82. The recorded post-merge CI/conformance workflows passed in all three repositories.
+- The CI workflow executes unit, contract, PostgreSQL integration, security-lint, Chromium smoke checks on Python 3.12 and 3.13, and the isolated-browser container job.
 
 ## Private-beta release decision
 
