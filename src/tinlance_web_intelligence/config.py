@@ -92,8 +92,8 @@ class Settings:
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
-        if self.environment == "production" and self.database_url is None:
-            raise ConfigurationError("production requires TWI_DATABASE_URL PostgreSQL persistence")
+        if self.environment in {"staging", "production"} and self.database_url is None:
+            raise ConfigurationError("staging and production require TWI_DATABASE_URL PostgreSQL persistence")
         if self.database_url is not None:
             try:
                 database = urlsplit(self.database_url)
@@ -119,8 +119,8 @@ class Settings:
                 "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
             }:
                 raise ConfigurationError("unsupported PostgreSQL sslmode")
-            if self.environment == "production" and sslmode != "verify-full":
-                raise ConfigurationError("production PostgreSQL requires sslmode=verify-full")
+            if self.environment in {"staging", "production"} and sslmode != "verify-full":
+                raise ConfigurationError("staging and production PostgreSQL require sslmode=verify-full")
         identity_values = (self.identity_issuer, self.identity_audience, self.identity_jwks_url)
         if any(identity_values) and not all(identity_values):
             raise ConfigurationError(
