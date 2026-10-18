@@ -38,11 +38,6 @@ class WorldIntelligenceExportWorkerTests(unittest.TestCase):
         worker = WorldIntelligenceExportWorker(self.outbox, client, worker_id="test-worker")
 
         self.assertTrue(worker.run_once())
-        event = self.outbox.get(
-            self.outbox.claim_next("read-worker").event_id,
-            "a" * 64,
-            "b" * 64,
-        ) if False else None
         # The event is delivered and therefore no longer available for another claim.
         self.assertIsNone(self.outbox.claim_next("read-worker"))
         client.send.assert_called_once()
