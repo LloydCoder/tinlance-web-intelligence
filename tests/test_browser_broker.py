@@ -4,6 +4,7 @@ import secrets
 
 from apps.browser_broker.main import create_app
 from fastapi.testclient import TestClient
+
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 BROKER_TOKEN = secrets.token_urlsafe(32)
