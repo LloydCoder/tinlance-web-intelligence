@@ -25,6 +25,7 @@ class OutboxLeaseLostError(RuntimeError):
 class OutboxEvent:
     event_id: str
     tenant_ref: str
+    subject_ref: str
     idempotency_key: str
     payload: dict[str, Any]
     status: str
@@ -56,6 +57,7 @@ class SQLiteSourceEvidenceOutbox:
             CREATE TABLE IF NOT EXISTS twi_source_evidence_outbox (
                 event_id TEXT PRIMARY KEY,
                 tenant_ref TEXT NOT NULL CHECK (length(tenant_ref) = 64),
+                subject_ref TEXT NOT NULL CHECK (length(subject_ref) = 64),
                 idempotency_key TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
                 payload_sha256 TEXT NOT NULL CHECK (length(payload_sha256) = 64),
@@ -71,7 +73,7 @@ class SQLiteSourceEvidenceOutbox:
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL,
                 delivered_at REAL,
-                UNIQUE (tenant_ref, idempotency_key),
+                UNIQUE (tenant_ref, subject_ref, idempotency_key),
                 CHECK (
                     (status = 'delivering' AND lease_owner IS NOT NULL AND lease_until IS NOT NULL)
                     OR status <> 'delivering'
@@ -90,6 +92,7 @@ class SQLiteSourceEvidenceOutbox:
         return OutboxEvent(
             event_id=row["event_id"],
             tenant_ref=row["tenant_ref"],
+            subject_ref=row["subject_ref"],
             idempotency_key=row["idempotency_key"],
             payload=json.loads(row["payload_json"]),
             status=row["status"],
@@ -104,6 +107,7 @@ class SQLiteSourceEvidenceOutbox:
         self,
         *,
         tenant_ref: str,
+        subject_ref: str,
         idempotency_key: str,
         payload: dict[str, Any],
         request_id: str,
@@ -111,6 +115,8 @@ class SQLiteSourceEvidenceOutbox:
     ) -> tuple[OutboxEvent, bool]:
         if not re.fullmatch(r"[0-9a-f]{64}", tenant_ref):
             raise ValueError("tenant_ref must be a pseudonymous SHA-256 reference")
+        if not re.fullmatch(r"[0-9a-f]{64}", subject_ref):
+            raise ValueError("subject_ref must be a pseudonymous SHA-256 reference")
         if not re.fullmatch(r"[A-Za-z0-9._:-]{16,128}", idempotency_key):
             raise ValueError("invalid idempotency key")
         if not request_id or len(request_id) > 128:
@@ -124,9 +130,9 @@ class SQLiteSourceEvidenceOutbox:
                 existing = connection.execute(
                     """
                     SELECT * FROM twi_source_evidence_outbox
-                    WHERE tenant_ref = ? AND idempotency_key = ?
+                    WHERE tenant_ref = ? AND subject_ref = ? AND idempotency_key = ?
                     """,
-                    (tenant_ref, idempotency_key),
+                    (tenant_ref, subject_ref, idempotency_key),
                 ).fetchone()
                 if existing is not None:
                     if existing["payload_sha256"] != payload_sha256:
@@ -140,13 +146,14 @@ class SQLiteSourceEvidenceOutbox:
                 connection.execute(
                     """
                     INSERT INTO twi_source_evidence_outbox (
-                        event_id, tenant_ref, idempotency_key, payload_json, payload_sha256,
+                        event_id, tenant_ref, subject_ref, idempotency_key, payload_json, payload_sha256,
                         status, attempts, available_at, request_id, traceparent, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, ?, ?, ?, ?, ?)
                     """,
                     (
                         event_id,
                         tenant_ref,
+                        subject_ref,
                         idempotency_key,
                         payload_json,
                         payload_sha256,
@@ -281,14 +288,14 @@ class SQLiteSourceEvidenceOutbox:
                 raise RuntimeError("failed outbox event could not be read back")
             return self._row_to_event(updated)
 
-    def get(self, event_id: str, tenant_ref: str) -> OutboxEvent | None:
+    def get(self, event_id: str, tenant_ref: str, subject_ref: str) -> OutboxEvent | None:
         with self._lock:
             row = self._connection.execute(
                 """
                 SELECT * FROM twi_source_evidence_outbox
-                WHERE event_id = ? AND tenant_ref = ?
+                WHERE event_id = ? AND tenant_ref = ? AND subject_ref = ?
                 """,
-                (event_id, tenant_ref),
+                (event_id, tenant_ref, subject_ref),
             ).fetchone()
         return self._row_to_event(row) if row is not None else None
 
