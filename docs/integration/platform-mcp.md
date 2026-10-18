@@ -14,6 +14,8 @@ TWI provides a versioned internal HTTP API for durable search/fetch jobs and pub
 - `twi.jobs.read` → `GET /v1/jobs/{job_id}`.
 - `twi.jobs.cancel` → `POST /v1/jobs/{job_id}/cancel`.
 - `twi.research.verify` → `POST /v1/research/verify`; requires `twi:research:verify` and only verifies citation provenance and exact excerpt matches against successful, caller-accessible TWI fetch/browser jobs. It does not establish factual truth.
+- `twi.world_intelligence.export_source_evidence` → `POST /v1/integrations/world-intelligence/exports`; requires `twi:observations:export`, an idempotency key, and a source quote that matches captured text. Platform policy must treat it as a consequential state-changing operation and apply any required approval before execution.
+- `twi.world_intelligence.export_status` → `GET /v1/integrations/world-intelligence/exports/{event_id}`; requires `twi:observations:export:read` and is tenant/subject scoped.
 
 The Platform adapter must map MCP tool names to these operations, apply Platform policy and scope decisions, and preserve the operation's idempotency semantics. It must not treat caller-supplied `tenant_id` or `subject_id` as trusted identity.
 
