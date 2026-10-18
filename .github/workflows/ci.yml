@@ -39,7 +39,7 @@ jobs:
       - name: Type check
         run: mypy src tests
       - name: Security lint
-        run: bandit -q -r src
+        run: bandit -q -r src apps
       - name: Install Chromium for isolated browser smoke test
         run: python -m playwright install --with-deps chromium
       - name: Unit and contract tests
