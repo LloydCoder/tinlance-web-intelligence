@@ -286,7 +286,7 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
 
         event = client.app.state.evidence_outbox.get(
             payload["event_id"],
-            hashlib.sha256(b"tenant-a").hexdigest(),
+            sha256(b"tenant-a").hexdigest(),
             hashlib.sha256(b"subject-a").hexdigest(),
         )
         assert event is not None
