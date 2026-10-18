@@ -1,6 +1,7 @@
 """PostgreSQL contract tests. CI supplies an ephemeral PostgreSQL service."""
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 import uuid
