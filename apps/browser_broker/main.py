@@ -126,7 +126,7 @@ def main() -> None:
     # This service is reachable only on the private broker networks in Compose.
     uvicorn.run(
         app,
-        host="0.0.0.0",  # noqa: S104 - container network isolation is the access boundary
+        host="0.0.0.0",  # noqa: S104  # nosec B104 - container network isolation is the access boundary
         port=8081,
         access_log=False,
     )
