@@ -110,6 +110,14 @@ def test_production_requires_postgres_with_verified_tls() -> None:
             **identity,
             "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
         })
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            **identity,
+            "TWI_DATABASE_URL": (
+                "postgresql://twi:secret@db.example/twi?"
+                "sslmode=verify-full&sslmode=require"
+            ),
+        })
     settings = Settings.from_env({
         **identity,
         "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
