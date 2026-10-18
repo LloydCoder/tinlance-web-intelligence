@@ -2,12 +2,14 @@
 
 Workstreams are executed serially. A workstream is complete only after implementation, relevant automated/integration/security tests, green required CI, reconciled documentation, and an evidence-backed audit. A directory scaffold or successful compile is insufficient.
 
-1. **W1 — Foundation and contracts:** package layout, configuration, contracts, security invariants, CI and developer tooling.
-2. **W2 — Search, fetch and extraction:** provider adapters, safe retrieval, normalization, source-backed results and artifact references.
-3. **W3 — Durable task API and remote MCP:** versioned API, persisted jobs, authentication/authorization integration, retries and observability.
-4. **W4 — Isolated browser workers:** worker isolation, destination controls, resource budgets, session lifecycle and adversarial tests.
-5. **W5 — Verified web agent and governed workflows:** evidence-linked synthesis, Platform authorization, approval boundaries, OS lifecycle and World Intelligence export.
-6. **W6 — Private beta and commercial readiness:** deployment, operational runbooks, backup/recovery, performance/security gates, release and TSIC conformance evidence.
+| Workstream | Scope | Status |
+| --- | --- | --- |
+| W1 | Foundation, contracts, configuration, security invariants, CI | Merged; CI green on Python 3.12 and 3.13 |
+| W2 | Search, safe fetch, extraction, source-backed results and artifact references | In progress |
+| W3 | Durable task API and remote MCP | Not started |
+| W4 | Isolated browser workers | Not started |
+| W5 | Verified web agent and governed workflows | Not started |
+| W6 | Private beta, operations, security, performance, release and TSIC conformance | Not started |
 
 ## Global exit gates
 

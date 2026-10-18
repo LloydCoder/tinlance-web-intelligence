@@ -7,6 +7,7 @@ time, revalidate every redirect, and enforce network egress restrictions.
 from __future__ import annotations
 
 import ipaddress
+import socket
 from dataclasses import dataclass
 from urllib.parse import urlsplit, urlunsplit
 
@@ -40,11 +41,27 @@ def is_public_routable_ip(value: str) -> bool:
     return address.is_global and not any(blocked)
 
 
+def _legacy_ipv4_literal(hostname: str) -> ipaddress.IPv4Address | None:
+    """Recognize legacy inet_aton forms such as integer, octal, and short IPv4 forms."""
+    try:
+        packed = socket.inet_aton(hostname)
+    except OSError:
+        return None
+    return ipaddress.IPv4Address(packed)
+
+
 def validate_url(
     value: str, *, allowed_schemes: tuple[str, ...] = ("https", "http")
 ) -> ValidatedURL:
-    if not value or value != value.strip() or any(ord(ch) < 32 for ch in value):
-        raise UnsafeURLError("URL must be non-empty, trimmed, and contain no control characters")
+    if (
+        not value
+        or value != value.strip()
+        or "\\" in value
+        or any(ord(ch) < 32 for ch in value)
+    ):
+        raise UnsafeURLError(
+            "URL must be trimmed, contain no backslashes, and contain no control characters"
+        )
     try:
         parsed = urlsplit(value)
         port = parsed.port
@@ -64,16 +81,16 @@ def validate_url(
         raise UnsafeURLError("localhost destinations are forbidden")
     if hostname.endswith(".local") or hostname.endswith(".internal"):
         raise UnsafeURLError("local and internal DNS namespaces are forbidden")
+    literal: ipaddress.IPv4Address | ipaddress.IPv6Address | None
     try:
         literal = ipaddress.ip_address(hostname)
     except ValueError:
-        literal = None
+        literal = _legacy_ipv4_literal(hostname)
     if literal is not None and not is_public_routable_ip(str(literal)):
         raise UnsafeURLError("non-public IP destinations are forbidden")
-    if port is not None and not 1 <= port <= 65535:
-        raise UnsafeURLError("port is outside the valid range")
-    netloc = f"[{hostname}]" if ":" in hostname else hostname
-    if port is not None:
-        netloc = f"{netloc}:{port}"
+    if port is not None and port not in {80, 443}:
+        raise UnsafeURLError("only standard HTTP and HTTPS destination ports are allowed")
+    normalized_host = f"[{hostname}]" if ":" in hostname else hostname
+    netloc = f"{normalized_host}:{port}" if port is not None else normalized_host
     normalized = urlunsplit((scheme, netloc, parsed.path or "/", parsed.query, ""))
     return ValidatedURL(normalized, scheme, hostname, port)

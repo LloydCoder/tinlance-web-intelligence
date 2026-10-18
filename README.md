@@ -2,7 +2,7 @@
 
 Evidence-first web discovery, retrieval, extraction, and monitoring for the Tinlance ecosystem.
 
-> **Status:** W1 foundation work is in progress. A passing test suite is not a production deployment or a production-readiness claim.
+> **Status:** W1 foundation is merged. W2 search/fetch/extraction is under implementation; no production deployment is claimed.
 
 ## Scope
 
@@ -21,13 +21,13 @@ TWI is a service/product layer, not an authority plane. It must not bypass Platf
 
 ## Development
 
-Requires Python 3.12+.
+Requires Python 3.12+ or 3.13.
 
 ```bash
 make install
 make check
 ```
 
-Network-capable acquisition must not be enabled until connection-time DNS/IP validation, redirect revalidation, and deployment egress controls are implemented and tested.
+Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md).
 
-See [docs/roadmap/phases.md](docs/roadmap/phases.md) and [docs/architecture/component-boundaries.md](docs/architecture/component-boundaries.md).
+See [workstream plan](docs/roadmap/phases.md) and [component boundaries](docs/architecture/component-boundaries.md).
