@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_browser_navigate",
+  "description": "Capture a public web page in a fresh isolated read-only browser context.",
+  "operation": "twi.jobs.create_browser",
+  "api": {
+    "method": "POST",
+    "path": "/v1/jobs",
+    "kind": "browser",
+    "idempotency_header": "Idempotency-Key"
+  },
+  "authorization": {
+    "required_scope": "twi:browser",
+    "capability": "web.browser.navigate",
+    "action": "navigate",
+    "resource_pattern": "web://browser/*"
+  },
+  "governance": {
+    "read_only": false,
+    "consequential": false,
+    "destructive": false,
+    "open_world": true,
+    "idempotency_argument": "idempotency_key"
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["url", "idempotency_key"],
+    "properties": {
+      "url": {"type": "string", "format": "uri", "maxLength": 4096},
+      "wait_until": {"type": "string", "enum": ["domcontentloaded", "load"], "default": "domcontentloaded"},
+      "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 30000, "default": 15000},
+      "include_screenshot": {"type": "boolean", "default": false},
+      "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256}
+    }
+  }
+}
