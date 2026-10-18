@@ -93,3 +93,37 @@ def test_world_intelligence_service_settings_fail_closed() -> None:
         "TWI_WORLD_INTELLIGENCE_TOKEN": token,
     })
     assert configured.world_intelligence_url == "http://world-intelligence:8080"
+
+
+
+def test_production_requires_postgres_with_verified_tls() -> None:
+    identity = {
+        "TWI_ENV": "production",
+        "TWI_IDENTITY_ISSUER": "https://identity.example/issuer",
+        "TWI_IDENTITY_AUDIENCE": "twi-api",
+        "TWI_IDENTITY_JWKS_URL": "https://identity.example/.well-known/jwks.json",
+    }
+    with pytest.raises(ConfigurationError):
+        Settings.from_env(identity)
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            **identity,
+            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
+        })
+    settings = Settings.from_env({
+        **identity,
+        "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
+    })
+    assert settings.database_url is not None
+
+
+@pytest.mark.parametrize("database_url", [
+    "sqlite:///tmp/twi.db",
+    "postgresql:///missing-host",
+    "postgresql://twi@db.example/twi",
+    "postgresql://twi:secret@db.example/",
+    "postgresql://twi:secret@db.example/twi#fragment",
+])
+def test_invalid_postgres_urls_are_rejected(database_url: str) -> None:
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({"TWI_DATABASE_URL": database_url})

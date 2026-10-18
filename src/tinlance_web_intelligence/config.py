@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 
 class ConfigurationError(ValueError):
@@ -21,6 +21,7 @@ class Settings:
     allowed_schemes: tuple[str, ...] = ("https", "http")
     user_agent: str = "TinlanceWebIntelligence/0.1"
     database_path: str = "./var/twi.sqlite3"
+    database_url: str | None = None
     identity_issuer: str | None = None
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
@@ -53,6 +54,7 @@ class Settings:
                 allowed_schemes=tuple(item.strip().lower() for item in schemes if item.strip()),
                 user_agent=values.get("TWI_USER_AGENT", "TinlanceWebIntelligence/0.1").strip(),
                 database_path=values.get("TWI_DATABASE_PATH", "./var/twi.sqlite3").strip(),
+                database_url=values.get("TWI_DATABASE_URL", "").strip() or None,
                 identity_issuer=values.get("TWI_IDENTITY_ISSUER") or None,
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
@@ -90,6 +92,30 @@ class Settings:
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
+        if self.environment == "production" and self.database_url is None:
+            raise ConfigurationError("production requires TWI_DATABASE_URL PostgreSQL persistence")
+        if self.database_url is not None:
+            try:
+                database = urlsplit(self.database_url)
+                query = parse_qs(database.query, strict_parsing=False)
+            except ValueError as exc:
+                raise ConfigurationError("PostgreSQL database URL is malformed") from exc
+            if (
+                database.scheme not in {"postgres", "postgresql"}
+                or not database.hostname
+                or not database.username
+                or not database.password
+                or not database.path.strip("/")
+                or database.fragment
+            ):
+                raise ConfigurationError(
+                    "TWI_DATABASE_URL must be a PostgreSQL URL with host, credentials, and database"
+                )
+            sslmode = query.get("sslmode", [""])[0]
+            if sslmode and sslmode not in {"disable", "allow", "prefer", "require", "verify-ca", "verify-full"}:
+                raise ConfigurationError("unsupported PostgreSQL sslmode")
+            if self.environment == "production" and sslmode != "verify-full":
+                raise ConfigurationError("production PostgreSQL requires sslmode=verify-full")
         identity_values = (self.identity_issuer, self.identity_audience, self.identity_jwks_url)
         if any(identity_values) and not all(identity_values):
             raise ConfigurationError(

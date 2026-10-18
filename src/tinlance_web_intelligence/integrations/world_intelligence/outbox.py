@@ -302,6 +302,14 @@ class SQLiteSourceEvidenceOutbox:
             ).fetchone()
         return self._row_to_event(row) if row is not None else None
 
+    def ping(self) -> bool:
+        try:
+            with self._lock:
+                row = self._connection.execute("SELECT 1 AS ready").fetchone()
+            return row is not None and row["ready"] == 1
+        except sqlite3.Error:
+            return False
+
     def close(self) -> None:
         with self._lock:
             self._connection.close()

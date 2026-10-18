@@ -5,7 +5,7 @@ import hashlib
 import json
 import time
 import uuid
-from pathlib import Path
+from importlib.resources import files
 from typing import Any
 
 from psycopg.rows import dict_row
@@ -28,7 +28,7 @@ class PostgresJobRepository:
     """Multi-worker PostgreSQL queue. Claiming is atomic across independent processes."""
 
     def __init__(self, dsn: str, *, max_attempts: int = 3,
-                 min_size: int = 1, max_size: int = 10) -> None:
+                 min_size: int = 1, max_size: int = 10, auto_migrate: bool = False) -> None:
         if not dsn or not dsn.strip() or dsn != dsn.strip():
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= max_attempts <= 10 or not 1 <= min_size <= max_size <= 50:
@@ -40,16 +40,35 @@ class PostgresJobRepository:
             timeout=10, open=True,
         )
         self._pool.wait(timeout=10)
-        self._ensure_schema()
+        if auto_migrate:
+            self._apply_migrations()
+        else:
+            self._verify_schema()
 
-    def _ensure_schema(self) -> None:
-        migration = Path(__file__).resolve().parents[3] / "db" / "migrations" / "001_production_postgres.sql"
+    def _apply_migrations(self) -> None:
+        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath("001_production_postgres.sql")
         if not migration.is_file():
             self._pool.close()
             raise RuntimeError("production PostgreSQL migration file is missing")
         sql = migration.read_text(encoding="utf-8")
         with self._pool.connection() as conn:
+            conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
             conn.execute(sql, prepare=False)
+
+    def _verify_schema(self) -> None:
+        with self._pool.connection() as conn:
+            tables = conn.execute(
+                "SELECT to_regclass('jobs') AS jobs, "
+                "to_regclass('twi_source_evidence_outbox') AS outbox, "
+                "to_regclass('twi_schema_migrations') AS migrations"
+            ).fetchone()
+            if tables is None or any(tables[name] is None for name in ("jobs", "outbox", "migrations")):
+                raise RuntimeError("PostgreSQL schema is missing; run the migration job")
+            version = conn.execute(
+                "SELECT max(version) AS version FROM twi_schema_migrations"
+            ).fetchone()
+            if version is None or version["version"] != 1:
+                raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod
     def _to_job(row: dict[str, Any]) -> Job:
@@ -149,8 +168,8 @@ class PostgresJobRepository:
             if allowed_kinds is None:
                 row = conn.execute(
                     """SELECT * FROM jobs WHERE status='queued' AND available_at <= %s
-                       AND cancel_requested=FALSE ORDER BY created_at, job_id
-                       FOR UPDATE SKIP LOCKED LIMIT 1""", (now,)
+                       AND cancel_requested=FALSE ORDER BY created_at, job_id LIMIT 1
+                       FOR UPDATE SKIP LOCKED""", (now,)
                 ).fetchone()
             else:
                 row = conn.execute(
@@ -171,8 +190,9 @@ class PostgresJobRepository:
 
     def _owned_running_job(self, conn: Any, job_id: str, worker_id: str) -> dict[str, Any]:
         row = conn.execute(
-            "SELECT * FROM jobs WHERE job_id=%s AND status='running' AND lease_owner=%s FOR UPDATE",
-            (job_id, worker_id),
+            "SELECT * FROM jobs WHERE job_id=%s AND status='running' AND lease_owner=%s
+               AND lease_until >= %s FOR UPDATE",
+            (job_id, worker_id, time.time()),
         ).fetchone()
         if row is None:
             raise LeaseLostError("worker no longer owns the running job")

@@ -9,14 +9,14 @@ import time
 from tinlance_web_intelligence.acquisition.fetcher import SafeHTTPFetcher
 from tinlance_web_intelligence.acquisition.service import WebAcquisitionService
 from tinlance_web_intelligence.config import Settings
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.factory import create_job_repository
 from tinlance_web_intelligence.jobs.worker import JobWorker
 from tinlance_web_intelligence.search.brave import BraveSearchProvider
 
 
 def main() -> None:
     settings = Settings.from_env()
-    repository = SQLiteJobRepository(settings.database_path)
+    repository = create_job_repository(settings)
     provider = (
         BraveSearchProvider(settings.brave_api_key, SafeHTTPFetcher(settings))
         if settings.brave_api_key

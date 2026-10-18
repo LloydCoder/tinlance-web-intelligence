@@ -23,7 +23,7 @@ def main() -> None:
             "World Intelligence export worker requires TWI_WORLD_INTELLIGENCE_URL and "
             "TWI_WORLD_INTELLIGENCE_TOKEN"
         )
-    outbox = SQLiteSourceEvidenceOutbox(settings.database_path)
+    outbox = create_source_evidence_outbox(settings)
     client = WorldIntelligenceEvidenceClient(
         settings.world_intelligence_url,
         settings.world_intelligence_token,

@@ -6,6 +6,7 @@ import json
 import re
 import time
 import uuid
+from importlib.resources import files
 from typing import Any
 
 from psycopg.rows import dict_row
@@ -22,7 +23,7 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 class PostgresSourceEvidenceOutbox:
     """Multi-replica-safe evidence outbox backed by PostgreSQL row-level locks."""
 
-    def __init__(self, dsn: str, *, min_size: int = 1, max_size: int = 10) -> None:
+    def __init__(self, dsn: str, *, min_size: int = 1, max_size: int = 10, auto_migrate: bool = False) -> None:
         if not dsn or dsn != dsn.strip():
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= min_size <= max_size <= 50:
@@ -33,12 +34,34 @@ class PostgresSourceEvidenceOutbox:
             timeout=10, open=True,
         )
         self._pool.wait(timeout=10)
-        migration = __import__("pathlib").Path(__file__).resolve().parents[3] / "db" / "migrations" / "001_production_postgres.sql"
+        if auto_migrate:
+            self._apply_migrations()
+        else:
+            self._verify_schema()
+
+    def _apply_migrations(self) -> None:
+        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath("001_production_postgres.sql")
         if not migration.is_file():
             self._pool.close()
             raise RuntimeError("production PostgreSQL migration file is missing")
         with self._pool.connection() as conn:
+            conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
             conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
+
+    def _verify_schema(self) -> None:
+        with self._pool.connection() as conn:
+            tables = conn.execute(
+                "SELECT to_regclass('jobs') AS jobs, "
+                "to_regclass('twi_source_evidence_outbox') AS outbox, "
+                "to_regclass('twi_schema_migrations') AS migrations"
+            ).fetchone()
+            if tables is None or any(tables[name] is None for name in ("jobs", "outbox", "migrations")):
+                raise RuntimeError("PostgreSQL schema is missing; run the migration job")
+            version = conn.execute(
+                "SELECT max(version) AS version FROM twi_schema_migrations"
+            ).fetchone()
+            if version is None or version["version"] != 1:
+                raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod
     def _row_to_event(row: dict[str, Any]) -> OutboxEvent:
@@ -111,7 +134,7 @@ class PostgresSourceEvidenceOutbox:
                 """SELECT * FROM twi_source_evidence_outbox
                 WHERE (status='pending' AND available_at <= %s)
                    OR (status='delivering' AND lease_until <= %s)
-                ORDER BY created_at, event_id FOR UPDATE SKIP LOCKED LIMIT 1""",
+                ORDER BY created_at, event_id LIMIT 1 FOR UPDATE SKIP LOCKED""",
                 (now, now),
             ).fetchone()
             if row is None:
@@ -132,9 +155,9 @@ class PostgresSourceEvidenceOutbox:
             row = conn.execute(
                 """UPDATE twi_source_evidence_outbox SET status='delivered',
                    remote_evidence_id=%s, delivered_at=%s, lease_owner=NULL, lease_until=NULL,
-                   updated_at=%s WHERE event_id=%s AND status='delivering'
+                   updated_at=%s WHERE event_id=%s AND status='delivering' AND lease_until >= %s
                    AND lease_owner=%s RETURNING *""",
-                (remote_evidence_id, now, now, event_id, lease_token),
+                (remote_evidence_id, now, now, event_id, now, lease_token),
             ).fetchone()
             if row is None:
                 raise OutboxLeaseLostError("outbox lease was lost before completion")
@@ -150,8 +173,9 @@ class PostgresSourceEvidenceOutbox:
         with self._pool.connection() as conn:
             row = conn.execute(
                 """SELECT attempts FROM twi_source_evidence_outbox
-                WHERE event_id=%s AND status='delivering' AND lease_owner=%s FOR UPDATE""",
-                (event_id, lease_token),
+                WHERE event_id=%s AND status='delivering' AND lease_owner=%s
+                  AND lease_until >= %s FOR UPDATE""",
+                (event_id, lease_token, now),
             ).fetchone()
             if row is None:
                 raise OutboxLeaseLostError("outbox lease was lost before failure handling")

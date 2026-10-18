@@ -17,18 +17,19 @@ from tinlance_web_intelligence.api.http.routes.world_intelligence import (
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
-from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
-    SQLiteSourceEvidenceOutbox,
+from tinlance_web_intelligence.persistence.factory import (
+    create_job_repository,
+    create_source_evidence_outbox,
 )
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox
 
 
 def create_app(
     *,
     settings: Settings | None = None,
-    repository: SQLiteJobRepository | None = None,
+    repository: JobRepository | None = None,
     verifier: PrincipalVerifier | None = None,
-    evidence_outbox: SQLiteSourceEvidenceOutbox | None = None,
+    evidence_outbox: SourceEvidenceOutbox | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
     if (
@@ -45,7 +46,7 @@ def create_app(
     if config.environment == "production" and verifier is None:
         raise ConfigurationError("production requires a configured Platform token verifier")
     trusted_verifier = verifier or DenyAllPrincipalVerifier()
-    repo = repository or SQLiteJobRepository(config.database_path)
+    repo = repository or create_job_repository(config)
     docs_enabled = config.environment in {"development", "test"}
     app = FastAPI(
         title="Tinlance Web Intelligence API",
@@ -56,10 +57,12 @@ def create_app(
     )
     app.state.repository = repo
     app.state.settings = config
-    outbox = evidence_outbox or SQLiteSourceEvidenceOutbox(config.database_path)
+    outbox = evidence_outbox or create_source_evidence_outbox(config)
     app.state.evidence_outbox = outbox
     if evidence_outbox is None:
         app.router.on_shutdown.append(outbox.close)
+    if repository is None:
+        app.router.on_shutdown.append(repo.close)
 
     @app.middleware("http")
     async def authenticate(

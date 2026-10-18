@@ -7,8 +7,15 @@ make install
 make check
 ```
 
-A Brave Search API key is optional and must be supplied as `TWI_BRAVE_SEARCH_API_KEY` to the worker. Never commit provider keys. The fetcher does not inherit proxy environment variables and rejects non-public DNS answers; do not weaken these checks to make local private test servers work. Test fetch orchestration with injected clients/resolvers and run network integration tests in an explicitly isolated environment.
+A Brave Search API key is optional and must be supplied as TWI_BRAVE_SEARCH_API_KEY to the worker. Never commit provider keys. The fetcher does not inherit proxy environment variables and rejects non-public DNS answers; do not weaken these checks to make local private test servers work. Test fetch orchestration with injected clients/resolvers and run network integration tests in an explicitly isolated environment.
 
-The W3 API uses a durable SQLite database by default at `./var/twi.sqlite3`. Non-health endpoints fail closed unless a trusted `PrincipalVerifier` is configured. Production requires `TWI_IDENTITY_ISSUER`, `TWI_IDENTITY_AUDIENCE`, and `TWI_IDENTITY_JWKS_URL`; these must describe the Tinlance Agent Platform token issuer and the TWI resource audience.
+Direct local development defaults to SQLite. To use PostgreSQL, set TWI_DATABASE_URL to a local PostgreSQL DSN with sslmode=disable only in development/test, then run python -m apps.migrate.main before starting the API or workers. Production requires sslmode=verify-full and a trusted CA, a separate TWI_MIGRATION_DATABASE_URL DDL role, and the migration job before runtime services start. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
 
-The artifact store is still process-local and intended for tests/development only. Durable job persistence is implemented; durable raw artifact storage remains a later hardening item.
+For Compose development, create a URL-safe local-only TWI_POSTGRES_PASSWORD in an ignored .env file, then run:
+
+```bash
+docker compose -f deployments/compose/development.yml config --quiet
+docker compose -f deployments/compose/development.yml up --build
+```
+
+The API binds to localhost port 8080. Its readiness endpoint checks the job repository and source-evidence outbox. Browser isolation remains a separate security-test topology; do not treat the development Compose network as a production cloud egress policy.

@@ -16,10 +16,9 @@ from tinlance_web_intelligence.integrations.world_intelligence.client import (
     redact_source_url,
     validate_traceparent,
 )
-from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
-    OutboxConflictError,
-)
+from tinlance_web_intelligence.integrations.world_intelligence.outbox import OutboxConflictError
 from tinlance_web_intelligence.jobs.model import Job
+from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.research.verification import (
     CitationInput,
     CitationNotFoundError,
@@ -70,7 +69,7 @@ def export_source_evidence(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="invalid trace context") from exc
 
-    repository = request.app.state.repository
+    repository: JobRepository = request.app.state.repository
     read_any = "twi:jobs:read:any" in principal.scopes
 
     def resolve_job(job_id: str) -> Job | None:

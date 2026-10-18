@@ -13,14 +13,14 @@ from tinlance_web_intelligence.acquisition.service import (
 )
 from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
 
 
 class JobWorker:
     def __init__(
         self,
-        repository: SQLiteJobRepository,
+        repository: JobRepository,
         *,
         worker_id: str,
         acquisition: WebAcquisitionService | None = None,

@@ -18,7 +18,23 @@ jobs:
   quality:
     name: Python quality and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: twi_test
+          POSTGRES_USER: twi
+          POSTGRES_PASSWORD: twi-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U twi -d twi_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TWI_TEST_POSTGRES_DSN: postgresql://twi:twi-ci-password@localhost:5432/twi_test?sslmode=disable
     strategy:
       fail-fast: false
       matrix:
@@ -42,8 +58,11 @@ jobs:
         run: bandit -q -r src apps
       - name: Install Chromium for isolated browser smoke test
         run: python -m playwright install --with-deps chromium
-      - name: Unit and contract tests
-        run: pytest -q
+      - name: Unit, contract, and PostgreSQL integration tests
+        run: |
+          pytest -q
+          python scripts/check_migration_sync.py
+          bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
       - name: Configure runner user-namespace sandbox prerequisites
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
