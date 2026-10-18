@@ -30,4 +30,4 @@ make check
 
 Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md).
 
-See [workstream plan](docs/roadmap/phases.md), [component boundaries](docs/architecture/component-boundaries.md), and [Platform MCP integration](docs/integration/platform-mcp.md).
+See [workstream plan](docs/roadmap/phases.md), [component boundaries](docs/architecture/component-boundaries.md), [browser isolation](docs/security/browser-isolation.md), and [Platform MCP integration](docs/integration/platform-mcp.md).
