@@ -21,7 +21,11 @@ from tinlance_web_intelligence.jobs.model import Job, JobStatus
 
 
 class CitationSourceError(ValueError):
-    """A citation does not reference accessible, successful acquisition evidence."""
+    """A citation does not reference successful acquisition evidence."""
+
+
+class CitationNotFoundError(CitationSourceError):
+    """A citation references no job visible to the authenticated principal."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +124,9 @@ def verify_research_report(
             if evidence is None:
                 job = resolve_job(citation.job_id)
                 if job is None:
-                    raise CitationSourceError("citation job is not accessible to this principal")
+                    raise CitationNotFoundError(
+                        "citation job is not accessible to this principal"
+                    )
                 evidence = _evidence_from_job(job)
                 evidence_by_job[citation.job_id] = evidence
             quote = _normalized_text(citation.quote)
