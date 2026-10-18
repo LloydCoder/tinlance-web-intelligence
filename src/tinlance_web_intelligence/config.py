@@ -197,7 +197,8 @@ class Settings:
                 or self.world_intelligence_token != self.world_intelligence_token.strip()
             ):
                 raise ConfigurationError(
-                    "World Intelligence service token must contain at least 32 non-padded characters"
+                    "World Intelligence service token must contain at least 32 "
+                    "non-padded characters"
                 )
         if self.browser_proxy_url is not None:
             try:
