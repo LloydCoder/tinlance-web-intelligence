@@ -9,7 +9,10 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
-from tinlance_web_intelligence.browser.policies import BrowserPolicyError, normalize_browser_payload
+from tinlance_web_intelligence.browser.policies import (
+    BrowserPolicyError,
+    normalize_browser_payload,
+)
 from tinlance_web_intelligence.jobs.model import IdempotencyConflictError, Job, JobStatus
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
@@ -56,7 +59,10 @@ def _normalize_payload(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:
             return normalize_browser_payload(payload)
         except BrowserPolicyError as exc:
-            raise HTTPException(status_code=422, detail="browser request rejected by acquisition policy") from exc
+            raise HTTPException(
+                status_code=422,
+                detail="browser request rejected by acquisition policy",
+            ) from exc
     if set(payload) != {"url"}:
         raise HTTPException(status_code=422, detail="fetch payload must contain only url")
     url = payload.get("url")
@@ -77,7 +83,11 @@ def create_job(
     ),
 ) -> dict[str, Any]:
     principal = _principal(request)
-    required_scope = {"search": "twi:search", "fetch": "twi:fetch", "browser": "twi:browser"}[body.kind]
+    required_scope = {
+        "search": "twi:search",
+        "fetch": "twi:fetch",
+        "browser": "twi:browser",
+    }[body.kind]
     _require_scope(principal, required_scope)
     if not _IDEMPOTENCY_PATTERN.fullmatch(idempotency_key):
         raise HTTPException(

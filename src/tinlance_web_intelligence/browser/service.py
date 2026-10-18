@@ -35,7 +35,13 @@ class BrowserService:
     def __init__(self, settings: Settings) -> None:
         if not settings.browser_enabled:
             raise ConfigurationError("browser acquisition is disabled")
-        if not all((settings.browser_proxy_url, settings.browser_proxy_username, settings.browser_proxy_password)):
+        if not all(
+            (
+                settings.browser_proxy_url,
+                settings.browser_proxy_username,
+                settings.browser_proxy_password,
+            )
+        ):
             raise ConfigurationError("browser service requires an authenticated egress proxy")
         self._proxy = {
             "server": settings.browser_proxy_url,
@@ -76,7 +82,11 @@ class BrowserService:
                         headless=True,
                         chromium_sandbox=True,
                         proxy=self._proxy,
-                        args=["--disable-background-networking", "--disable-extensions", "--disable-sync"],
+                        args=[
+                            "--disable-background-networking",
+                            "--disable-extensions",
+                            "--disable-sync",
+                        ],
                     )
                     context = await browser.new_context(
                         accept_downloads=False,
@@ -88,7 +98,10 @@ class BrowserService:
                     async def route_request(route: Any, browser_request: Any) -> None:
                         nonlocal request_count, policy_rejections
                         request_count += 1
-                        if request_count > MAX_BROWSER_REQUESTS or browser_request.method not in {"GET", "HEAD"}:
+                        if (
+                            request_count > MAX_BROWSER_REQUESTS
+                            or browser_request.method not in {"GET", "HEAD"}
+                        ):
                             policy_rejections += 1
                             await route.abort("blockedbyclient")
                             return
@@ -115,8 +128,13 @@ class BrowserService:
                     extracted = await page.evaluate(
                         """() => ({
                           text: (document.body?.innerText || '').slice(0, 100000),
-                          links: Array.from(document.querySelectorAll('a[href]')).slice(0, 100)
-                            .map(a => ({text: (a.innerText || a.getAttribute('aria-label') || '').trim().slice(0, 300), url: a.href}))
+                          links: Array.from(document.querySelectorAll('a[href]'))
+                            .slice(0, 100)
+                            .map(a => ({
+                              text: (a.innerText || a.getAttribute('aria-label') || '')
+                                .trim().slice(0, 300),
+                              url: a.href
+                            }))
                         })"""
                     )
                     text = extracted.get("text", "") if isinstance(extracted, dict) else ""
@@ -133,7 +151,14 @@ class BrowserService:
                             except BrowserPolicyError:
                                 continue
                             link_text = item.get("text", "")
-                            links.append({"url": link_url, "text": link_text[:300] if isinstance(link_text, str) else ""})
+                            links.append(
+                                {
+                                    "url": link_url,
+                                    "text": link_text[:300]
+                                    if isinstance(link_text, str)
+                                    else "",
+                                }
+                            )
                     result: dict[str, Any] = {
                         "provider": "playwright-chromium",
                         "source_url": final_url,
@@ -142,19 +167,25 @@ class BrowserService:
                         "title": (await page.title())[:500],
                         "text": text[:MAX_BROWSER_TEXT_CHARS],
                         "links": links,
-                        "content_sha256": hashlib.sha256(text[:MAX_BROWSER_TEXT_CHARS].encode()).hexdigest(),
+                        "content_sha256": hashlib.sha256(
+                            text[:MAX_BROWSER_TEXT_CHARS].encode()
+                        ).hexdigest(),
                         "request_count": request_count,
                         "policy_rejections": policy_rejections,
                     }
                     if request["include_screenshot"]:
                         try:
-                            screenshot = await page.screenshot(type="jpeg", quality=60, full_page=False, timeout=5_000)
+                            screenshot = await page.screenshot(
+                                type="jpeg", quality=60, full_page=False, timeout=5_000
+                            )
                         except PlaywrightError:
                             screenshot = b""
                         if screenshot and len(screenshot) <= MAX_SCREENSHOT_BYTES:
                             result["screenshot_media_type"] = "image/jpeg"
                             result["screenshot_sha256"] = hashlib.sha256(screenshot).hexdigest()
-                            result["screenshot_base64"] = base64.b64encode(screenshot).decode("ascii")
+                            result["screenshot_base64"] = base64.b64encode(
+                                screenshot
+                            ).decode("ascii")
                         else:
                             result["screenshot_omitted_reason"] = "size_limit_or_capture_failure"
                     return result
@@ -175,7 +206,9 @@ class BrowserService:
     @staticmethod
     def _normalize_final_url(url: str) -> str:
         parsed = urlsplit(url)
-        without_fragment = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, parsed.query, ""))
+        without_fragment = urlunsplit(
+            (parsed.scheme, parsed.netloc, parsed.path, parsed.query, "")
+        )
         try:
             return validate_browser_resource_url(without_fragment)
         except BrowserPolicyError as exc:

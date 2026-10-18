@@ -11,7 +11,6 @@ import re
 import socket
 from contextlib import suppress
 from dataclasses import dataclass
-from urllib.parse import urlsplit
 
 
 class ProxyProtocolError(ValueError):
@@ -98,7 +97,7 @@ class SafeEgressProxy:
                         client_reader.readuntil(b"\r\n\r\n"),
                         timeout=self.config.idle_timeout_seconds,
                     )
-                except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, asyncio.TimeoutError):
+                except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, TimeoutError):
                     await self._send_status(client_writer, 400, "Bad Request")
                     return
                 if len(raw) > self.config.max_header_bytes:
@@ -110,7 +109,12 @@ class SafeEgressProxy:
                     host, port = self._parse_target(method, target)
                     ip = await self._resolve_public_ip(host, port, "https" if method == "CONNECT" else "http")
                 except ProxyAuthenticationError:
-                    await self._send_status(client_writer, 407, "Proxy Authentication Required", extra="Proxy-Authenticate: Basic realm=\"twi-egress\"\r\n")
+                    await self._send_status(
+                        client_writer,
+                        407,
+                        "Proxy Authentication Required",
+                        extra='Proxy-Authenticate: Basic realm="twi-egress"\r\n',
+                    )
                     return
                 except ProxyProtocolError:
                     await self._send_status(client_writer, 400, "Bad Request")
@@ -120,10 +124,14 @@ class SafeEgressProxy:
                     return
                 try:
                     upstream_reader, upstream_writer = await asyncio.wait_for(
-                        asyncio.open_connection(ip, port, family=socket.AF_INET6 if ":" in ip else socket.AF_INET),
+                        asyncio.open_connection(
+                            ip,
+                            port,
+                            family=socket.AF_INET6 if ":" in ip else socket.AF_INET,
+                        ),
                         timeout=5,
                     )
-                except (OSError, asyncio.TimeoutError):
+                except (OSError, TimeoutError):
                     await self._send_status(client_writer, 502, "Bad Gateway")
                     return
                 if method == "CONNECT":
@@ -145,7 +153,7 @@ class SafeEgressProxy:
                     max_seconds=self.config.max_tunnel_seconds,
                     max_bytes=self.config.max_tunnel_bytes,
                 )
-            except (ConnectionError, OSError, asyncio.TimeoutError, ProxyPolicyError):
+            except (ConnectionError, OSError, TimeoutError, ProxyPolicyError):
                 return
             finally:
                 if upstream_writer is not None:
@@ -203,43 +211,68 @@ class SafeEgressProxy:
 
     @staticmethod
     def _parse_target(method: str, target: str) -> tuple[str, int]:
-        if method == "CONNECT":
-            if "@" in target or target.count(":") != 1:
-                raise ProxyProtocolError("CONNECT target must be host:port")
-            host, raw_port = target.rsplit(":", 1)
-            if not raw_port.isdigit() or int(raw_port) != 443 or not host:
-                raise ProxyPolicyError("CONNECT is permitted only on port 443")
-            return host.rstrip(".").lower(), 443
-        raise ProxyPolicyError("only HTTPS CONNECT tunnels are supported")
+        if method != "CONNECT":
+            raise ProxyPolicyError("only HTTPS CONNECT tunnels are supported")
+        if target.startswith("["):
+            closing = target.find("]")
+            if closing < 0 or target[closing + 1 :] != ":443":
+                raise ProxyProtocolError("IPv6 CONNECT target must use [address]:443")
+            host = target[1:closing]
+            try:
+                address = ipaddress.ip_address(host)
+            except ValueError as exc:
+                raise ProxyProtocolError("invalid IPv6 CONNECT target") from exc
+            if not isinstance(address, ipaddress.IPv6Address):
+                raise ProxyProtocolError("bracketed CONNECT target must be IPv6")
+            return str(address), 443
+        if "@" in target or target.count(":") != 1:
+            raise ProxyProtocolError("CONNECT target must be host:443")
+        host, raw_port = target.rsplit(":", 1)
+        if not raw_port.isdigit() or int(raw_port) != 443 or not host:
+            raise ProxyPolicyError("CONNECT is permitted only on port 443")
+        return host.rstrip(".").lower(), 443
 
     async def _resolve_public_ip(self, host: str, port: int, scheme: str) -> str:
+        if scheme != "https" or port != 443:
+            raise ProxyPolicyError("egress proxy permits HTTPS on port 443 only")
         try:
             literal = ipaddress.ip_address(host)
         except ValueError:
-            if not host or len(host) > 253 or any(not label or len(label) > 63 for label in host.split(".")):
-                raise ProxyPolicyError("invalid hostname")
-            loop = asyncio.get_running_loop()
-            try:
-                infos = await asyncio.wait_for(
-                    loop.getaddrinfo(host, port, type=socket.SOCK_STREAM), timeout=5
-                )
-            except (OSError, asyncio.TimeoutError) as exc:
-                raise ProxyPolicyError("destination DNS lookup failed") from exc
-            addresses = sorted({item[4][0].split("%", 1)[0] for item in infos})
-            if not addresses:
-                raise ProxyPolicyError("destination has no addresses")
-            parsed = []
-            for address in addresses:
-                try:
-                    parsed.append(ipaddress.ip_address(address))
-                except ValueError as exc:
-                    raise ProxyPolicyError("invalid DNS response") from exc
-            if any(not address.is_global for address in parsed):
-                raise ProxyPolicyError("hostname resolves to a non-public address")
-            return str(parsed[0])
+            return await self._resolve_public_hostname(host, port)
         if not literal.is_global:
             raise ProxyPolicyError("non-public IP destinations are forbidden")
         return str(literal)
+
+    async def _resolve_public_hostname(self, host: str, port: int) -> str:
+        labels = host.rstrip(".").lower().split(".")
+        if (
+            not host
+            or len(host) > 253
+            or any(
+                not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+                for label in labels
+            )
+        ):
+            raise ProxyPolicyError("invalid hostname")
+        loop = asyncio.get_running_loop()
+        try:
+            infos = await asyncio.wait_for(
+                loop.getaddrinfo(host, port, type=socket.SOCK_STREAM), timeout=5
+            )
+        except (OSError, TimeoutError) as exc:
+            raise ProxyPolicyError("destination DNS lookup failed") from exc
+        addresses = sorted({item[4][0].split("%", 1)[0] for item in infos})
+        if not addresses:
+            raise ProxyPolicyError("destination has no addresses")
+        parsed: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
+        for address in addresses:
+            try:
+                parsed.append(ipaddress.ip_address(address))
+            except ValueError as exc:
+                raise ProxyPolicyError("invalid DNS response") from exc
+        if any(not address.is_global for address in parsed):
+            raise ProxyPolicyError("hostname resolves to a non-public address")
+        return str(parsed[0])
 
     @staticmethod
     async def _relay(
@@ -276,7 +309,10 @@ class SafeEgressProxy:
     ) -> None:
         body = f"{code} {reason}\n".encode()
         writer.write(
-            f"HTTP/1.1 {code} {reason}\r\n{extra}Connection: close\r\nContent-Length: {len(body)}\r\n\r\n".encode()
+            (
+                f"HTTP/1.1 {code} {reason}\r\n{extra}"
+                f"Connection: close\r\nContent-Length: {len(body)}\r\n\r\n"
+            ).encode()
             + body
         )
         with suppress(OSError):

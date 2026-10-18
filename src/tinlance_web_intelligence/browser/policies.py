@@ -58,7 +58,11 @@ def normalize_browser_payload(payload: dict[str, object]) -> dict[str, Any]:
     if not isinstance(wait_until, str) or wait_until not in {"domcontentloaded", "load"}:
         raise BrowserPolicyError("wait_until must be domcontentloaded or load")
     timeout_ms = payload.get("timeout_ms", 15_000)
-    if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 1_000 <= timeout_ms <= 30_000:
+    if (
+        isinstance(timeout_ms, bool)
+        or not isinstance(timeout_ms, int)
+        or not 1_000 <= timeout_ms <= 30_000
+    ):
         raise BrowserPolicyError("timeout_ms must be an integer from 1000 to 30000")
     include_screenshot = payload.get("include_screenshot", False)
     if not isinstance(include_screenshot, bool):

@@ -61,8 +61,17 @@ BROWSER_SCHEMA: dict[str, Any] = {
     "required": ["url", "idempotency_key"],
     "properties": {
         "url": {"type": "string", "format": "uri", "maxLength": 4096},
-        "wait_until": {"type": "string", "enum": ["domcontentloaded", "load"], "default": "domcontentloaded"},
-        "timeout_ms": {"type": "integer", "minimum": 1000, "maximum": 30000, "default": 15000},
+        "wait_until": {
+            "type": "string",
+            "enum": ["domcontentloaded", "load"],
+            "default": "domcontentloaded",
+        },
+        "timeout_ms": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 30000,
+            "default": 15000,
+        },
         "include_screenshot": {"type": "boolean", "default": False},
         "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
     },

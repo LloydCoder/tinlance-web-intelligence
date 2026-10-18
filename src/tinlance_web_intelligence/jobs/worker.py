@@ -7,11 +7,11 @@ from dataclasses import asdict
 from typing import Any
 
 from tinlance_web_intelligence.acquisition.fetcher import FetchError, SafeHTTPFetcher
-from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.acquisition.service import (
     UnsupportedMediaType,
     WebAcquisitionService,
 )
+from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
@@ -38,7 +38,11 @@ class JobWorker:
         self.lease_seconds = lease_seconds
 
     def run_once(self) -> bool:
-        job = self.repository.claim_next(self.worker_id, lease_seconds=self.lease_seconds, allowed_kinds=self.allowed_kinds)
+        job = self.repository.claim_next(
+            self.worker_id,
+            lease_seconds=self.lease_seconds,
+            allowed_kinds=self.allowed_kinds,
+        )
         if job is None:
             return False
         try:
