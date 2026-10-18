@@ -2,7 +2,7 @@
 
 Evidence-first web discovery, retrieval, extraction, and monitoring for the Tinlance ecosystem.
 
-> **Status:** W1 and W2 are merged. W3 durable API, job lifecycle, and Platform MCP operation contracts are under implementation. Production readiness is not claimed.
+> **Status:** Workstream implementation and acceptance status are tracked in [the phase ledger](docs/roadmap/phases.md). Production readiness is not claimed.
 
 ## Scope
 
