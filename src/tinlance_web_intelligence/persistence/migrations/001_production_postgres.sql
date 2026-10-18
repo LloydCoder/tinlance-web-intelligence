@@ -56,5 +56,35 @@ CREATE INDEX IF NOT EXISTS twi_outbox_claim_idx
 CREATE INDEX IF NOT EXISTS twi_outbox_scope_idx
     ON twi_source_evidence_outbox(event_id, tenant_ref, subject_ref);
 
+
+CREATE TABLE IF NOT EXISTS twi_artifact_content (
+    tenant_id TEXT NOT NULL,
+    sha256 CHAR(64) NOT NULL
+        CHECK (length(btrim(sha256)) = 64 AND sha256 ~ '^[0-9a-f]{64}'),
+    body BYTEA NOT NULL,
+    byte_size BIGINT NOT NULL CHECK (byte_size >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, sha256),
+    CHECK (octet_length(body) = byte_size)
+);
+
+CREATE TABLE IF NOT EXISTS twi_artifact_records (
+    tenant_id TEXT NOT NULL,
+    sha256 CHAR(64) NOT NULL
+        CHECK (length(btrim(sha256)) = 64 AND sha256 ~ '^[0-9a-f]{64}'),
+    source_url_hash CHAR(64) NOT NULL
+        CHECK (length(btrim(source_url_hash)) = 64 AND source_url_hash ~ '^[0-9a-f]{64}'),
+    source_url TEXT NOT NULL CHECK (length(source_url) <= 4096),
+    captured_at TIMESTAMPTZ NOT NULL,
+    content_type TEXT NOT NULL CHECK (length(content_type) BETWEEN 1 AND 255),
+    byte_size BIGINT NOT NULL CHECK (byte_size >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (tenant_id, sha256, source_url_hash, captured_at),
+    FOREIGN KEY (tenant_id, sha256)
+        REFERENCES twi_artifact_content(tenant_id, sha256) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS twi_artifact_records_tenant_time_idx
+    ON twi_artifact_records(tenant_id, captured_at DESC);
+
 INSERT INTO twi_schema_migrations(version) VALUES (1)
 ON CONFLICT (version) DO NOTHING;
