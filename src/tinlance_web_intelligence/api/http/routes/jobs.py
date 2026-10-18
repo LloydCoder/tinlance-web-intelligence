@@ -122,7 +122,7 @@ def get_job(request: Request, job_id: str) -> dict[str, Any]:
     read_any = "twi:jobs:read:any" in principal.scopes
     if not read_any and "twi:jobs:read" not in principal.scopes:
         raise HTTPException(status_code=403, detail="required scope is missing")
-    repository: SQLiteJobRepository = request.app.state.repository
+    repository: JobRepository = request.app.state.repository
     job = repository.get(
         job_id,
         tenant_id=principal.tenant_id,
@@ -137,7 +137,7 @@ def get_job(request: Request, job_id: str) -> dict[str, Any]:
 def cancel_job(request: Request, job_id: str) -> dict[str, Any]:
     principal = _principal(request)
     _require_scope(principal, "twi:jobs:cancel")
-    repository: SQLiteJobRepository = request.app.state.repository
+    repository: JobRepository = request.app.state.repository
     job = repository.cancel(
         job_id, tenant_id=principal.tenant_id, subject_id=principal.subject_id
     )
