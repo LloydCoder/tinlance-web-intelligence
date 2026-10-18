@@ -59,7 +59,7 @@ def create_app(
     outbox = evidence_outbox or SQLiteSourceEvidenceOutbox(config.database_path)
     app.state.evidence_outbox = outbox
     if evidence_outbox is None:
-        app.add_event_handler("shutdown", outbox.close)
+        app.router.on_shutdown.append(outbox.close)
 
     @app.middleware("http")
     async def authenticate(
