@@ -292,11 +292,10 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
         assert "secret-value" not in event.payload["source_url"]
         assert event.payload["tenant_ref"] == hashlib.sha256(b"tenant-a").hexdigest()
 
-        other_subject = _client(
-            repository,
-            _principal(subject_id="subject-b", scopes=frozenset({"twi:observations:export:read"})),
+        client.app.state.verifier = FakeVerifier(
+            _principal(subject_id="subject-b", scopes=frozenset({"twi:observations:export:read"}))
         )
-        hidden = other_subject.get(
+        hidden = client.get(
             f"/v1/integrations/world-intelligence/exports/{payload['event_id']}",
             headers={"Authorization": "Bearer valid-credential"},
         )
