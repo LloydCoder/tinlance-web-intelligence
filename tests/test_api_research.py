@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
-import uuid
 
 from fastapi.testclient import TestClient
 
