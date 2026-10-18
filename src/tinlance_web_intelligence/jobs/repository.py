@@ -78,6 +78,45 @@ class SQLiteJobRepository:
             self._connection.execute("PRAGMA journal_mode = WAL")
             self._connection.execute("PRAGMA synchronous = FULL")
         self._connection.executescript(_SCHEMA)
+        self._migrate_browser_job_kind()
+
+    def _migrate_browser_job_kind(self) -> None:
+        """Transactionally rebuild a W3 schema to permit browser jobs."""
+        row = self._connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='jobs'"
+        ).fetchone()
+        if row is None or "'browser'" in (row["sql"] or ""):
+            return
+        with self._lock:
+            self._connection.execute("BEGIN IMMEDIATE")
+            try:
+                self._connection.execute("DROP INDEX IF EXISTS jobs_claim_idx")
+                self._connection.execute("DROP INDEX IF EXISTS jobs_tenant_idx")
+                self._connection.execute("ALTER TABLE jobs RENAME TO jobs_w3_migration")
+                self._connection.execute(
+                    "CREATE TABLE jobs (job_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, "
+                    "subject_id TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('search','fetch','browser')), "
+                    "payload_json TEXT NOT NULL, payload_fingerprint TEXT NOT NULL, "
+                    "status TEXT NOT NULL CHECK (status IN ('queued','running','succeeded','failed','cancelled')), "
+                    "result_json TEXT, error_code TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, "
+                    "attempts INTEGER NOT NULL DEFAULT 0, max_attempts INTEGER NOT NULL DEFAULT 3, "
+                    "available_at REAL NOT NULL, lease_owner TEXT, lease_until REAL, "
+                    "cancel_requested INTEGER NOT NULL DEFAULT 0, idempotency_key TEXT NOT NULL, "
+                    "UNIQUE (tenant_id, subject_id, idempotency_key))"
+                )
+                self._connection.execute("INSERT INTO jobs SELECT * FROM jobs_w3_migration")
+                self._connection.execute("DROP TABLE jobs_w3_migration")
+                self._connection.execute(
+                    "CREATE INDEX jobs_claim_idx ON jobs(status, available_at, created_at)"
+                )
+                self._connection.execute(
+                    "CREATE INDEX jobs_tenant_idx ON jobs(tenant_id, subject_id, created_at)"
+                )
+                self._connection.commit()
+            except Exception:
+                if self._connection.in_transaction:
+                    self._connection.rollback()
+                raise
 
     def create(
         self,
