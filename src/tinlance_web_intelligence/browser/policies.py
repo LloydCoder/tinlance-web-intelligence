@@ -36,11 +36,9 @@ def validate_browser_resource_url(value: str) -> str:
             address = None
         if address is not None and not address.is_global:
             raise BrowserPolicyError("non-public IP literals are forbidden")
-        if parsed.port not in (None, 80, 443):
-            raise BrowserPolicyError("only standard HTTP and HTTPS ports are permitted")
-        if parsed.scheme == "http" and parsed.port == 443:
-            raise BrowserPolicyError("HTTP is permitted only on port 80")
-        if parsed.scheme == "https" and parsed.port == 80:
+        if parsed.scheme != "https":
+            raise BrowserPolicyError("browser acquisition requires HTTPS")
+        if parsed.port not in (None, 443):
             raise BrowserPolicyError("HTTPS is permitted only on port 443")
         return urlunsplit((parsed.scheme, parsed.netloc, parsed.path or "/", parsed.query, ""))
     except (UnsafeURLError, ValueError) as exc:
