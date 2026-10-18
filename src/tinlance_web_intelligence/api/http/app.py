@@ -11,10 +11,16 @@ from tinlance_web_intelligence.api.http.middleware import RequestBodyLimitMiddle
 from tinlance_web_intelligence.api.http.routes.health import router as health_router
 from tinlance_web_intelligence.api.http.routes.jobs import router as jobs_router
 from tinlance_web_intelligence.api.http.routes.research import router as research_router
+from tinlance_web_intelligence.api.http.routes.world_intelligence import (
+    router as world_intelligence_router,
+)
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
+    SQLiteSourceEvidenceOutbox,
+)
 
 
 def create_app(
@@ -22,6 +28,7 @@ def create_app(
     settings: Settings | None = None,
     repository: SQLiteJobRepository | None = None,
     verifier: PrincipalVerifier | None = None,
+    evidence_outbox: SQLiteSourceEvidenceOutbox | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
     if (
@@ -49,6 +56,12 @@ def create_app(
     )
     app.state.repository = repo
     app.state.settings = config
+    outbox = evidence_outbox or SQLiteSourceEvidenceOutbox(config.database_path)
+    app.state.evidence_outbox = outbox
+    if evidence_outbox is None:
+        @app.on_event("shutdown")
+        def close_evidence_outbox() -> None:
+            outbox.close()
 
     @app.middleware("http")
     async def authenticate(
@@ -78,4 +91,5 @@ def create_app(
     app.include_router(health_router)
     app.include_router(jobs_router)
     app.include_router(research_router)
+    app.include_router(world_intelligence_router)
     return app
