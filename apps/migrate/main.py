@@ -6,6 +6,7 @@ from importlib.resources import files
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
@@ -55,7 +56,7 @@ def main() -> int:
     )
     if not migration.is_file():
         raise SystemExit("packaged PostgreSQL migration resource is missing")
-    pool: ConnectionPool[dict[str, Any]] = ConnectionPool(
+    pool = ConnectionPool[Connection[dict[str, Any]]](
         conninfo=migration_dsn,
         min_size=1,
         max_size=2,
