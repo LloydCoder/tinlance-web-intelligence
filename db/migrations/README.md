@@ -1,3 +1,5 @@
 # Database migrations
 
-The W3 SQLite schema is initialized by `SQLiteJobRepository` and is intended for the single-node durable job API. This is not the production multi-replica schema contract. W6 must introduce versioned PostgreSQL migrations, migration verification in CI, upgrade/rollback procedures, and a tested backup/restore path before production readiness can be claimed.
+W3 initializes the durable single-node SQLite job store in SQLiteJobRepository. W4 includes a transactional runtime migration that rebuilds the W3 jobs table to allow the browser kind while preserving existing rows and recreating indexes. This migration is covered by tests/test_jobs_migration.py.
+
+This is not a production multi-replica schema strategy. W6 must introduce versioned PostgreSQL migrations, schema-upgrade verification in CI, rollback procedures, and a tested backup/restore path before production readiness can be claimed.
