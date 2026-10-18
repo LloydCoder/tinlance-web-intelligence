@@ -40,7 +40,7 @@ class BrowserService:
         proxy_password = settings.browser_proxy_password
         if proxy_url is None or proxy_username is None or proxy_password is None:
             raise ConfigurationError("browser service requires an authenticated egress proxy")
-        self._proxy = {
+        self._proxy: Any = {
             "server": proxy_url,
             "username": proxy_username,
             "password": proxy_password,
