@@ -50,7 +50,7 @@ services:
       TWI_WORKER_ID: ${TWI_WORKER_ID:-twi-wi-export-worker}
     volumes:
       - twi-data:/data
-    networks: [twi_app]
+    networks: [twi_app, twi_outbound]
     depends_on:
       api:
         condition: service_healthy
@@ -62,3 +62,4 @@ volumes:
 networks:
   twi_app:
     internal: true
+  twi_outbound: {}
