@@ -9,6 +9,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.browser.policies import BrowserPolicyError, normalize_browser_payload
 from tinlance_web_intelligence.jobs.model import IdempotencyConflictError, Job, JobStatus
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
@@ -20,7 +21,7 @@ _IDEMPOTENCY_PATTERN = re.compile(r"^[\x21-\x7e]+$")
 class JobCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    kind: Literal["search", "fetch"]
+    kind: Literal["search", "fetch", "browser"]
     payload: dict[str, Any] = Field(max_length=32)
 
 
@@ -51,6 +52,11 @@ def _normalize_payload(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 20:
             raise HTTPException(status_code=422, detail="limit must be an integer from 1 to 20")
         return {"query": " ".join(query.split()), "limit": limit}
+    if kind == "browser":
+        try:
+            return normalize_browser_payload(payload)
+        except BrowserPolicyError as exc:
+            raise HTTPException(status_code=422, detail="browser request rejected by acquisition policy") from exc
     if set(payload) != {"url"}:
         raise HTTPException(status_code=422, detail="fetch payload must contain only url")
     url = payload.get("url")
@@ -71,7 +77,7 @@ def create_job(
     ),
 ) -> dict[str, Any]:
     principal = _principal(request)
-    required_scope = "twi:search" if body.kind == "search" else "twi:fetch"
+    required_scope = {"search": "twi:search", "fetch": "twi:fetch", "browser": "twi:browser"}[body.kind]
     _require_scope(principal, required_scope)
     if not _IDEMPOTENCY_PATTERN.fullmatch(idempotency_key):
         raise HTTPException(
@@ -79,6 +85,8 @@ def create_job(
             detail="Idempotency-Key contains unsupported characters",
         )
     payload = _normalize_payload(body.kind, body.payload)
+    if body.kind == "browser" and not request.app.state.settings.browser_enabled:
+        raise HTTPException(status_code=503, detail="browser acquisition is disabled")
     repository: SQLiteJobRepository = request.app.state.repository
     try:
         job = repository.create(
