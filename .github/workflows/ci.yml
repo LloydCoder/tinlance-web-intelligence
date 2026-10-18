@@ -18,7 +18,7 @@ jobs:
   quality:
     name: Python quality and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -40,5 +40,11 @@ jobs:
         run: mypy src tests
       - name: Security lint
         run: bandit -q -r src
+      - name: Install Chromium for isolated browser smoke test
+        if: matrix.python-version == '3.12'
+        run: python -m playwright install --with-deps chromium
       - name: Unit and contract tests
         run: pytest -q
+      - name: Chromium runtime smoke test
+        if: matrix.python-version == '3.12'
+        run: pytest -q tests/test_browser_runtime.py
