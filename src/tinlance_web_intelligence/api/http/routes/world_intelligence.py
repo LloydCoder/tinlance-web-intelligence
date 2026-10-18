@@ -89,7 +89,9 @@ def export_source_evidence(
     except CitationNotFoundError as exc:
         raise HTTPException(status_code=404, detail="citation job not found") from exc
     except CitationSourceError as exc:
-        raise HTTPException(status_code=422, detail="valid captured source evidence is required") from exc
+        raise HTTPException(
+            status_code=422, detail="valid captured source evidence is required"
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="source-evidence validation failed") from exc
 
@@ -128,9 +130,13 @@ def export_source_evidence(
             traceparent=traceparent,
         )
     except OutboxConflictError as exc:
-        raise HTTPException(status_code=409, detail="idempotency key conflicts with another export") from exc
+        raise HTTPException(
+            status_code=409, detail="idempotency key conflicts with another export"
+        ) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail="invalid idempotency key or export context") from exc
+        raise HTTPException(
+            status_code=400, detail="invalid idempotency key or export context"
+        ) from exc
     return JSONResponse(
         status_code=200 if replayed else 202,
         content={
