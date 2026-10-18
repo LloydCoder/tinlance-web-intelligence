@@ -175,7 +175,7 @@ class PostgresJobRepository:
                 row = conn.execute(
                     """SELECT * FROM jobs WHERE status='queued' AND available_at <= %s
                        AND cancel_requested=FALSE AND kind = ANY(%s)
-                       ORDER BY created_at, job_id FOR UPDATE SKIP LOCKED LIMIT 1""",
+                       ORDER BY created_at, job_id LIMIT 1 FOR UPDATE SKIP LOCKED""",
                     (now, list(allowed_kinds)),
                 ).fetchone()
             if row is None:
@@ -190,8 +190,8 @@ class PostgresJobRepository:
 
     def _owned_running_job(self, conn: Any, job_id: str, worker_id: str) -> dict[str, Any]:
         row = conn.execute(
-            "SELECT * FROM jobs WHERE job_id=%s AND status='running' AND lease_owner=%s
-               AND lease_until >= %s FOR UPDATE",
+            """SELECT * FROM jobs WHERE job_id=%s AND status='running' AND lease_owner=%s
+               AND lease_until >= %s FOR UPDATE""",
             (job_id, worker_id, time.time()),
         ).fetchone()
         if row is None:
