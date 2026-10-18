@@ -23,6 +23,7 @@ from tinlance_web_intelligence.security.url_validation import (
         "https://user:password@example.com/",
         "https://example.com/#fragment",
         "https://example.com:99999/",
+        "https://example.com:8080/",
         "http://example.com\\@evil.com/",
         "http://2130706433/",
         " https://example.com",

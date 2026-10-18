@@ -47,7 +47,7 @@ class BraveSearchProvider:
         results: list[SearchResult] = []
         if not isinstance(raw_results, list):
             raise SearchProviderError("search provider results have an invalid shape")
-        for item in raw_results:
+        for raw_rank, item in enumerate(raw_results, start=1):
             if not isinstance(item, dict):
                 continue
             title = item.get("title")
@@ -65,7 +65,7 @@ class BraveSearchProvider:
                     url=safe_url,
                     snippet=snippet[:2000] if isinstance(snippet, str) else "",
                     provider=self.name,
-                    rank=len(results) + 1,
+                    rank=raw_rank,
                 )
             )
             if len(results) >= limit:

@@ -81,16 +81,16 @@ def validate_url(
         raise UnsafeURLError("localhost destinations are forbidden")
     if hostname.endswith(".local") or hostname.endswith(".internal"):
         raise UnsafeURLError("local and internal DNS namespaces are forbidden")
+    literal: ipaddress.IPv4Address | ipaddress.IPv6Address | None
     try:
         literal = ipaddress.ip_address(hostname)
     except ValueError:
         literal = _legacy_ipv4_literal(hostname)
     if literal is not None and not is_public_routable_ip(str(literal)):
         raise UnsafeURLError("non-public IP destinations are forbidden")
-    if port is not None and not 1 <= port <= 65535:
-        raise UnsafeURLError("port is outside the valid range")
-    netloc = f"[{hostname}]" if ":" in hostname else hostname
-    if port is not None:
-        netloc = f"{netloc}:{port}"
+    if port is not None and port not in {80, 443}:
+        raise UnsafeURLError("only standard HTTP and HTTPS destination ports are allowed")
+    normalized_host = f"[{hostname}]" if ":" in hostname else hostname
+    netloc = f"{normalized_host}:{port}" if port is not None else normalized_host
     normalized = urlunsplit((scheme, netloc, parsed.path or "/", parsed.query, ""))
     return ValidatedURL(normalized, scheme, hostname, port)

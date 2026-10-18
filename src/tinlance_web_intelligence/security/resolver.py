@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import socket
-from typing import Any
 
-from aiohttp.abc import AbstractResolver
+from aiohttp.abc import AbstractResolver, ResolveResult
 from aiohttp.resolver import DefaultResolver
 
-from tinlance_web_intelligence.security.url_validation import UnsafeURLError, is_public_routable_ip
+from tinlance_web_intelligence.security.url_validation import (
+    UnsafeURLError,
+    is_public_routable_ip,
+)
 
 
 class PublicOnlyResolver(AbstractResolver):
@@ -23,13 +25,13 @@ class PublicOnlyResolver(AbstractResolver):
         self._delegate = delegate or DefaultResolver()
 
     async def resolve(
-        self, host: str, port: int = 0, family: int = socket.AF_INET
-    ) -> list[dict[str, Any]]:
+        self, host: str, port: int = 0, family: socket.AddressFamily = socket.AF_INET
+    ) -> list[ResolveResult]:
         results = await self._delegate.resolve(host, port, family)
         if not results:
             raise UnsafeURLError("destination has no DNS addresses")
         for result in results:
-            address = str(result.get("host", ""))
+            address = result["host"]
             if not is_public_routable_ip(address):
                 raise UnsafeURLError("destination resolved to a non-public IP address")
         return results

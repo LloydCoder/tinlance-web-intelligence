@@ -11,11 +11,32 @@ import aiohttp
 from tinlance_web_intelligence.acquisition.models import FetchResult
 from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.security.resolver import PublicOnlyResolver
-from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
+from tinlance_web_intelligence.security.url_validation import UnsafeURLError, ValidatedURL, validate_url
 
 
 class FetchError(RuntimeError):
     """A request was rejected or could not be completed safely."""
+
+
+_SENSITIVE_REDIRECT_HEADERS = frozenset(
+    {"authorization", "proxy-authorization", "cookie", "x-subscription-token", "x-api-key", "api-key"}
+)
+
+
+def headers_for_redirect(
+    headers: Mapping[str, str], previous: ValidatedURL, target: ValidatedURL
+) -> dict[str, str]:
+    """Strip credentials when a redirect crosses an origin boundary."""
+    previous_port = previous.port or (443 if previous.scheme == "https" else 80)
+    target_port = target.port or (443 if target.scheme == "https" else 80)
+    previous_origin = (previous.scheme, previous.hostname, previous_port)
+    target_origin = (target.scheme, target.hostname, target_port)
+    if previous_origin == target_origin:
+        return dict(headers)
+    return {
+        key: value for key, value in headers.items()
+        if key.lower() not in _SENSITIVE_REDIRECT_HEADERS
+    }
 
 
 class SafeHTTPFetcher:
@@ -45,6 +66,7 @@ class SafeHTTPFetcher:
         }
         if headers:
             request_headers.update(headers)
+        request_headers["Accept-Encoding"] = "identity"
         current = requested
         try:
             async with aiohttp.ClientSession(
@@ -67,12 +89,14 @@ class SafeHTTPFetcher:
                             if not location:
                                 raise FetchError("redirect response lacks a Location header")
                             try:
-                                current = validate_url(
+                                target = validate_url(
                                     urljoin(current.normalized, location),
                                     allowed_schemes=self.settings.allowed_schemes,
                                 )
                             except UnsafeURLError as exc:
                                 raise FetchError("redirect destination rejected by policy") from exc
+                            request_headers = headers_for_redirect(request_headers, current, target)
+                            current = target
                             continue
                         if not 200 <= response.status < 300:
                             raise FetchError(f"upstream returned HTTP {response.status}")
