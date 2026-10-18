@@ -34,6 +34,13 @@ def test_browser_proxy_configuration_fails_closed() -> None:
             "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
             "TWI_BROWSER_PROXY_PASSWORD": "weak",
         })
+
+    with pytest.raises(ConfigurationError):
+        Settings.from_env({
+            "TWI_BROWSER_PROXY_URL": "http://proxy:0",
+            "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+            "TWI_BROWSER_PROXY_PASSWORD": "correct-horse-battery-staple-2026",
+        })
     configured = Settings.from_env({
         "TWI_BROWSER_PROXY_URL": "http://egress-proxy:3128",
         "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
