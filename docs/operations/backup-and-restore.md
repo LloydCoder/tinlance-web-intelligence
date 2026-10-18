@@ -6,10 +6,11 @@ The production persistence backend stores job state, raw content-addressed artif
 
 ## Backup requirements
 
-- Use a dedicated database role with only the required read privileges for backup.
+- Use a dedicated database role with only the required read privileges for backup. Artifact retention must use a separate least-privilege `TWI_ARTIFACT_MAINTENANCE_DATABASE_URL` with delete access limited to artifact tables.
 - Supply TWI_DATABASE_URL through the deployment secret manager. Production URLs must use TLS with sslmode=verify-full and a trusted CA.
 - Run scripts/backup_postgres.sh from an approved operations environment with pg_dump and Python 3 installed. The script rejects URLs unless sslmode=verify-full is set.
 - Store encrypted backups outside the database failure domain. Restrict access, apply retention, and monitor backup age and failures.
+- Use `scripts/prune_artifacts.py` for artifact retention. It defaults to a dry run; destructive pruning requires `--apply` and `TWI_CONFIRM_ARTIFACT_PRUNE=YES`. Configure and audit the retention interval before enabling scheduled execution.
 - Preserve the SHA-256 checksum and backup metadata with the backup; do not log the DSN or source data.
 - Keep a documented retention schedule and delete expired copies according to policy.
 
