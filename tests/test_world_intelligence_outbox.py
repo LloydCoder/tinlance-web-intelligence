@@ -50,13 +50,17 @@ class SourceEvidenceOutboxTests(unittest.TestCase):
             self.enqueue(payload={**self.payload, "statement": "Changed statement."})
 
     def test_expired_lease_gets_a_new_token_and_stale_worker_cannot_complete(self) -> None:
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=100):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=100):
             self.enqueue()
             first = self.outbox.claim_next("same-worker", lease_seconds=5)
         self.assertIsNotNone(first)
         assert first is not None and first.lease_token is not None
 
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=106):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=106):
             second = self.outbox.claim_next("same-worker", lease_seconds=5)
         self.assertIsNotNone(second)
         assert second is not None and second.lease_token is not None
@@ -69,11 +73,15 @@ class SourceEvidenceOutboxTests(unittest.TestCase):
         self.assertEqual(completed.remote_evidence_id, "remote-id")
 
     def test_retryable_failure_uses_backoff_and_terminal_failure_stops_retrying(self) -> None:
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=100):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=100):
             self.enqueue()
             first = self.outbox.claim_next("worker", lease_seconds=10)
         assert first is not None and first.lease_token is not None
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=101):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=101):
             retry = self.outbox.fail(
                 first.event_id,
                 first.lease_token,
@@ -82,12 +90,18 @@ class SourceEvidenceOutboxTests(unittest.TestCase):
             )
         self.assertEqual(retry.status, "pending")
 
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=102):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=102):
             self.assertIsNone(self.outbox.claim_next("worker", lease_seconds=10))
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=104):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=104):
             second = self.outbox.claim_next("worker", lease_seconds=10)
         assert second is not None and second.lease_token is not None
-        with patch("tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time", return_value=105):
+        with patch(
+            "tinlance_web_intelligence.integrations.world_intelligence.outbox.time.time",
+            return_value=105):
             terminal = self.outbox.fail(
                 second.event_id,
                 second.lease_token,
