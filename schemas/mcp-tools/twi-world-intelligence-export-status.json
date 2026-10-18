@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_world_intelligence_export_status",
+  "description": "Read the status of a World Intelligence source-evidence export owned by the authenticated subject.",
+  "operation": "twi.world_intelligence.export_status",
+  "api": {
+    "method": "GET",
+    "path": "/v1/integrations/world-intelligence/exports/{event_id}",
+    "path_parameters": {"event_id": "$.event_id"}
+  },
+  "authorization": {
+    "required_scope": "twi:observations:export:read",
+    "capability": "world-intelligence.source-evidence.read",
+    "action": "read",
+    "resource_pattern": "twi://world-intelligence/exports/{event_id}"
+  },
+  "governance": {
+    "read_only": true,
+    "consequential": false,
+    "destructive": false,
+    "open_world": false
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["event_id"],
+    "properties": {"event_id": {"type": "string", "format": "uuid"}}
+  }
+}
