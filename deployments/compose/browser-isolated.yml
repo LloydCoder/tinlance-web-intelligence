@@ -2,6 +2,7 @@ name: twi-browser-isolation
 
 services:
   api:
+    init: true
     build:
       context: ../..
       dockerfile: deployments/docker/api.Dockerfile
@@ -26,6 +27,7 @@ services:
     restart: unless-stopped
 
   worker:
+    init: true
     build:
       context: ../..
       dockerfile: deployments/docker/worker.Dockerfile
@@ -44,6 +46,7 @@ services:
     restart: unless-stopped
 
   browser-worker:
+    init: true
     build:
       context: ../..
       dockerfile: deployments/docker/browser.Dockerfile
@@ -75,6 +78,7 @@ services:
     restart: unless-stopped
 
   egress-proxy:
+    init: true
     build:
       context: ../..
       dockerfile: deployments/docker/egress-proxy.Dockerfile
