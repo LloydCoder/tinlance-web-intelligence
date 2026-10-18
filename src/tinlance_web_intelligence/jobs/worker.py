@@ -88,7 +88,9 @@ class JobWorker:
                 "results": [asdict(item) for item in results],
             }
         if job.kind == "fetch":
-            page = asyncio.run(self.acquisition.acquire_page(job.payload["url"], tenant_id=job.tenant_id))
+            page = asyncio.run(
+                self.acquisition.acquire_page(job.payload["url"], tenant_id=job.tenant_id)
+            )
             return {
                 "source_url": page.fetch.final_url,
                 "retrieved_at": page.fetch.retrieved_at.isoformat(),
