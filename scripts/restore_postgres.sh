@@ -9,6 +9,8 @@ umask 077
 : "${TWI_DATABASE_URL:?TWI_DATABASE_URL must identify the isolated recovery target}"
 : "${TWI_BACKUP_FILE:?TWI_BACKUP_FILE must identify a verified custom-format dump}"
 : "${TWI_RESTORE_TARGET_DATABASE:?Set the expected recovery database name}"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$script_dir/check_database_tls.py"
 [[ -f "$TWI_BACKUP_FILE" ]] || { echo "backup file not found" >&2; exit 1; }
 [[ -f "$TWI_BACKUP_FILE.sha256" ]] || { echo "backup checksum file not found" >&2; exit 1; }
 command -v pg_restore >/dev/null 2>&1 || { echo "pg_restore is required" >&2; exit 127; }
