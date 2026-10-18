@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 from importlib.resources import files
 from urllib.parse import parse_qs, urlsplit
 
@@ -54,7 +55,7 @@ def main() -> int:
     )
     if not migration.is_file():
         raise SystemExit("packaged PostgreSQL migration resource is missing")
-    pool = ConnectionPool(
+    pool: ConnectionPool[dict[str, Any]] = ConnectionPool(
         conninfo=migration_dsn,
         min_size=1,
         max_size=2,
