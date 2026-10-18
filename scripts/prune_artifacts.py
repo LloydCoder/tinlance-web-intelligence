@@ -6,6 +6,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from check_database_tls import validate_database_url
+
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 
 
