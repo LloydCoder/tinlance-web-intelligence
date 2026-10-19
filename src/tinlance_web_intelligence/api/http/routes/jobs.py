@@ -121,8 +121,12 @@ def create_job(
         feature_decision = evaluate_feature(plan, feature=body.kind)
         if not feature_decision.allowed:
             if feature_decision.reason == "unknown_plan":
-                raise HTTPException(status_code=503, detail="commercial entitlement state unavailable")
-            raise HTTPException(status_code=403, detail="feature is not included in the current plan")
+                raise HTTPException(
+                    status_code=503, detail="commercial entitlement state unavailable"
+                )
+            raise HTTPException(
+                status_code=403, detail="feature is not included in the current plan"
+            )
         dimension = f"{body.kind}_requests_month"
         limit = plan.limits.get(dimension) if plan is not None else None
         if limit is None:
