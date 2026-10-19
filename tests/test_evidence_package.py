@@ -121,3 +121,18 @@ def test_export_matches_published_json_schema() -> None:
     Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER).validate(
         package
     )
+
+
+def test_validator_rejects_non_object_provenance_and_oversized_metadata() -> None:
+    body, manifest = _fixture()
+    package = json.loads(_build(body, manifest))
+    package["provenance"] = []
+    malformed = json.dumps(package, sort_keys=True, separators=(",", ":")).encode()
+    with pytest.raises(EvidencePackageError, match="provenance is invalid"):
+        validate_evidence_package(malformed)
+
+    package = json.loads(_build(body, manifest))
+    package["byte_size"] = 20_000_001
+    oversized = json.dumps(package, sort_keys=True, separators=(",", ":")).encode()
+    with pytest.raises(EvidencePackageError, match="byte_size"):
+        validate_evidence_package(oversized)
