@@ -9,6 +9,7 @@
     {"gate":"repository.consumer_contracts","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_consumer_contracts.py"},
     {"gate":"repository.monitor_persistence","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_monitors_repository.py"},
     {"gate":"repository.ci_contracts","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_ci_contracts.py"},
+    {"gate":"repository.evidence_export","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_evidence_api.py;tests/test_evidence_package.py;schemas/twi-evidence-package-v1.schema.json;run:39303747429@c9331b33e997bae010ada4bc4cebd3c36ee42b4a"},
     {"gate":"external.ci_run","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
     {"gate":"external.branch_governance","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
     {"gate":"external.consumer_approvals","status":"fail","owner":"Platform integration owner","evidence_reference":"contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"},
