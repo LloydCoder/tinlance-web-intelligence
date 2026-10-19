@@ -117,8 +117,10 @@ def test_browser_broker_uses_shared_postgres_job_queue() -> None:
         )
         assert completed.status_code == 200
         assert completed.json()["status"] == "succeeded"
-        assert repository.get(
+        persisted = repository.get(
             created.job_id, tenant_id=f"tenant-{namespace}", subject_id=f"subject-{namespace}"
-        ).status.value == "succeeded"
+        )
+        assert persisted is not None
+        assert persisted.status.value == "succeeded"
     finally:
         repository.close()
