@@ -17,6 +17,7 @@ from tinlance_web_intelligence.contracts.provenance import (
     validate_evidence_pack,
 )
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
+from tinlance_web_intelligence.monitors.model import MonitorDeletedError
 from tinlance_web_intelligence.monitors.service import MonitorService
 from tinlance_web_intelligence.observability.tracing import (
     extract_valid_traceparent,
@@ -71,6 +72,8 @@ class JobWorker:
                 parent=parent,
             ):
                 result = self._execute(job)
+        except MonitorDeletedError:
+            self._fail(job, "monitor_deleted", False)
         except BrowserCaptureError as exc:
             self._fail(job, exc.error_code, exc.retryable)
         except FetchError as exc:
