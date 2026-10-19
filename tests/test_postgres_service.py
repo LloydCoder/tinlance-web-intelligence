@@ -9,7 +9,6 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from scripts.create_pg_service import parse_service_values, write_service_file
 from scripts.validate_restore_target import validate_restore_target, verify_backup_checksum
 
