@@ -82,6 +82,13 @@ _SCHEMA_VERSION = "1.1.0"
 _REPORT_SCHEMA_VERSION = "1.1.0"
 _ALLOWED_COMPLETION = frozenset({"completed", "failed", "unsupported"})
 _ALLOWED_SUPPORT = frozenset({"supported", "unsupported"})
+_ALLOWED_FAILURE_MODES = frozenset(
+    {
+        "stale_evidence", "unsupported_claim", "blocked_redirect", "authorization_denied",
+        "capture_failed", "conflicting_sources", "anti_bot_challenge",
+        "unsupported_content_type",
+    }
+)
 _ALLOWED_EVIDENCE_MODES = frozenset({"synthetic", "live"})
 _MAX_LATENCY_MS = 600_000
 _MAX_RESOURCE_BYTES = 100_000_000
@@ -192,6 +199,8 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
         failure_mode = row.get("expected_failure_mode")
         if failure_mode is not None:
             failure_mode = _string(failure_mode, f"cases[{index}].expected_failure_mode")
+            if failure_mode not in _ALLOWED_FAILURE_MODES:
+                raise BenchmarkError(f"cases[{index}].expected_failure_mode is invalid")
         challenge_class = _string(row.get("challenge_class"), f"cases[{index}].challenge_class")
         support_status = _string(row.get("support_status"), f"cases[{index}].support_status")
         completion_status = _string(
@@ -303,6 +312,8 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
         failure_mode = row.get("failure_mode")
         if failure_mode is not None:
             failure_mode = _string(failure_mode, "failure_mode")
+            if failure_mode not in _ALLOWED_FAILURE_MODES:
+                raise BenchmarkError("failure_mode is invalid")
         completion_status = _string(row.get("completion_status"), "completion_status")
         evidence_mode = _string(row.get("evidence_mode"), "evidence_mode")
         if completion_status not in _ALLOWED_COMPLETION:
