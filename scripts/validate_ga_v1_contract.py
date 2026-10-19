@@ -10,6 +10,8 @@ from typing import Any
 
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
+from scripts.validate_w15_evidence_pack import validate as validate_evidence_pack
+
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
 _SHA64 = re.compile(r"^[0-9a-f]{64}$")
 _STATUSES = {"pass", "fail", "not_evidenced"}
@@ -67,6 +69,8 @@ def validate(
 
     pack = None
     if evidence_pack_path is not None:
+        if not _SHA40.fullmatch(revision or ""):
+            raise ValueError("evidence pack validation requires a bound source revision")
         pack_bytes = evidence_pack_path.read_bytes()
         pack = json.loads(pack_bytes)
         digest = hashlib.sha256(pack_bytes).hexdigest()
@@ -85,6 +89,7 @@ def validate(
             for row in pack_rows
         ):
             raise ValueError("evidence pack is not ready or is not source-bound")
+        validate_evidence_pack(evidence_pack_path, revision, gates_path)
     elif contract["decision"] == "approved":
         raise ValueError("approved release requires an evidence pack file")
 
