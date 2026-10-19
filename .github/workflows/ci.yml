@@ -79,6 +79,9 @@ jobs:
         run: |
           pytest -q
           python scripts/check_migration_sync.py
+          python scripts/validate_consumer_contracts.py --matrix contracts/consumer-matrix.json
+          python scripts/build_w15_evidence_pack.py --gates docs/readiness/w15-gates.json --output dist/w15-evidence-pack.json
+          python scripts/validate_w15_evidence_pack.py --pack dist/w15-evidence-pack.json --revision "$(git rev-parse HEAD)"
           bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
       - name: Configure runner user-namespace sandbox prerequisites
         run: |

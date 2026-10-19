@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "consumers": [
+    {"name":"agent-platform","repository":"LloydCoder/tinlance-agent-platform","revision":null,"contract_version":"1.0.0","fixture":"contracts/fixtures/platform/not-evidenced/tool-catalog.json","status":"not_evidenced","evidence_reference":"docs/roadmap/phases.md#W5"},
+    {"name":"world-intelligence","repository":null,"revision":null,"contract_version":"1.0.0","fixture":"contracts/fixtures/world-intelligence/not-evidenced/source-evidence.json","status":"not_evidenced","evidence_reference":"docs/roadmap/phases.md#W5"},
+    {"name":"tsic","repository":"LloydCoder/tinlance-system-integration","revision":null,"contract_version":"1.0.0","fixture":"contracts/fixtures/tsic/not-evidenced/conformance.json","status":"not_evidenced","evidence_reference":"docs/roadmap/phases.md#W5"}
+  ]
+}
