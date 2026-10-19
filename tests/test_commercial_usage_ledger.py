@@ -8,6 +8,7 @@ from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
     SQLiteUsageLedger,
     UsageConflictError,
+    UsageReservation,
 )
 
 
@@ -15,7 +16,9 @@ def ledger() -> SQLiteUsageLedger:
     return SQLiteUsageLedger(":memory:")
 
 
-def reserve(store: SQLiteUsageLedger, *, key: str, quantity: int = 1, limit: int = 2):
+def reserve(
+    store: SQLiteUsageLedger, *, key: str, quantity: int = 1, limit: int = 2
+) -> UsageReservation:
     return store.reserve(
         tenant_id="tenant-a", subject_id="subject-a", feature="fetch",
         dimension="requests_month", period_start="2026-10-01T00:00:00Z",
@@ -90,6 +93,6 @@ def test_released_reservation_cannot_be_committed() -> None:
 def test_bad_limit_and_quantity_fail_closed() -> None:
     store = ledger()
     with pytest.raises(ValueError):
-        reserve(store, key="bool", quantity=True)  # type: ignore[arg-type]
+        reserve(store, key="bool", quantity=True)
     with pytest.raises(ValueError):
         reserve(store, key="negative", limit=-1)
