@@ -181,25 +181,33 @@ class PostgresUsageLedger:
             ).fetchone()
             return row is not None
 
-    def usage_total(self, *, tenant_id: str, subject_id: str, dimension: str,
-                    period_start: str) -> int:
+    def usage_total(
+        self, *, tenant_id: str, subject_id: str | None, dimension: str, period_start: str
+    ) -> int:
+        sql = (
+            "SELECT COALESCE(SUM(quantity),0) AS quantity FROM twi_usage_events "
+            "WHERE tenant_id=%s AND dimension=%s AND period_start=%s"
+        )
+        parameters: list[Any] = [tenant_id, dimension, period_start]
+        if subject_id is not None:
+            sql += " AND subject_id=%s"
+            parameters.append(subject_id)
         with self._pool.connection() as conn:
-            row = conn.execute(
-                """SELECT COALESCE(SUM(quantity),0) AS quantity FROM twi_usage_events
-                   WHERE tenant_id=%s AND subject_id=%s AND dimension=%s AND period_start=%s""",
-                (tenant_id, subject_id, dimension, period_start),
-            ).fetchone()
+            row = conn.execute(sql, parameters).fetchone()
         return int(row["quantity"]) if row is not None else 0
 
     def list_events(
-        self, *, tenant_id: str, subject_id: str, limit: int = 100,
+        self, *, tenant_id: str, subject_id: str | None, limit: int = 100,
         dimension: str | None = None, period_start: str | None = None,
         after: tuple[str, str] | None = None,
     ) -> list[UsageEvent]:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 501:
             raise ValueError("limit must be between 1 and 501")
-        sql = "SELECT * FROM twi_usage_events WHERE tenant_id=%s AND subject_id=%s"
-        parameters: list[Any] = [tenant_id, subject_id]
+        sql = "SELECT * FROM twi_usage_events WHERE tenant_id=%s"
+        parameters: list[Any] = [tenant_id]
+        if subject_id is not None:
+            sql += " AND subject_id=%s"
+            parameters.append(subject_id)
         if dimension is not None:
             sql += " AND dimension=%s"
             parameters.append(dimension)
