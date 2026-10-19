@@ -8,9 +8,8 @@ import re
 import stat
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
 
-from scripts.check_database_tls import validate_database_url
+from scripts.create_pg_service import parse_service_values
 
 _ALLOWED_ENV_NAMES = {"TWI_RESTORE_DATABASE_URL", "TWI_PRIMARY_DATABASE_URL"}
 _MANIFEST = re.compile(r"^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]{0,255})$")
@@ -18,21 +17,8 @@ _MANIFEST = re.compile(r"^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]{0,255})$")
 
 def database_identity(dsn: str) -> tuple[str, int, str]:
     """Return normalized host/port/database identity after strict TLS URL validation."""
-    validate_database_url(dsn)
-    try:
-        parsed = urlsplit(dsn)
-        host = parsed.hostname
-        port = parsed.port if parsed.port is not None else 5432
-    except ValueError as exc:
-        raise ValueError("PostgreSQL database URL is malformed") from exc
-    database = unquote(parsed.path.lstrip("/"))
-    if (
-        not host
-        or not database
-        or any(ord(character) < 32 or ord(character) == 127 for character in database)
-    ):
-        raise ValueError("PostgreSQL database identity is invalid")
-    return host.lower(), port, database
+    values = parse_service_values(dsn)
+    return values["host"].lower(), int(values["port"]), values["dbname"]
 
 
 def validate_restore_target(
