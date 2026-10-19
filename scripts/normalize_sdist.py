@@ -7,14 +7,19 @@ import os
 import pathlib
 import sys
 import tarfile
+import tempfile
 
 
 def normalize_sdist(path: pathlib.Path, source_date_epoch: int) -> None:
     if source_date_epoch < 0:
         raise ValueError("SOURCE_DATE_EPOCH must be a non-negative integer")
-    if not path.is_file() or path.suffixes[-2:] != [".tar", ".gz"]:
+    if path.is_symlink() or not path.is_file() or path.suffixes[-2:] != [".tar", ".gz"]:
         raise ValueError("sdist path must identify an existing .tar.gz archive")
-    temporary = path.with_name(f".{path.name}.normalized")
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".normalized", dir=path.parent
+    )
+    os.close(descriptor)
+    temporary = pathlib.Path(temporary_name)
     try:
         with tarfile.open(path, mode="r:gz") as source:
             members = sorted(source.getmembers(), key=lambda member: member.name)
