@@ -58,7 +58,9 @@ def verify_backup_checksum(
     except (OSError, UnicodeDecodeError) as exc:
         raise ValueError("backup checksum manifest is unreadable") from exc
     if not manifest.endswith("\n") or manifest.count("\n") != 1:
-        raise ValueError("backup checksum manifest must contain exactly one newline-terminated line")
+        raise ValueError(
+            "backup checksum manifest must contain exactly one newline-terminated line"
+        )
     line = manifest[:-1]
     match = _MANIFEST.fullmatch(line)
     if match is None:
