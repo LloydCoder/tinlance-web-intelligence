@@ -86,6 +86,27 @@ class PostgresUsageLedger:
             if existing is not None:
                 if existing["request_fingerprint"].strip() != fingerprint:
                     raise UsageConflictError("idempotency key reused with different quota request")
+                if existing["status"] == "released":
+                    used_row = conn.execute(
+                        """SELECT COALESCE(SUM(quantity), 0) AS quantity
+                           FROM twi_usage_reservations
+                           WHERE tenant_id=%s AND dimension=%s AND period_start=%s
+                             AND status IN ('reserved','committed')""",
+                        (tenant_id, dimension, period_start),
+                    ).fetchone()
+                    used = int(used_row["quantity"]) if used_row is not None else 0
+                    if used + quantity > limit:
+                        raise QuotaExceededError("hard quota would be exceeded")
+                    reactivated = conn.execute(
+                        """UPDATE twi_usage_reservations
+                           SET period_start=%s, status='reserved', updated_at=%s
+                           WHERE reservation_id=%s AND status='released'
+                           RETURNING *""",
+                        (period_start, _now(), existing["reservation_id"]),
+                    ).fetchone()
+                    if reactivated is None:
+                        raise RuntimeError("released usage reservation could not be reactivated")
+                    existing = reactivated
                 return self._to_reservation(existing)
             row = conn.execute(
                 """SELECT COALESCE(SUM(quantity), 0) AS quantity
