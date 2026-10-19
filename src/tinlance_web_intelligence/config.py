@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlsplit
 
@@ -22,6 +23,7 @@ class Settings:
     user_agent: str = "TinlanceWebIntelligence/0.1"
     database_path: str = "./var/twi.sqlite3"
     database_url: str | None = None
+    source_revision: str | None = None
     identity_issuer: str | None = None
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
@@ -61,6 +63,7 @@ class Settings:
                 user_agent=values.get("TWI_USER_AGENT", "TinlanceWebIntelligence/0.1").strip(),
                 database_path=values.get("TWI_DATABASE_PATH", "./var/twi.sqlite3").strip(),
                 database_url=values.get("TWI_DATABASE_URL", "").strip() or None,
+                source_revision=values.get("TWI_SOURCE_REVISION") or None,
                 identity_issuer=values.get("TWI_IDENTITY_ISSUER") or None,
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
@@ -98,6 +101,10 @@ class Settings:
             raise ConfigurationError("only http and https schemes may be configured")
         if not self.user_agent or any(ord(ch) < 32 for ch in self.user_agent):
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
+        if self.source_revision is not None and not re.fullmatch(
+            r"[0-9a-f]{40}", self.source_revision
+        ):
+            raise ConfigurationError("TWI_SOURCE_REVISION must be a full lowercase Git commit SHA")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
         if (

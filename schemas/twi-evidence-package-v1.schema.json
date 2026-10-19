@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinlance.com/schemas/twi-evidence-package-1.0.0.json",
+  "title": "TWI Deterministic Evidence Package",
+  "description": "Integrity-checked acquisition observation; it does not assert source truth or authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schema_version",
+    "export_id",
+    "artifact_id",
+    "content_sha256",
+    "content_type",
+    "byte_size",
+    "source_revision",
+    "provenance",
+    "content_base64",
+    "interpretation"
+  ],
+  "properties": {
+    "format": {
+      "const": "application/vnd.tinlance.twi-evidence+json"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "export_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "content_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "byte_size": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20000000
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "requested_url_sha256",
+        "final_url_sha256",
+        "status_code",
+        "content_type",
+        "content_sha256",
+        "byte_size",
+        "retrieved_at",
+        "redirect_count",
+        "extractor_version"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "requested_url_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "final_url_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "status_code": { "type": "integer", "minimum": 200, "maximum": 599 },
+        "content_type": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "byte_size": { "type": "integer", "minimum": 0 },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "redirect_count": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "extractor_version": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "content_base64": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "maxLength": 26666668
+    },
+    "interpretation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provenance_kind",
+        "truth_assessment",
+        "source_authority_assessment"
+      ],
+      "properties": {
+        "provenance_kind": { "const": "acquisition_observation" },
+        "truth_assessment": { "const": "not_provided" },
+        "source_authority_assessment": { "const": "not_provided" }
+      }
+    }
+  }
+}

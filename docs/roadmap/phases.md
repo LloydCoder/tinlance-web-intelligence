@@ -20,6 +20,18 @@ Workstreams are executed serially for **release-gate closure**. Implementation m
 | W14 | Enterprise tenant controls and integration contracts | **Repository API/tool contracts implemented; Platform integration is blocked.** Tenant/subject-scoped routes, separate destructive scope, strict payloads, and exact consumer snapshots are present. Platform `db8473b452701d9b3807797ab1bc178b58feb96d` lacks all six monitor tools; World Intelligence schema at `a564816faffa5be8e970eae5127f3a504d0a1729` passes the emitted-payload check; TSIC requirements at `d30d5a6ec9a19c6de7d373cba578cbd9cdc26451` have no external conformance result. |
 | W15 | General availability and customer operations | **Not ready.** The exact-revision evidence pack reports the Platform consumer gate as `fail`, plus unevidenced branch governance, deployment/security, live quality/GA approval, privacy/risk, and SLO/on-call gates. Repository tests and the pinned World Intelligence schema do not establish production readiness. |
 
+## W15 commercial/product subphase sequence
+
+These are sequential delivery modules within the wider W15 readiness work; they do not replace the W15 external release gates.
+
+| Subphase | Scope | Evidence-backed status |
+|---|---|---|
+| W15-A | Commercial readiness: entitlements, atomic quotas, usage ledger, billing-event lifecycle and reconciliation | **Merged.** PR [#59](https://github.com/LloydCoder/tinlance-web-intelligence/pull/59) merged to `main`; exact-head CI run [#39301007288](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39301007288) succeeded. External payment-provider settlement and live billing remain unverified. |
+| W15-B | Customer-facing provenance and evidence export | **Implementation and phase audit complete; awaiting merge.** PR [#61](https://github.com/LloydCoder/tinlance-web-intelligence/pull/61) head `c9331b33e997bae010ada4bc4cebd3c36ee42b4a) passed Python 3.12/3.13, lint, typing, security lint, tests, reproducible artifact, and browser-isolation checks in [run #39303747429](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39303747429). The pinned Platform adapter still lacks `twi_evidence_export`; the external consumer gate remains failed. |
+| W15-C | Hard-job benchmark and regression qualification | Not started. Must extend `benchmarks/twi/v1/` with versioned hard cases, reproducible result hashes, failure classes, and justified thresholds; synthetic results must not be represented as live quality. |
+| W15-D | Deployment and self-hosting readiness | Not started. Conservative default: self-hosting is **excluded from GA v1** until explicitly approved; supported deployment claims must match tested Compose/install, configuration, migration, backup/restore, and security evidence. |
+| W15-E | GA v1 product contract and release decision | Not started. Must reconcile docs/claims/pricing, source-bound release evidence, benchmark and security findings, accepted risks, and external approvals. Repository completion alone cannot certify GA. |
+
 ## Global exit gates
 
 - Tests prove positive, negative, failure, concurrency, and recovery behavior.

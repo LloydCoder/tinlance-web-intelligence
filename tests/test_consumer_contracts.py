@@ -36,6 +36,9 @@ def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
     assert set(fixture["expected_monitor_tools"]) == expected
     assert set(fixture["missing_monitor_tools"]) == expected
     assert not (expected & set(fixture["registered_tools"]))
+    assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
+    assert fixture["missing_evidence_tools"] == ["twi_evidence_export"]
+    assert "twi_evidence_export" not in fixture["registered_tools"]
 
 
 def test_tsic_requirements_are_pinned_without_claiming_external_conformance() -> None:

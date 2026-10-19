@@ -91,6 +91,12 @@ JOB_ID_SCHEMA: dict[str, Any] = {
     "required": ["job_id"],
     "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 64}},
 }
+EVIDENCE_EXPORT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["job_id"],
+    "properties": {"job_id": {"type": "string", "minLength": 1, "maxLength": 64}},
+}
 BROWSER_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
@@ -228,6 +234,23 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         resource_pattern="twi://jobs/{job_id}",
         required_scope="twi:jobs:read",
         input_schema=JOB_ID_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
+        open_world=False,
+    ),
+    PlatformToolContract(
+        name="twi_evidence_export",
+        operation="twi.jobs.export_evidence",
+        description=(
+            "Export integrity-checked acquisition bytes and provenance for a successful fetch job; "
+            "does not assert source truth or authority."
+        ),
+        capability="web.evidence.export",
+        action="read",
+        resource_pattern="twi://jobs/{job_id}/evidence",
+        required_scope="twi:evidence:export",
+        input_schema=EVIDENCE_EXPORT_SCHEMA,
         read_only=True,
         consequential=False,
         destructive=False,
