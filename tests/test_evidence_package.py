@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 from datetime import UTC, datetime
 from hashlib import sha256
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from tinlance_web_intelligence.contracts.evidence_package import (
     EvidencePackageError,
@@ -106,3 +108,16 @@ def test_package_rejects_invalid_source_revision_and_oversized_input() -> None:
         )
     with pytest.raises(EvidencePackageError, match="30 MB"):
         validate_evidence_package(b"x" * 30_000_001)
+
+
+def test_export_matches_published_json_schema() -> None:
+    body, manifest = _fixture()
+    package = json.loads(_build(body, manifest))
+    schema_path = (
+        Path(__file__).resolve().parents[1] / "schemas" / "twi-evidence-package-v1.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER).validate(
+        package
+    )
