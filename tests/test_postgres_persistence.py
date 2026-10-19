@@ -16,8 +16,6 @@ from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
     UsageConflictError,
 )
-from tinlance_web_intelligence.persistence.postgres_usage_ledger import PostgresUsageLedger
-
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
     OutboxLeaseLostError,
@@ -30,6 +28,7 @@ from tinlance_web_intelligence.jobs.model import (
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 from tinlance_web_intelligence.persistence.postgres_outbox import PostgresSourceEvidenceOutbox
+from tinlance_web_intelligence.persistence.postgres_usage_ledger import PostgresUsageLedger
 
 _DSN = os.environ.get("TWI_TEST_POSTGRES_DSN")
 pytestmark = pytest.mark.skipif(not _DSN, reason="TWI_TEST_POSTGRES_DSN is not configured")
