@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
+import os
 import re
 import sys
 from collections.abc import Mapping, Sequence
@@ -33,6 +35,11 @@ class BenchmarkCase:
     expected_phrases: tuple[str, ...]
     max_age_seconds: int
     expected_failure_mode: str | None
+    challenge_class: str
+    support_status: str
+    expected_completion_status: str
+    evidence_mode: str
+    max_duplicate_retrievals: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +62,12 @@ class CaseObservation:
     retrieved: tuple[Evidence, ...]
     claims: tuple[Claim, ...]
     failure_mode: str | None
+    completion_status: str
+    latency_ms: int
+    resource_bytes: int
+    request_count: int
+    retry_count: int
+    evidence_mode: str
 
 
 _STOP_WORDS = frozenset(
@@ -65,7 +78,16 @@ _STOP_WORDS = frozenset(
     }
 )
 _TOKEN = re.compile(r"[a-z0-9_]{3,}")
-_SCHEMA_VERSION = "1.0.0"
+_SCHEMA_VERSION = "1.1.0"
+_REPORT_SCHEMA_VERSION = "1.1.0"
+_ALLOWED_COMPLETION = frozenset({"completed", "failed", "unsupported"})
+_ALLOWED_SUPPORT = frozenset({"supported", "unsupported"})
+_ALLOWED_EVIDENCE_MODES = frozenset({"synthetic", "live"})
+_MAX_LATENCY_MS = 600_000
+_MAX_RESOURCE_BYTES = 100_000_000
+_MAX_REQUEST_COUNT = 10_000
+_MAX_RETRY_COUNT = 100
+_MAX_DUPLICATES = 10_000
 
 
 def _mapping(value: object, field: str) -> Mapping[str, object]:
@@ -161,6 +183,21 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
         failure_mode = row.get("expected_failure_mode")
         if failure_mode is not None:
             failure_mode = _string(failure_mode, f"cases[{index}].expected_failure_mode")
+        challenge_class = _string(row.get("challenge_class"), f"cases[{index}].challenge_class")
+        support_status = _string(row.get("support_status"), f"cases[{index}].support_status")
+        completion_status = _string(
+            row.get("expected_completion_status"), f"cases[{index}].expected_completion_status"
+        )
+        evidence_mode = _string(row.get("evidence_mode"), f"cases[{index}].evidence_mode")
+        max_duplicates = row.get("max_duplicate_retrievals", 0)
+        if support_status not in _ALLOWED_SUPPORT:
+            raise BenchmarkError(f"cases[{index}].support_status is invalid")
+        if completion_status not in _ALLOWED_COMPLETION:
+            raise BenchmarkError(f"cases[{index}].expected_completion_status is invalid")
+        if evidence_mode not in _ALLOWED_EVIDENCE_MODES:
+            raise BenchmarkError(f"cases[{index}].evidence_mode is invalid")
+        if type(max_duplicates) is not int or not 0 <= max_duplicates <= _MAX_DUPLICATES:
+            raise BenchmarkError(f"cases[{index}].max_duplicate_retrievals is invalid")
         cases.append(
             BenchmarkCase(
                 case_id=case_id,
@@ -181,6 +218,11 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
                 ),
                 max_age_seconds=max_age,
                 expected_failure_mode=failure_mode,
+                challenge_class=challenge_class,
+                support_status=support_status,
+                expected_completion_status=completion_status,
+                evidence_mode=evidence_mode,
+                max_duplicate_retrievals=max_duplicates,
             )
         )
     if not cases:
@@ -232,12 +274,34 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
         failure_mode = row.get("failure_mode")
         if failure_mode is not None:
             failure_mode = _string(failure_mode, "failure_mode")
+        completion_status = _string(row.get("completion_status"), "completion_status")
+        evidence_mode = _string(row.get("evidence_mode"), "evidence_mode")
+        if completion_status not in _ALLOWED_COMPLETION:
+            raise BenchmarkError("completion_status is invalid")
+        if evidence_mode not in _ALLOWED_EVIDENCE_MODES:
+            raise BenchmarkError("evidence_mode is invalid")
+        measurements = {
+            "latency_ms": (row.get("latency_ms"), _MAX_LATENCY_MS),
+            "resource_bytes": (row.get("resource_bytes"), _MAX_RESOURCE_BYTES),
+            "request_count": (row.get("request_count"), _MAX_REQUEST_COUNT),
+            "retry_count": (row.get("retry_count"), _MAX_RETRY_COUNT),
+        }
+        for field, (value, maximum) in measurements.items():
+            minimum = 1 if field == "request_count" else 0
+            if type(value) is not int or not minimum <= value <= maximum:
+                raise BenchmarkError(f"{field} must be an integer from {minimum} to {maximum}")
         observations.append(
             CaseObservation(
                 case_id=case_id,
                 retrieved=tuple(retrieved),
                 claims=tuple(claims),
                 failure_mode=failure_mode,
+                completion_status=completion_status,
+                latency_ms=measurements["latency_ms"][0],
+                resource_bytes=measurements["resource_bytes"][0],
+                request_count=measurements["request_count"][0],
+                retry_count=measurements["retry_count"][0],
+                evidence_mode=evidence_mode,
             )
         )
     if not observations:
