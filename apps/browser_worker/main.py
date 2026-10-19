@@ -17,7 +17,7 @@ async def _serve(worker: BrowserBrokerWorker) -> None:
 
 
 def main() -> None:
-    settings = Settings.from_env(require_identity=False)
+    settings = Settings.from_env(require_identity=False, require_database=False)
     if not settings.browser_enabled:
         raise RuntimeError("browser worker refuses to start unless TWI_BROWSER_ENABLED=true")
     worker = BrowserBrokerWorker(settings, BrowserService(settings))
