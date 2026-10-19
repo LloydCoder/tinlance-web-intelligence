@@ -63,7 +63,7 @@ class Settings:
                 user_agent=values.get("TWI_USER_AGENT", "TinlanceWebIntelligence/0.1").strip(),
                 database_path=values.get("TWI_DATABASE_PATH", "./var/twi.sqlite3").strip(),
                 database_url=values.get("TWI_DATABASE_URL", "").strip() or None,
-                source_revision=values.get("TWI_SOURCE_REVISION", "").strip() or None,
+                source_revision=values.get("TWI_SOURCE_REVISION") or None,
                 identity_issuer=values.get("TWI_IDENTITY_ISSUER") or None,
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
