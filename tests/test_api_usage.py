@@ -11,6 +11,7 @@ from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 TEST_JTI = "usage-api-test"
+TEST_CREDENTIAL = "valid-credential"
 
 
 class FakeVerifier:
@@ -18,7 +19,7 @@ class FakeVerifier:
         self.value = value
 
     def verify(self, token: str) -> Principal:
-        if token != "valid-credential":
+        if token != TEST_CREDENTIAL:
             raise PermissionError("invalid credential")
         return self.value
 
@@ -55,7 +56,7 @@ def test_usage_endpoint_requires_scope_and_uses_verified_identity() -> None:
     client = TestClient(app)
     response = client.get(
         "/v1/usage?dimension=requests_month&period_start=2026-10-01T00:00:00Z",
-        headers={"Authorization": "Bearer valid-credential"},
+        headers={"Authorization": f"Bearer {TEST_CREDENTIAL}"},
     )
     assert response.status_code == 200
     assert response.json()["used"] == 2
