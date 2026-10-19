@@ -649,6 +649,8 @@ def evaluate(
             qualification_reason = "synthetic_or_mixed_evidence_cannot_qualify_live_quality"
         elif approval_status != "approved":
             qualification_reason = "thresholds_not_approved"
+        elif thresholds_sha256 is None:
+            qualification_reason = "threshold_registry_hash_missing"
         else:
             failures: list[str] = []
             unavailable: list[str] = []
