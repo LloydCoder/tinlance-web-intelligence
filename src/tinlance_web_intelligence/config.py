@@ -100,7 +100,11 @@ class Settings:
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
-        if require_database and self.environment in {"staging", "production"} and self.database_url is None:
+        if (
+            require_database
+            and self.environment in {"staging", "production"}
+            and self.database_url is None
+        ):
             raise ConfigurationError(
                 "staging and production require TWI_DATABASE_URL PostgreSQL persistence"
             )
