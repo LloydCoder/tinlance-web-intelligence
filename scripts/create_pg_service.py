@@ -44,7 +44,7 @@ def parse_service_values(dsn: str) -> dict[str, str]:
     validate_database_url(dsn)
     try:
         parsed = urlsplit(dsn)
-        port = parsed.port or 5432
+        port = parsed.port if parsed.port is not None else 5432
         query = parse_qs(parsed.query, keep_blank_values=True, strict_parsing=True)
     except ValueError as exc:
         raise ValueError("PostgreSQL service URL is malformed") from exc
