@@ -105,7 +105,7 @@
       "completion_status": "failed",
       "latency_ms": 15,
       "resource_bytes": 200,
-      "request_count": 0,
+      "request_count": 1,
       "retry_count": 0,
       "evidence_mode": "synthetic"
     },
