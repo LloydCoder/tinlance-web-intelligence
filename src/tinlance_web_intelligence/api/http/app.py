@@ -2,8 +2,21 @@
 
 from __future__ import annotations
 
+import hmac
+import re
+import time
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
@@ -57,6 +70,26 @@ def create_app(
     )
     app.state.repository = repo
     app.state.settings = config
+    registry = CollectorRegistry()
+    http_requests = Counter(
+        "twi_http_requests_total",
+        "Completed HTTP requests, excluding metrics scrapes.",
+        ("method", "route", "status"),
+        registry=registry,
+    )
+    http_duration = Histogram(
+        "twi_http_request_duration_seconds",
+        "HTTP request latency in seconds, excluding metrics scrapes.",
+        ("method", "route"),
+        registry=registry,
+    )
+    http_in_flight = Gauge(
+        "twi_http_in_flight_requests",
+        "HTTP requests currently being handled by this API process.",
+        ("method",),
+        registry=registry,
+    )
+    app.state.metrics_registry = registry
     outbox = evidence_outbox or create_source_evidence_outbox(config)
     app.state.evidence_outbox = outbox
     if evidence_outbox is None:
@@ -64,29 +97,77 @@ def create_app(
     if repository is None:
         app.router.on_shutdown.append(repo.close)
 
+    @app.get("/internal/metrics", include_in_schema=False)
+    def metrics() -> Response:
+        return Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
+
     @app.middleware("http")
     async def authenticate(
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        if request.url.path in {"/health/live", "/health/ready"}:
-            return await call_next(request)
-        authorization = request.headers.get("authorization", "")
-        scheme, separator, token = authorization.partition(" ")
-        if scheme.lower() != "bearer" or not separator or not token:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "bearer token required"},
-                headers={"WWW-Authenticate": 'Bearer realm="twi", error="invalid_token"'},
-            )
+        method = request.method if request.method in {
+            "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
+        } else "OTHER"
+        supplied_request_id = request.headers.get("x-request-id", "")
+        request_id = (
+            supplied_request_id
+            if re.fullmatch(r"[A-Za-z0-9._-]{1,64}", supplied_request_id)
+            else uuid.uuid4().hex
+        )
+        request.state.request_id = request_id
+        started_at = time.perf_counter()
+        http_in_flight.labels(method).inc()
+        response: Response | None = None
         try:
-            request.state.principal = trusted_verifier.verify(token)
-        except Exception:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "access token invalid"},
-                headers={"WWW-Authenticate": 'Bearer realm="twi", error="invalid_token"'},
-            )
-        return await call_next(request)
+            if request.url.path in {"/health/live", "/health/ready"}:
+                response = await call_next(request)
+            elif request.url.path == "/internal/metrics":
+                if config.metrics_token is None:
+                    response = JSONResponse(status_code=404, content={"detail": "not found"})
+                elif not hmac.compare_digest(
+                    request.headers.get("authorization", ""), f"Bearer {config.metrics_token}"
+                ):
+                    response = JSONResponse(
+                        status_code=401,
+                        content={"detail": "metrics credentials required"},
+                        headers={"WWW-Authenticate": 'Bearer realm="twi-metrics"'},
+                    )
+                else:
+                    response = await call_next(request)
+            else:
+                authorization = request.headers.get("authorization", "")
+                scheme, separator, token = authorization.partition(" ")
+                if scheme.lower() != "bearer" or not separator or not token:
+                    response = JSONResponse(
+                        status_code=401,
+                        content={"detail": "bearer token required"},
+                        headers={"WWW-Authenticate": 'Bearer realm="twi", error="invalid_token"'},
+                    )
+                else:
+                    try:
+                        request.state.principal = trusted_verifier.verify(token)
+                    except Exception:
+                        response = JSONResponse(
+                            status_code=401,
+                            content={"detail": "access token invalid"},
+                            headers={
+                                "WWW-Authenticate": 'Bearer realm="twi", error="invalid_token"'
+                            },
+                        )
+                    else:
+                        response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+            return response
+        finally:
+            route = request.scope.get("route")
+            route_path = getattr(route, "path", "unmatched")
+            if not isinstance(route_path, str) or not route_path.startswith("/"):
+                route_path = "unmatched"
+            if request.url.path != "/internal/metrics":
+                status_code = response.status_code if response is not None else 500
+                http_requests.labels(method, route_path, str(status_code)).inc()
+                http_duration.labels(method, route_path).observe(time.perf_counter() - started_at)
+            http_in_flight.labels(method).dec()
 
     app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=65_536)
     app.include_router(health_router)
