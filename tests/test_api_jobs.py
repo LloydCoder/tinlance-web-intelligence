@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.commercial.entitlements import PlanEntitlements
+from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger, UsageEvent
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
@@ -220,3 +223,159 @@ def test_production_fails_closed_without_platform_identity_configuration() -> No
     except ConfigurationError:
         return
     raise AssertionError("production app unexpectedly started without a trusted verifier")
+
+
+
+class FakeEntitlementResolver:
+    def __init__(self, plan: PlanEntitlements | None) -> None:
+        self.plan = plan
+
+    def resolve(self, *, tenant_id: str, subject_id: str) -> PlanEntitlements | None:
+        assert tenant_id and subject_id
+        return self.plan
+
+
+def test_job_submission_enforces_atomic_monthly_quota_and_idempotent_usage() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    plan = PlanEntitlements(
+        plan_id="test-basic", version=1, features=frozenset({"search"}),
+        limits={"search_requests_month": 1},
+    )
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=repository, usage_ledger=usage,
+        verifier=FakeVerifier(principal()),
+        entitlement_resolver=FakeEntitlementResolver(plan),
+    )
+    client = TestClient(app)
+    headers = {
+        "Authorization": "Bearer valid-credential",
+        "Idempotency-Key": "quota-request-key-0001",
+    }
+    payload = {"kind": "search", "payload": {"query": "first operation"}}
+    first = client.post("/v1/jobs", json=payload, headers=headers)
+    replay = client.post("/v1/jobs", json=payload, headers=headers)
+    assert first.status_code == replay.status_code == 202
+    assert first.json()["job_id"] == replay.json()["job_id"]
+    period = usage.list_events(
+        tenant_id="tenant-a", subject_id="subject-a",
+        dimension="search_requests_month",
+    )[0].period_start
+    assert usage.usage_total(
+        tenant_id="tenant-a", subject_id="subject-a",
+        dimension="search_requests_month", period_start=period,
+    ) == 1
+    exceeded = client.post(
+        "/v1/jobs",
+        json={"kind": "search", "payload": {"query": "second operation"}},
+        headers={
+            "Authorization": "Bearer valid-credential",
+            "Idempotency-Key": "quota-request-key-0002",
+        },
+    )
+    assert exceeded.status_code == 429
+    usage.close()
+    repository.close()
+
+
+def test_job_submission_fails_closed_for_unknown_plan_or_missing_quota() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=repository, usage_ledger=usage,
+        verifier=FakeVerifier(principal()),
+        entitlement_resolver=FakeEntitlementResolver(None),
+    )
+    response = TestClient(app).post(
+        "/v1/jobs", json={"kind": "search", "payload": {"query": "no plan"}},
+        headers={
+            "Authorization": "Bearer valid-credential",
+            "Idempotency-Key": "unknown-plan-key-0001",
+        },
+    )
+    assert response.status_code == 503
+    missing_quota_app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=repository, usage_ledger=usage,
+        verifier=FakeVerifier(principal()),
+        entitlement_resolver=FakeEntitlementResolver(
+            PlanEntitlements(
+                plan_id="incomplete", version=1, features=frozenset({"search"}), limits={}
+            )
+        ),
+    )
+    missing_quota = TestClient(missing_quota_app).post(
+        "/v1/jobs", json={"kind": "search", "payload": {"query": "no quota"}},
+        headers={
+            "Authorization": "Bearer valid-credential",
+            "Idempotency-Key": "missing-quota-key-0001",
+        },
+    )
+    assert missing_quota.status_code == 503
+    usage.close()
+    repository.close()
+
+
+def test_production_requires_entitlement_resolver_even_with_platform_verifier() -> None:
+    settings = Settings.from_env(
+        {
+            "TWI_ENV": "production",
+            "TWI_IDENTITY_ISSUER": "https://identity.example.test",
+            "TWI_IDENTITY_AUDIENCE": "twi",
+            "TWI_IDENTITY_JWKS_URL": "https://identity.example.test/.well-known/jwks.json",
+        },
+        require_database=False,
+    )
+    with pytest.raises(ConfigurationError, match="entitlement resolver"):
+        create_app(settings=settings, verifier=FakeVerifier(principal()))
+
+
+
+class FailOnceSQLiteUsageLedger(SQLiteUsageLedger):
+    def __init__(self) -> None:
+        super().__init__(":memory:")
+        self.fail_next_commit = True
+
+    def commit(self, *, tenant_id: str, subject_id: str, reservation_id: str) -> UsageEvent:
+        if self.fail_next_commit:
+            self.fail_next_commit = False
+            raise RuntimeError("simulated transient accounting failure")
+        return super().commit(
+            tenant_id=tenant_id, subject_id=subject_id, reservation_id=reservation_id
+        )
+
+
+def test_job_usage_commit_recovers_on_same_idempotency_key() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    usage = FailOnceSQLiteUsageLedger()
+    plan = PlanEntitlements(
+        plan_id="test-basic", version=1, features=frozenset({"search"}),
+        limits={"search_requests_month": 1},
+    )
+    client = TestClient(create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=repository, usage_ledger=usage,
+        verifier=FakeVerifier(principal()),
+        entitlement_resolver=FakeEntitlementResolver(plan),
+    ))
+    headers = {
+        "Authorization": "Bearer valid-credential",
+        "Idempotency-Key": "recovery-request-key-0001",
+    }
+    payload = {"kind": "search", "payload": {"query": "recover accounting"}}
+    first = client.post("/v1/jobs", json=payload, headers=headers)
+    assert first.status_code == 503
+    replay = client.post("/v1/jobs", json=payload, headers=headers)
+    assert replay.status_code == 202
+    assert usage.usage_total(
+        tenant_id="tenant-a", subject_id="subject-a",
+        dimension="search_requests_month",
+        period_start=usage.list_events(
+            tenant_id="tenant-a", subject_id="subject-a",
+            dimension="search_requests_month",
+        )[0].period_start,
+    ) == 1
+    usage.close()
+    repository.close()

@@ -10,7 +10,17 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
 import pytest
+from psycopg.errors import RaiseException
 
+from tinlance_web_intelligence.commercial.billing_events import VerifiedBillingEvent
+from tinlance_web_intelligence.commercial.billing_inbox import (
+    BillingEventReceiptConflict,
+    PostgresBillingEventInbox,
+)
+from tinlance_web_intelligence.commercial.usage_ledger import (
+    QuotaExceededError,
+    UsageConflictError,
+)
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
     OutboxLeaseLostError,
@@ -23,6 +33,7 @@ from tinlance_web_intelligence.jobs.model import (
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 from tinlance_web_intelligence.persistence.postgres_outbox import PostgresSourceEvidenceOutbox
+from tinlance_web_intelligence.persistence.postgres_usage_ledger import PostgresUsageLedger
 
 _DSN = os.environ.get("TWI_TEST_POSTGRES_DSN")
 pytestmark = pytest.mark.skipif(not _DSN, reason="TWI_TEST_POSTGRES_DSN is not configured")
@@ -273,3 +284,127 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
     finally:
         store.close()
         migration.close()
+
+
+
+def test_postgres_usage_ledger_is_idempotent_scoped_and_append_only() -> None:
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
+    ledger = PostgresUsageLedger(_DSN, min_size=1, max_size=8)
+    namespace = uuid.uuid4().hex
+    tenant, subject = f"usage-tenant-{namespace}", f"usage-subject-{namespace}"
+    period = "2026-10-01T00:00:00Z"
+    try:
+        reservation = ledger.reserve(
+            tenant_id=tenant, subject_id=subject, feature="fetch",
+            dimension="requests_month", period_start=period, quantity=2, limit=2,
+            idempotency_key=f"usage-key-{namespace}",
+        )
+        replay = ledger.reserve(
+            tenant_id=tenant, subject_id=subject, feature="fetch",
+            dimension="requests_month", period_start=period, quantity=2, limit=2,
+            idempotency_key=f"usage-key-{namespace}",
+        )
+        assert replay.reservation_id == reservation.reservation_id
+        with pytest.raises(UsageConflictError):
+            ledger.reserve(
+                tenant_id=tenant, subject_id=subject, feature="fetch",
+                dimension="requests_month", period_start=period, quantity=1, limit=2,
+                idempotency_key=f"usage-key-{namespace}",
+            )
+        with pytest.raises(QuotaExceededError):
+            ledger.reserve(
+                tenant_id=tenant, subject_id=subject, feature="fetch",
+                dimension="requests_month", period_start=period, quantity=1, limit=2,
+                idempotency_key=f"over-quota-{namespace}",
+            )
+        event = ledger.commit(
+            tenant_id=tenant, subject_id=subject, reservation_id=reservation.reservation_id
+        )
+        assert ledger.commit(
+            tenant_id=tenant, subject_id=subject, reservation_id=reservation.reservation_id
+        ) == event
+        assert ledger.usage_total(
+            tenant_id=tenant, subject_id=subject,
+            dimension="requests_month", period_start=period,
+        ) == 2
+        assert ledger.list_events(tenant_id=tenant, subject_id=subject) == [event]
+        assert ledger.list_events(tenant_id=f"other-{namespace}", subject_id=subject) == []
+        with ledger._pool.connection() as conn:
+            with pytest.raises(RaiseException, match="append-only"):
+                conn.execute(
+                    "UPDATE twi_usage_events SET quantity=9 WHERE event_id=%s", (event.event_id,)
+                )
+    finally:
+        ledger.close()
+
+
+def test_postgres_usage_quota_reservations_serialize_concurrent_requests() -> None:
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
+    ledger = PostgresUsageLedger(_DSN, min_size=1, max_size=10)
+    namespace = uuid.uuid4().hex
+    tenant, subject = f"quota-tenant-{namespace}", f"quota-subject-{namespace}"
+    period = "2026-10-01T00:00:00Z"
+
+    def reserve(index: int) -> bool:
+        try:
+            ledger.reserve(
+                tenant_id=tenant, subject_id=subject, feature="fetch",
+                dimension="requests_month", period_start=period, quantity=1, limit=1,
+                idempotency_key=f"concurrent-{namespace}-{index}",
+            )
+            return True
+        except QuotaExceededError:
+            return False
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            results = list(executor.map(reserve, range(8)))
+        assert sum(results) == 1
+    finally:
+        ledger.close()
+
+
+
+def test_postgres_billing_event_inbox_is_idempotent_and_recoverable() -> None:
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
+    inbox = PostgresBillingEventInbox(_DSN, min_size=1, max_size=8)
+    namespace = uuid.uuid4().hex
+    provider = f"provider-{namespace}"
+    event = VerifiedBillingEvent(
+        event_id=f"event-{namespace}", event_type="invoice.paid",
+        occurred_at="2026-10-19T10:00:00+00:00", received_timestamp=1_800_000_000,
+        payload_sha256="a" * 64,
+    )
+    try:
+        first, replayed = inbox.record(provider_key=provider, event=event)
+        assert not replayed and first.status == "received"
+        replay, was_replayed = inbox.record(provider_key=provider, event=event)
+        assert was_replayed and replay == first
+        with pytest.raises(BillingEventReceiptConflict):
+            inbox.record(
+                provider_key=provider,
+                event=VerifiedBillingEvent(
+                    event_id=event.event_id, event_type=event.event_type,
+                    occurred_at=event.occurred_at, received_timestamp=event.received_timestamp,
+                    payload_sha256="b" * 64,
+                ),
+            )
+        failed = inbox.mark_failed(
+            provider_key=provider, event_id=event.event_id, error_code="temporary_error"
+        )
+        assert failed.status == "failed" and failed.attempts == 1
+        processed = inbox.mark_processed(provider_key=provider, event_id=event.event_id)
+        assert processed.status == "processed" and processed.attempts == 2
+        assert inbox.get(provider_key=provider, event_id=event.event_id) == processed
+        with pytest.raises(ValueError, match="state transition"):
+            inbox.mark_failed(
+                provider_key=provider, event_id=event.event_id, error_code="late_failure"
+            )
+    finally:
+        inbox.close()
