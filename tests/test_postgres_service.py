@@ -192,7 +192,8 @@ for argument in "$@"; do
 done
 [[ -n "$target" ]] || exit 94
 printf 'sample pg dump bytes' > "$target"
-[[ "${PG_DUMP_FAIL:-0}" == 1 ]] && exit 17
+if [[ "${PG_DUMP_FAIL:-0}" == 1 ]]; then exit 17; fi
+exit 0
 """,
     )
     backup_dir = tmp_path / "encrypted-backup"
