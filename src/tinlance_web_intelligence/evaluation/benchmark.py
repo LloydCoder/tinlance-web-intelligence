@@ -325,10 +325,10 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
                 claims=tuple(claims),
                 failure_mode=failure_mode,
                 completion_status=completion_status,
-                latency_ms=measurements["latency_ms"][0],
-                resource_bytes=measurements["resource_bytes"][0],
-                request_count=measurements["request_count"][0],
-                retry_count=measurements["retry_count"][0],
+                latency_ms=cast(int, measurements["latency_ms"][0]),
+                resource_bytes=cast(int, measurements["resource_bytes"][0]),
+                request_count=cast(int, measurements["request_count"][0]),
+                retry_count=cast(int, measurements["retry_count"][0]),
                 evidence_mode=evidence_mode,
             )
         )
@@ -382,7 +382,7 @@ def load_threshold_registry(raw: bytes, expected_dataset_id: str) -> dict[str, o
     if payload["schema_version"] != "1.0.0" or payload["dataset_id"] != expected_dataset_id:
         raise BenchmarkError("threshold registry version or dataset ID does not match")
     approval_status = payload["approval_status"]
-    if approval_status not in {"approved", "not_approved"}:
+    if not isinstance(approval_status, str) or approval_status not in {"approved", "not_approved"}:
         raise BenchmarkError("threshold approval_status is invalid")
     thresholds = _mapping(payload["thresholds"], "thresholds")
     if approval_status == "not_approved":
