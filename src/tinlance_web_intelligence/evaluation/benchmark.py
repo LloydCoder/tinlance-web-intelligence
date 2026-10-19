@@ -166,7 +166,9 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
                 case_id=case_id,
                 expected_urls=tuple(
                     _url(url, f"cases[{index}].expected_urls[]")
-                    for url in _string_list(row.get("expected_urls"), f"cases[{index}].expected_urls")
+                    for url in _string_list(
+                        row.get("expected_urls"), f"cases[{index}].expected_urls"
+                    )
                 ),
                 expected_domains=tuple(
                     _domain(domain, f"cases[{index}].expected_domains[]")
@@ -372,8 +374,12 @@ def evaluate(
                 "heuristic lexical overlap; cited URL must exist in retrieved evidence and "
                 "at least 50% of non-stopword claim tokens must occur in one cited source"
             ),
-            "freshness": "explicit case max_age_seconds and five-minute future clock-skew allowance",
-            "truth_boundary": "metrics measure observed retrieval/evidence properties, not factual truth",
+            "freshness": (
+                "explicit case max_age_seconds and five-minute future clock-skew allowance"
+            ),
+            "truth_boundary": (
+                "metrics measure observed retrieval/evidence properties, not factual truth"
+            ),
         },
         "summary": {name: _mean(values) for name, values in metric_values.items()},
         "cases": case_reports,
@@ -403,7 +409,7 @@ def render_markdown(report: Mapping[str, object]) -> str:
             "",
             "## Per-case metrics",
             "",
-            "| Case | Retrieved | Domains | Retrieval | Diversity | Extraction | Citation grounding | Freshness | Failure calibration |",
+            "| Case | Items | Domains | Recall | Diversity | Extract | Grounding | Fresh | Failure match |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
@@ -440,7 +446,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, required=True)
     parser.add_argument("--results", type=Path, required=True)
-    parser.add_argument("--now", required=True, help="fixed timezone-aware ISO-8601 evaluation time")
+    parser.add_argument(
+        "--now", required=True, help="fixed timezone-aware ISO-8601 evaluation time"
+    )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--markdown-out", type=Path)
     args = parser.parse_args(argv)
