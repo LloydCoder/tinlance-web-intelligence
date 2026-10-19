@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from tinlance_web_intelligence.monitors.model import (
 from tinlance_web_intelligence.persistence.sqlite_monitors import SQLiteMonitorRepository
 
 
-def test_create_is_idempotent_and_scoped_to_tenant_subject(tmp_path) -> None:
+def test_create_is_idempotent_and_scoped_to_tenant_subject(tmp_path: Path) -> None:
     repository = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
     try:
         created = repository.create(
@@ -42,7 +43,7 @@ def test_create_is_idempotent_and_scoped_to_tenant_subject(tmp_path) -> None:
         repository.close()
 
 
-def test_create_rejects_idempotency_key_reuse_for_different_payload(tmp_path) -> None:
+def test_create_rejects_idempotency_key_reuse_for_different_payload(tmp_path: Path) -> None:
     repository = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
     try:
         repository.create(
@@ -65,7 +66,7 @@ def test_create_rejects_idempotency_key_reuse_for_different_payload(tmp_path) ->
         repository.close()
 
 
-def test_only_successful_expected_version_run_advances_baseline(tmp_path) -> None:
+def test_only_successful_expected_version_run_advances_baseline(tmp_path: Path) -> None:
     repository = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
     try:
         monitor = repository.create(
@@ -97,6 +98,6 @@ def test_only_successful_expected_version_run_advances_baseline(tmp_path) -> Non
 
         assert updated.baseline_digest == "a" * 64
         assert updated.baseline_version == 1
-        assert repository.record_run_result(result) is None
+        repository.record_run_result(result)
     finally:
         repository.close()

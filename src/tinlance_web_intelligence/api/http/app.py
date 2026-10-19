@@ -32,6 +32,10 @@ from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    start_span,
+)
 from tinlance_web_intelligence.persistence.factory import (
     create_job_repository,
     create_monitor_repository,
@@ -177,9 +181,24 @@ def create_app(
         started_at = time.perf_counter()
         http_in_flight.labels(method).inc()
         response: Response | None = None
+
+        async def traced_call_next() -> Response:
+            traceparent = extract_valid_traceparent(request.headers)
+            parent = None
+            if traceparent:
+                from opentelemetry.propagate import extract
+
+                parent = extract({"traceparent": traceparent})
+            with start_span(
+                "twi.http.request",
+                {"operation": method.lower(), "component": "api"},
+                parent=parent,
+            ):
+                return await call_next(request)
+
         try:
             if request.url.path in {"/health/live", "/health/ready"}:
-                response = await call_next(request)
+                response = await traced_call_next()
             elif request.url.path == "/internal/metrics":
                 if config.metrics_token is None:
                     response = JSONResponse(status_code=404, content={"detail": "not found"})
@@ -192,7 +211,7 @@ def create_app(
                         headers={"WWW-Authenticate": 'Bearer realm="twi-metrics"'},
                     )
                 else:
-                    response = await call_next(request)
+                    response = await traced_call_next()
             else:
                 authorization = request.headers.get("authorization", "")
                 scheme, separator, token = authorization.partition(" ")
@@ -214,7 +233,7 @@ def create_app(
                             },
                         )
                     else:
-                        response = await call_next(request)
+                        response = await traced_call_next()
             if response is None:
                 raise RuntimeError("request middleware completed without a response")
             response.headers["X-Request-ID"] = request_id

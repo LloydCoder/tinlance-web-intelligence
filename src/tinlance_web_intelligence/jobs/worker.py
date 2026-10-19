@@ -18,6 +18,10 @@ from tinlance_web_intelligence.contracts.provenance import (
 )
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    start_span,
+)
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
 
@@ -53,7 +57,20 @@ class JobWorker:
         if job is None:
             return False
         try:
-            result = self._execute(job)
+            parent = None
+            traceparent = extract_valid_traceparent(
+                {"traceparent": job.traceparent} if job.traceparent else {}
+            )
+            if traceparent:
+                from opentelemetry.propagate import extract
+
+                parent = extract({"traceparent": traceparent})
+            with start_span(
+                "twi.job.execute",
+                {"operation": job.kind, "component": "worker"},
+                parent=parent,
+            ):
+                result = self._execute(job)
         except BrowserCaptureError as exc:
             self._fail(job, exc.error_code, exc.retryable)
         except FetchError as exc:

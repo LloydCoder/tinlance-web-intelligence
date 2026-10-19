@@ -11,8 +11,19 @@ import httpx
 from tinlance_web_intelligence.browser.policies import BrowserPolicyError, normalize_browser_payload
 from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
 from tinlance_web_intelligence.config import ConfigurationError, Settings
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    inject_current_traceparent,
+    start_span,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _trace_headers() -> dict[str, str]:
+    headers: dict[str, str] = {}
+    inject_current_traceparent(headers)
+    return headers
 
 
 class BrowserBrokerWorker:
@@ -33,7 +44,9 @@ class BrowserBrokerWorker:
     async def run_forever(self) -> None:
         while True:
             try:
-                response = await self._client.post("/internal/browser-jobs/claim", json={})
+                response = await self._client.post(
+                    "/internal/browser-jobs/claim", json={}, headers=_trace_headers()
+                )
                 if response.status_code == 204:
                     await asyncio.sleep(0.5)
                     continue
@@ -42,7 +55,7 @@ class BrowserBrokerWorker:
                 response.raise_for_status()
                 claim = response.json()
                 if not isinstance(claim, dict) or set(claim) != {
-                    "job_id", "payload", "lease_token", "attempts"
+                    "job_id", "payload", "lease_token", "attempts", "traceparent"
                 }:
                     raise RuntimeError("browser broker returned an invalid claim")
                 job_id = claim["job_id"]
@@ -56,7 +69,22 @@ class BrowserBrokerWorker:
                     or not isinstance(payload, dict)
                 ):
                     raise RuntimeError("browser broker returned invalid claim fields")
-                await self._execute_claim(job_id, lease_token, payload)
+                parent = None
+                traceparent = extract_valid_traceparent(
+                    {"traceparent": claim["traceparent"]}
+                    if isinstance(claim["traceparent"], str)
+                    else {}
+                )
+                if traceparent:
+                    from opentelemetry.propagate import extract
+
+                    parent = extract({"traceparent": traceparent})
+                with start_span(
+                    "twi.browser.execute",
+                    {"operation": "capture", "component": "browser"},
+                    parent=parent,
+                ):
+                    await self._execute_claim(job_id, lease_token, payload)
             except ConfigurationError:
                 raise
             except (httpx.HTTPError, ValueError, RuntimeError) as exc:
@@ -89,6 +117,7 @@ class BrowserBrokerWorker:
             response = await self._client.post(
                 f"/internal/browser-jobs/{job_id}/complete",
                 json={"lease_token": lease_token, "result": result},
+                headers=_trace_headers(),
             )
             if response.status_code == 409:
                 logger.warning("browser job lease expired before result commit")
@@ -108,6 +137,7 @@ class BrowserBrokerWorker:
                     "error_code": error_code,
                     "retryable": retryable,
                 },
+                headers=_trace_headers(),
             )
             if response.status_code == 409:
                 logger.warning("browser job lease expired before failure commit")

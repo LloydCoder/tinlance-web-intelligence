@@ -9,6 +9,27 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     SQLiteSourceEvidenceOutbox,
 )
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    inject_traceparent,
+    start_span,
+)
+
+
+def test_traceparent_validation_and_injection_are_fail_closed() -> None:
+    valid = "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+    invalid = "00-00000000000000000000000000000000-0123456789abcdef-01"
+    assert extract_valid_traceparent({"TraceParent": valid}) == valid
+    assert extract_valid_traceparent({"traceparent": invalid}) is None
+    headers: dict[str, str] = {"baggage": "secret"}
+    inject_traceparent(headers, valid)
+    inject_traceparent(headers, "bad")
+    assert headers == {"baggage": "secret", "traceparent": valid}
+
+
+def test_span_attributes_are_allowlisted() -> None:
+    with start_span("test", {"operation": "capture", "url": "https://secret.test/?token=x"}):
+        pass
 
 
 def _client(

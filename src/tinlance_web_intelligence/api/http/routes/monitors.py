@@ -9,9 +9,10 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
-from tinlance_web_intelligence.jobs.model import IdempotencyConflictError, Job
+from tinlance_web_intelligence.jobs.model import IdempotencyConflictError
 from tinlance_web_intelligence.monitors.model import Monitor
 from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.observability.tracing import extract_valid_traceparent
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
 
@@ -161,6 +162,7 @@ def enqueue_monitor_run(
             subject_id=principal.subject_id,
             monitor_id=monitor_id,
             idempotency_key=key,
+            traceparent=extract_valid_traceparent(request.headers),
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="monitor not found") from exc

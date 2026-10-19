@@ -10,6 +10,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import httpx
 
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import OutboxEvent
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    inject_current_traceparent,
+    inject_traceparent,
+    start_span,
+)
 
 _TRACEPARENT = re.compile(r"^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
 _SENSITIVE_QUERY_KEYS = {
@@ -98,6 +104,22 @@ class WorldIntelligenceEvidenceClient:
         self._service_token = service_token
 
     def send(self, event: OutboxEvent) -> str:
+        parent = None
+        traceparent = extract_valid_traceparent(
+            {"traceparent": event.traceparent} if event.traceparent else {}
+        )
+        if traceparent:
+            from opentelemetry.propagate import extract
+
+            parent = extract({"traceparent": traceparent})
+        with start_span(
+            "twi.world_intelligence.export",
+            {"operation": "source_evidence_export", "component": "world_intelligence"},
+            parent=parent,
+        ):
+            return self._send(event)
+
+    def _send(self, event: OutboxEvent) -> str:
         if event.lease_token is None:
             raise WorldIntelligenceDeliveryError("missing_outbox_lease", retryable=False)
         headers = {
@@ -106,8 +128,9 @@ class WorldIntelligenceEvidenceClient:
             "Idempotency-Key": event.idempotency_key,
             "X-Request-ID": event.request_id,
         }
+        inject_current_traceparent(headers)
         if event.traceparent is not None:
-            headers["traceparent"] = event.traceparent
+            inject_traceparent(headers, event.traceparent)
         try:
             with self._client.stream(
                 "POST",

@@ -30,6 +30,7 @@ def _repository_with_jobs() -> SQLiteJobRepository:
         kind="browser",
         payload={"url": "https://example.com"},
         idempotency_key="browser-job-idempotency-key",
+        traceparent="00-0123456789abcdef0123456789abcdef-0123456789abcdef-01",
     )
     return repository
 
@@ -54,6 +55,7 @@ def test_browser_broker_claims_only_browser_jobs_and_binds_result_to_lease() -> 
         claim = claim_response.json()
         assert claim["payload"] == {"url": "https://example.com"}
         assert claim["attempts"] == 1
+        assert claim["traceparent"] == "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
         job_id = claim["job_id"]
         lease_token = claim["lease_token"]
         assert isinstance(job_id, str)

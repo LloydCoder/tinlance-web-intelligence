@@ -19,14 +19,14 @@ class FakeVerifier:
             subject_id=subject_id,
             client_id="api-monitor-test",
             principal_type="user",
-            token_id="monitor-test-jti",
+            token_id="monitor-test-jti",  # noqa: S106
             scopes=scopes,
             roles=frozenset(),
             expires_at=datetime.now(UTC) + timedelta(minutes=5),
         )
 
     def verify(self, token: str) -> Principal:
-        if token != "valid-credential":
+        if token != "valid-credential":  # noqa: S105
             raise PermissionError("invalid test credential")
         return self.principal
 
@@ -84,9 +84,17 @@ def test_monitor_lifecycle_is_idempotent_scoped_and_redacts_urls() -> None:
         "Authorization": "Bearer valid-credential",
         "Idempotency-Key": "monitor-run-key-0001",
     }
-    run = client.post(f"/v1/monitors/{monitor_id}/runs", headers=run_headers)
+    traceparent = "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+    run = client.post(
+        f"/v1/monitors/{monitor_id}/runs",
+        headers={**run_headers, "traceparent": traceparent},
+    )
     assert run.status_code == 202
     assert run.headers["Location"].endswith(f"/runs/{run.json()['job_id']}")
+    stored_job = jobs.get(
+        run.json()["job_id"], tenant_id="tenant-a", subject_id="subject-a"
+    )
+    assert stored_job is not None and stored_job.traceparent == traceparent
     run_read = client.get(
         f"/v1/monitors/{monitor_id}/runs/{run.json()['job_id']}",
         headers={"Authorization": "Bearer valid-credential"},
