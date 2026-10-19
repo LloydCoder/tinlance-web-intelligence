@@ -28,6 +28,7 @@ services:
     environment:
       TWI_ENV: staging
       TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      TWI_SOURCE_REVISION: ${TWI_SOURCE_REVISION:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:?Set the Platform issuer URL}
       TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:?Set the TWI audience}
