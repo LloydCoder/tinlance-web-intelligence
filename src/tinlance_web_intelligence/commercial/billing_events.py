@@ -163,7 +163,9 @@ def reconcile_usage(
     for event_id in sorted(set(usage_by_id) | set(billing_by_id)):
         usage_rows = usage_by_id.get(event_id, [])
         billing_rows = billing_by_id.get(event_id, [])
-        usage_quantity = sum(usage_fact.quantity for usage_fact in usage_rows) if usage_rows else None
+        usage_quantity = (
+            sum(usage_fact.quantity for usage_fact in usage_rows) if usage_rows else None
+        )
         billing_quantity = (
             sum(billing_fact.quantity for billing_fact in billing_rows) if billing_rows else None
         )
