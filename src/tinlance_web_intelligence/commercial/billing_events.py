@@ -139,33 +139,35 @@ def reconcile_usage(
     """Return deterministic findings without mutating either source ledger."""
     usage_by_id: dict[str, list[UsageFact]] = {}
     billing_by_id: dict[str, list[BillingFact]] = {}
-    for fact in usage_facts:
+    for usage_fact in usage_facts:
         if (
-            not fact.event_id
-            or isinstance(fact.quantity, bool)
-            or not isinstance(fact.quantity, int)
-            or fact.quantity < 1
+            not usage_fact.event_id
+            or isinstance(usage_fact.quantity, bool)
+            or not isinstance(usage_fact.quantity, int)
+            or usage_fact.quantity < 1
         ):
             raise ValueError("usage facts require an event ID and positive integer quantity")
-        usage_by_id.setdefault(fact.event_id, []).append(fact)
-    for fact in billing_facts:
+        usage_by_id.setdefault(usage_fact.event_id, []).append(usage_fact)
+    for billing_fact in billing_facts:
         if (
-            not fact.event_id
-            or isinstance(fact.quantity, bool)
-            or not isinstance(fact.quantity, int)
-            or fact.quantity < 1
-            or not fact.status
-            or len(fact.status) > 40
+            not billing_fact.event_id
+            or isinstance(billing_fact.quantity, bool)
+            or not isinstance(billing_fact.quantity, int)
+            or billing_fact.quantity < 1
+            or not billing_fact.status
+            or len(billing_fact.status) > 40
         ):
             raise ValueError("billing facts require an event ID, positive quantity, and status")
-        billing_by_id.setdefault(fact.event_id, []).append(fact)
+        billing_by_id.setdefault(billing_fact.event_id, []).append(billing_fact)
     findings: list[ReconciliationFinding] = []
     for event_id in sorted(set(usage_by_id) | set(billing_by_id)):
         usage_rows = usage_by_id.get(event_id, [])
         billing_rows = billing_by_id.get(event_id, [])
-        usage_quantity = sum(row.quantity for row in usage_rows) if usage_rows else None
-        billing_quantity = sum(row.quantity for row in billing_rows) if billing_rows else None
-        status = ",".join(sorted(row.status for row in billing_rows)) or None
+        usage_quantity = sum(usage_fact.quantity for usage_fact in usage_rows) if usage_rows else None
+        billing_quantity = (
+            sum(billing_fact.quantity for billing_fact in billing_rows) if billing_rows else None
+        )
+        status = ",".join(sorted(billing_fact.status for billing_fact in billing_rows)) or None
         if len(usage_rows) > 1 or len(billing_rows) > 1:
             classification = "duplicate_records"
         elif not billing_rows:
@@ -173,8 +175,8 @@ def reconcile_usage(
         elif not usage_rows:
             classification = "billing_missing_in_usage"
         elif any(
-            row.status.lower() in {"refunded", "reversed", "voided", "unknown"}
-            for row in billing_rows
+            billing_fact.status.lower() in {"refunded", "reversed", "voided", "unknown"}
+            for billing_fact in billing_rows
         ):
             classification = "manual_review"
         elif usage_quantity != billing_quantity:
