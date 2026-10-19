@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
+
+import pytest
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
