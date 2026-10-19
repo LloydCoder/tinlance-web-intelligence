@@ -53,6 +53,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
           python -m pip install --no-deps -e .
+          python -m pip install pip-audit==2.10.1
+          python -m pip check
       - name: Verify installed dependency metadata
         run: python -m pip check
       - name: Lint
@@ -61,6 +63,16 @@ jobs:
         run: mypy src tests
       - name: Security lint
         run: bandit -q -r src apps
+      - name: Audit installed Python dependencies
+        run: pip-audit --strict --progress-spinner off --format json --output pip-audit.json
+      - name: Upload dependency audit report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pip-audit-${{ github.sha }}-py${{ matrix.python-version }}
+          path: pip-audit.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Install Chromium for isolated browser smoke test
         run: python -m playwright install --with-deps chromium
       - name: Unit, contract, and PostgreSQL integration tests
