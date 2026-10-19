@@ -1,4 +1,4 @@
-.PHONY: install lint test typecheck security migration-check shell-check check
+.PHONY: install lint test typecheck security migration-check shell-check evaluation-check check
 
 install:
 	python -m pip install -r requirements-dev.txt
@@ -22,4 +22,7 @@ migration-check:
 shell-check:
 	bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
 
-check: lint typecheck security test migration-check shell-check
+evaluation-check:
+	python scripts/evaluate_twi.py --dataset benchmarks/twi/v1/cases.json --results benchmarks/twi/v1/sample_results.json --now 2026-10-19T12:00:00Z --json-out /tmp/twi-evaluation.json --markdown-out /tmp/twi-evaluation.md
+
+check: lint typecheck security test migration-check shell-check evaluation-check
