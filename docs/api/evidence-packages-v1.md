@@ -15,7 +15,7 @@ The response is a deterministic JSON evidence package with media type `applicati
 - Versioned acquisition provenance: requested/final URL fingerprints, status, retrieval time, redirect count, and extractor version.
 - Explicit interpretation metadata: provenance is an acquisition observation; source truth and source authority are not assessed.
 
-Raw URLs, query values, tenant/subject IDs, credentials, request tokens, and billing payloads are excluded. Package integrity detects accidental or malicious modification; it is not a digital signature and does not prove that the upstream source was truthful.
+Raw source URLs and their query parameters are excluded from package metadata, as are tenant/subject IDs and billing payloads. Captured bytes are included unchanged and may themselves contain personal data, credentials, tokens, or query-like text from the source page; treat the export as customer data and apply the approved access and retention policy. Package integrity detects modification; it is not a digital signature and does not prove that the upstream source was truthful.
 
 ## Availability and failure behavior
 
