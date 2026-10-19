@@ -32,7 +32,7 @@ def test_tls_cli_selects_dedicated_dsn_environment_without_printing_secrets(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     secret_dsn = (  # noqa: S105
-        "postgresql://backup:super-secret@db.example.com:5432/twi"  # nosec B105
+        "postgresql://backup:super-secret@db.example.com:5432/twi"  # nosec B105  # noqa: S105
         "?sslmode=verify-full"
     )
     monkeypatch.delenv("TWI_DATABASE_URL", raising=False)
