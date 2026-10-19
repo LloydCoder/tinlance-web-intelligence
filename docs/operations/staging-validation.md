@@ -2,7 +2,7 @@
 
 ## Purpose and evidence boundary
 
-This procedure is a low-impact, read-only health and authorization probe for a deployed TWI staging API. It does not provision infrastructure, create jobs, exercise real acquisition, prove browser egress isolation, verify Platform-to-World-Intelligence delivery, or certify private beta.
+This procedure is a low-impact, read-only health, monitor-persistence, telemetry-instrumentation, and authorization probe for a deployed TWI staging API. It does not provision infrastructure, create jobs, exercise real acquisition, prove browser egress isolation, verify Platform-to-World-Intelligence delivery, verify collector reachability, or certify private beta.
 
 Use only an explicitly approved staging origin. Never point the probe at production during a staging rehearsal.
 
@@ -11,6 +11,7 @@ Use only an explicitly approved staging origin. Never point the probe at product
 - A deployed TWI API with a trusted HTTPS certificate and hostname.
 - \`TWI_STAGING_BASE_URL\` set to the HTTPS origin/path, without credentials, query parameters, or fragment.
 - Optional: \`TWI_STAGING_PROBE_TOKEN\` containing a short-lived, Platform-issued staging token for the TWI audience. The token is read from the process environment and is never printed.
+- Optional: \`TWI_OTEL_EXPORTER_OTLP_ENDPOINT\` set to an approved HTTPS OTLP traces URL when collector export is enabled. The endpoint is injected into API and worker services and cannot include credentials or query parameters.
 - Access to the deployment's request logs and release SHA for evidence correlation.
 
 ## Deploy the staging topology
@@ -25,7 +26,7 @@ docker compose -f deployments/compose/staging.yml up -d --build --wait
 docker compose -f deployments/compose/staging.yml ps
 ```
 
-Before enabling browser acquisition, prove from the deployed browser-worker network namespace that direct public and metadata IP connections fail while authenticated proxy access works. Compose alone cannot constrain egress for API/HTTP-acquisition/exporter containers attached to the outbound network: the host/cloud firewall must restrict API and exporter egress to approved database/identity/World Intelligence endpoints, and must enforce the documented acquisition-worker egress policy. If those controls cannot be enforced and evidenced, do not enable the staging stack for external traffic.
+Before enabling browser acquisition, prove from the deployed browser-worker network namespace that direct public and metadata IP connections fail while authenticated proxy access works. Compose alone cannot constrain egress for API/HTTP-acquisition/exporter containers attached to the outbound network: the host/cloud firewall must restrict API and exporter egress to approved database/identity/World Intelligence endpoints and, when configured, the approved OTLP collector; it must also enforce the documented acquisition-worker egress policy. If those controls cannot be enforced and evidenced, do not enable the staging stack for external traffic.
 
 ```bash
 TWI_STAGING_BASE_URL=https://<approved-staging-host> python scripts/verify_staging.py
@@ -44,9 +45,11 @@ The script verifies:
 1. TLS certificate and hostname validation through Python's default trust store.
 2. Liveness returns HTTP 200 and the expected minimal JSON.
 3. Readiness returns HTTP 200 and the expected minimal JSON.
-4. An unauthenticated write request is rejected with HTTP 401 before job creation.
-5. Interactive API documentation remains disabled outside development/test.
-6. If a Platform token is supplied, authentication does not reject it as invalid (HTTP 403 means authenticated but missing required scope; HTTP 404 means authenticated and the random job identifier was not found).
+4. Monitor persistence returns ready; the aggregate readiness endpoint also checks this repository.
+5. Telemetry instrumentation is present and reports whether the OTLP exporter is configured. `noop` is a valid local mode; production still requires an approved endpoint and a separate delivery check. This probe does not prove collector reachability.
+6. An unauthenticated write request is rejected with HTTP 401 before job creation.
+7. Interactive API documentation remains disabled outside development/test.
+8. If a Platform token is supplied, authentication does not reject it as invalid (HTTP 403 means authenticated but missing required scope; HTTP 404 means authenticated and the random job identifier was not found).
 
 Redirects are not followed. Network, TLS, malformed-response, unexpected status, and readiness failures cause a non-zero exit. Output contains status codes and pass/fail booleans only.
 

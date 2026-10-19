@@ -95,3 +95,20 @@ def test_running_cancel_is_observed_at_completion() -> None:
     assert finished.status is JobStatus.CANCELLED
     assert finished.result is None
     repository.close()
+
+
+def test_monitor_job_persists_traceparent() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    created = repository.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        kind="monitor",
+        payload={"monitor_id": "monitor-1", "baseline_version": 0},
+        idempotency_key="monitor-run-1",
+        traceparent="00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+    )
+
+    assert created.kind == "monitor"
+    assert created.traceparent == "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+    assert "traceparent" not in created.to_dict()
+    repository.close()

@@ -56,8 +56,19 @@ class SafeHTTPFetcher:
         self.settings = settings or Settings.from_env()
 
     async def fetch(
-        self, url: str, *, headers: Mapping[str, str] | None = None
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+        max_bytes: int | None = None,
     ) -> FetchResult:
+        if max_bytes is not None and (
+            not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes < 1
+        ):
+            raise FetchError("response byte limit must be a positive integer")
+        response_limit = min(max_bytes, self.settings.max_response_bytes) if max_bytes else (
+            self.settings.max_response_bytes
+        )
         requested = validate_url(url, allowed_schemes=self.settings.allowed_schemes)
         timeout = aiohttp.ClientTimeout(
             total=self.settings.request_timeout_seconds,
@@ -126,13 +137,13 @@ class SafeHTTPFetcher:
                         declared = response.headers.get("Content-Length")
                         if declared is not None:
                             try:
-                                if int(declared) > self.settings.max_response_bytes:
+                                if int(declared) > response_limit:
                                     raise FetchError("response exceeds configured byte limit")
                             except ValueError as exc:
                                 raise FetchError("invalid Content-Length header") from exc
                         body = bytearray()
                         async for chunk in response.content.iter_chunked(65536):
-                            if len(body) + len(chunk) > self.settings.max_response_bytes:
+                            if len(body) + len(chunk) > response_limit:
                                 raise FetchError("response exceeds configured byte limit")
                             body.extend(chunk)
                         safe_headers = {

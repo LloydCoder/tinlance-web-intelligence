@@ -18,6 +18,12 @@ def test_platform_tool_catalog_has_unique_names_and_operations() -> None:
         "twi_research_verify",
         "twi_world_intelligence_export",
         "twi_world_intelligence_export_status",
+        "twi_monitor_create",
+        "twi_monitor_read",
+        "twi_monitor_run",
+        "twi_monitor_pause",
+        "twi_monitor_resume",
+        "twi_monitor_delete",
     }
 
 

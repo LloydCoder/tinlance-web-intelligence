@@ -8,48 +8,93 @@ from tinlance_web_intelligence.config import ConfigurationError, Settings, valid
 
 def test_defaults_are_valid() -> None:
     assert Settings.from_env({}).environment == "development"
+    assert Settings.from_env({}).otel_exporter_endpoint is None
 
 
-@pytest.mark.parametrize("env", [
-    {"TWI_MAX_REDIRECTS": "-1"},
-    {"TWI_MAX_RESPONSE_BYTES": "0"},
-    {"TWI_REQUEST_TIMEOUT_SECONDS": "999"},
-    {"TWI_ALLOWED_SCHEMES": "file,https"},
-    {"TWI_ENV": "prod"},
-    {"TWI_METRICS_TOKEN": "short"},
-])
+def test_otlp_exporter_endpoint_requires_safe_https_or_local_development() -> None:
+    assert (
+        Settings.from_env(
+            {"TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318/v1/traces"}
+        ).otel_exporter_endpoint
+        == "http://localhost:4318/v1/traces"
+    )
+    assert (
+        Settings.from_env(
+            {
+                "TWI_ENV": "production",
+                "TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "https://otel.example/v1/traces",
+            },
+            require_identity=False,
+            require_database=False,
+        ).otel_exporter_endpoint
+        == "https://otel.example/v1/traces"
+    )
+    for env in (
+        {"TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318/v1/traces"},
+        {"TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "https://user:pass@otel.example/v1/traces"},
+        {"TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "https://otel.example/v1/traces?token=secret"},
+        {"TWI_OTEL_EXPORTER_OTLP_ENDPOINT": "https://otel.example/custom/path"},
+    ):
+        with pytest.raises(ConfigurationError, match="OpenTelemetry"):
+            Settings.from_env(env)
+
+
+@pytest.mark.parametrize(
+    "env",
+    [
+        {"TWI_MAX_REDIRECTS": "-1"},
+        {"TWI_MAX_RESPONSE_BYTES": "0"},
+        {"TWI_REQUEST_TIMEOUT_SECONDS": "999"},
+        {"TWI_ALLOWED_SCHEMES": "file,https"},
+        {"TWI_ENV": "prod"},
+        {"TWI_METRICS_TOKEN": "short"},
+    ],
+)
 def test_invalid_settings_are_rejected(env: dict[str, str]) -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env(env)
 
 
 def test_service_url_requires_https_and_no_userinfo() -> None:
-    assert validate_service_base_url("https://platform.example/v1/") == "https://platform.example/v1"
-    for value in ("http://platform.example", "https://user:pass@platform.example", "https:///missing"):
+    assert (
+        validate_service_base_url("https://platform.example/v1/") == "https://platform.example/v1"
+    )
+    for value in (
+        "http://platform.example",
+        "https://user:pass@platform.example",
+        "https:///missing",
+    ):
         with pytest.raises(ConfigurationError):
             validate_service_base_url(value)
+
 
 def test_browser_proxy_configuration_fails_closed() -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env({"TWI_BROWSER_PROXY_URL": "http://proxy:3128"})
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
-            "TWI_BROWSER_PROXY_URL": "http://proxy:3128",
-            "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
-            "TWI_BROWSER_PROXY_PASSWORD": "weak",
-        })
+        Settings.from_env(
+            {
+                "TWI_BROWSER_PROXY_URL": "http://proxy:3128",
+                "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+                "TWI_BROWSER_PROXY_PASSWORD": "weak",
+            }
+        )
 
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
-            "TWI_BROWSER_PROXY_URL": "http://proxy:0",
+        Settings.from_env(
+            {
+                "TWI_BROWSER_PROXY_URL": "http://proxy:0",
+                "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+                "TWI_BROWSER_PROXY_PASSWORD": "correct-horse-battery-staple-2026",
+            }
+        )
+    configured = Settings.from_env(
+        {
+            "TWI_BROWSER_PROXY_URL": "http://egress-proxy:3128",
             "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
             "TWI_BROWSER_PROXY_PASSWORD": "correct-horse-battery-staple-2026",
-        })
-    configured = Settings.from_env({
-        "TWI_BROWSER_PROXY_URL": "http://egress-proxy:3128",
-        "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
-        "TWI_BROWSER_PROXY_PASSWORD": "correct-horse-battery-staple-2026",
-    })
+        }
+    )
     assert configured.browser_proxy_url == "http://egress-proxy:3128"
 
 
@@ -80,21 +125,26 @@ def test_world_intelligence_service_settings_fail_closed() -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env({"TWI_WORLD_INTELLIGENCE_URL": "https://wi.example"})
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
-            "TWI_WORLD_INTELLIGENCE_URL": "http://wi.example",
-            "TWI_WORLD_INTELLIGENCE_TOKEN": token,
-        })
+        Settings.from_env(
+            {
+                "TWI_WORLD_INTELLIGENCE_URL": "http://wi.example",
+                "TWI_WORLD_INTELLIGENCE_TOKEN": token,
+            }
+        )
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
-            "TWI_WORLD_INTELLIGENCE_URL": "https://wi.example/path",
+        Settings.from_env(
+            {
+                "TWI_WORLD_INTELLIGENCE_URL": "https://wi.example/path",
+                "TWI_WORLD_INTELLIGENCE_TOKEN": token,
+            }
+        )
+    configured = Settings.from_env(
+        {
+            "TWI_WORLD_INTELLIGENCE_URL": "http://world-intelligence:8080",
             "TWI_WORLD_INTELLIGENCE_TOKEN": token,
-        })
-    configured = Settings.from_env({
-        "TWI_WORLD_INTELLIGENCE_URL": "http://world-intelligence:8080",
-        "TWI_WORLD_INTELLIGENCE_TOKEN": token,
-    })
+        }
+    )
     assert configured.world_intelligence_url == "http://world-intelligence:8080"
-
 
 
 def test_production_requires_postgres_with_verified_tls() -> None:
@@ -107,32 +157,40 @@ def test_production_requires_postgres_with_verified_tls() -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env(identity)
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
-            **identity,
-            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
-        })
+        Settings.from_env(
+            {
+                **identity,
+                "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
+            }
+        )
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
+        Settings.from_env(
+            {
+                **identity,
+                "TWI_DATABASE_URL": (
+                    "postgresql://twi:secret@db.example/twi?sslmode=verify-full&sslmode=require"
+                ),
+            }
+        )
+    settings = Settings.from_env(
+        {
             **identity,
-            "TWI_DATABASE_URL": (
-                "postgresql://twi:secret@db.example/twi?"
-                "sslmode=verify-full&sslmode=require"
-            ),
-        })
-    settings = Settings.from_env({
-        **identity,
-        "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
-    })
+            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
+        }
+    )
     assert settings.database_url is not None
 
 
-@pytest.mark.parametrize("database_url", [
-    "sqlite:///tmp/twi.db",
-    "postgresql:///missing-host",
-    "postgresql://twi@db.example/twi",
-    "postgresql://twi:secret@db.example/",
-    "postgresql://twi:secret@db.example/twi#fragment",
-])
+@pytest.mark.parametrize(
+    "database_url",
+    [
+        "sqlite:///tmp/twi.db",
+        "postgresql:///missing-host",
+        "postgresql://twi@db.example/twi",
+        "postgresql://twi:secret@db.example/",
+        "postgresql://twi:secret@db.example/twi#fragment",
+    ],
+)
 def test_invalid_postgres_urls_are_rejected(database_url: str) -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env({"TWI_DATABASE_URL": database_url})
@@ -142,14 +200,18 @@ def test_staging_requires_postgres_with_verified_tls() -> None:
     with pytest.raises(ConfigurationError):
         Settings.from_env({"TWI_ENV": "staging"})
     with pytest.raises(ConfigurationError):
-        Settings.from_env({
+        Settings.from_env(
+            {
+                "TWI_ENV": "staging",
+                "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
+            }
+        )
+    configured = Settings.from_env(
+        {
             "TWI_ENV": "staging",
-            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=require",
-        })
-    configured = Settings.from_env({
-        "TWI_ENV": "staging",
-        "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
-    })
+            "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
+        }
+    )
     assert configured.environment == "staging"
 
 

@@ -64,4 +64,14 @@ def test_w3_database_migrates_to_browser_job_kind_without_losing_jobs(tmp_path: 
         idempotency_key="browser-request-key-0001",
     )
     assert browser.kind == "browser"
+    monitor = repository.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        kind="monitor",
+        payload={"monitor_id": "monitor-1", "baseline_version": 0},
+        idempotency_key="monitor-run-key-0001",
+        traceparent="00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+    )
+    assert monitor.kind == "monitor"
+    assert monitor.traceparent is not None
     repository.close()

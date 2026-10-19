@@ -26,6 +26,7 @@ class Settings:
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
     metrics_token: str | None = None
+    otel_exporter_endpoint: str | None = None
     brave_api_key: str | None = None
     browser_enabled: bool = False
     browser_proxy_url: str | None = None
@@ -64,6 +65,7 @@ class Settings:
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
                 metrics_token=values.get("TWI_METRICS_TOKEN") or None,
+                otel_exporter_endpoint=values.get("TWI_OTEL_EXPORTER_OTLP_ENDPOINT") or None,
                 brave_api_key=values.get("TWI_BRAVE_SEARCH_API_KEY") or None,
                 browser_enabled=browser_enabled_raw == "true",
                 browser_proxy_url=values.get("TWI_BROWSER_PROXY_URL") or None,
@@ -76,14 +78,10 @@ class Settings:
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
-        settings.validate(
-            require_identity=require_identity, require_database=require_database
-        )
+        settings.validate(require_identity=require_identity, require_database=require_database)
         return settings
 
-    def validate(
-        self, *, require_identity: bool = True, require_database: bool = True
-    ) -> None:
+    def validate(self, *, require_identity: bool = True, require_database: bool = True) -> None:
         if self.environment not in {"development", "test", "staging", "production"}:
             raise ConfigurationError("TWI_ENV must be development, test, staging, or production")
         if self.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -132,7 +130,12 @@ class Settings:
                 raise ConfigurationError("PostgreSQL sslmode must be specified exactly once")
             sslmode = sslmode_values[0] if sslmode_values else ""
             if sslmode and sslmode not in {
-                "disable", "allow", "prefer", "require", "verify-ca", "verify-full"
+                "disable",
+                "allow",
+                "prefer",
+                "require",
+                "verify-ca",
+                "verify-full",
             }:
                 raise ConfigurationError("unsupported PostgreSQL sslmode")
             if self.environment in {"staging", "production"} and sslmode != "verify-full":
@@ -163,15 +166,38 @@ class Settings:
                 or parsed.password is not None
                 or parsed.fragment
             ):
-                raise ConfigurationError(
-                    "identity issuer and JWKS URL must be absolute HTTPS URLs"
-                )
+                raise ConfigurationError("identity issuer and JWKS URL must be absolute HTTPS URLs")
         if self.metrics_token is not None and (
             len(self.metrics_token) < 32 or self.metrics_token != self.metrics_token.strip()
         ):
             raise ConfigurationError(
                 "TWI_METRICS_TOKEN must contain at least 32 non-padded characters"
             )
+        if self.otel_exporter_endpoint is not None:
+            try:
+                telemetry_url = urlsplit(self.otel_exporter_endpoint)
+                telemetry_port = telemetry_url.port
+            except ValueError as exc:
+                raise ConfigurationError("OpenTelemetry exporter endpoint is malformed") from exc
+            local_http = (
+                self.environment in {"development", "test"}
+                and telemetry_url.scheme == "http"
+                and telemetry_url.hostname in {"localhost", "127.0.0.1"}
+            )
+            if (
+                (telemetry_url.scheme != "https" and not local_http)
+                or not telemetry_url.hostname
+                or telemetry_url.username is not None
+                or telemetry_url.password is not None
+                or telemetry_url.query
+                or telemetry_url.fragment
+                or telemetry_url.path != "/v1/traces"
+                or (telemetry_port is not None and not 1 <= telemetry_port <= 65535)
+            ):
+                raise ConfigurationError(
+                    "OpenTelemetry endpoint must be an HTTPS OTLP traces URL "
+                    "(loopback HTTP is allowed only in development/test)"
+                )
         if self.brave_api_key is not None and not self.brave_api_key.strip():
             raise ConfigurationError("Brave Search API key must be non-empty when configured")
         proxy_values = (
@@ -272,16 +298,12 @@ class Settings:
                 or proxy_port is None
                 or not 1 <= proxy_port <= 65535
             ):
-                raise ConfigurationError(
-                    "browser proxy must be an absolute HTTP(S) host:port URL"
-                )
+                raise ConfigurationError("browser proxy must be an absolute HTTP(S) host:port URL")
             if (
                 not self.browser_proxy_username
                 or self.browser_proxy_username != self.browser_proxy_username.strip()
             ):
-                raise ConfigurationError(
-                    "browser proxy username must be non-empty and normalized"
-                )
+                raise ConfigurationError("browser proxy username must be non-empty and normalized")
             if (
                 self.browser_proxy_password is None
                 or len(self.browser_proxy_password) < 24

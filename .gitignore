@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+.tmp/
+.worktrees/
 .env
 .env.*
 !.env.example

@@ -26,3 +26,8 @@ Run scripts/backup_postgres.sh from an approved backup environment. Restore is d
 ## Limits
 
 The PostgreSQL adapters and integration tests establish repository-level behavior; they do not certify the target cloud deployment, secret rotation, database HA/failover, monitoring alerts, or actual backup recovery. Do not claim production readiness until the deployment-specific evidence is reviewed.
+# W15 monitor deployment notes
+
+Production monitor storage requires PostgreSQL migration 002 and the runtime least-privilege database role. Deploy API and worker from the same immutable source revision. The worker must enable the `monitor` job kind and apply the configured maximum response bytes. Do not configure a second scheduler: Agent OS invokes run operations.
+
+Before enabling customer monitors, verify backup/restore for monitor definitions and the deletion redaction policy, database migration rollback/recovery against a real PostgreSQL service, safe DNS/redirect egress, trace collector configuration, alert delivery, and retention ownership. The local environment has no PostgreSQL DSN or Docker, so those database and deployment checks remain `not_evidenced`.

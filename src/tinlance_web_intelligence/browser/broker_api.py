@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.jobs.model import LeaseLostError
+from tinlance_web_intelligence.observability.tracing import validate_traceparent
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 
 
@@ -81,6 +82,7 @@ def create_app(repository: JobRepository, service_token: str) -> FastAPI:
             "payload": job.payload,
             "lease_token": lease_token,
             "attempts": job.attempts,
+            "traceparent": validate_traceparent(job.traceparent),
         }
         return JSONResponse(status_code=200, content=body)
 

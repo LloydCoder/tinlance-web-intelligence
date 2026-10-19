@@ -23,6 +23,7 @@ from starlette.responses import Response
 from tinlance_web_intelligence.api.http.middleware import RequestBodyLimitMiddleware
 from tinlance_web_intelligence.api.http.routes.health import router as health_router
 from tinlance_web_intelligence.api.http.routes.jobs import router as jobs_router
+from tinlance_web_intelligence.api.http.routes.monitors import router as monitors_router
 from tinlance_web_intelligence.api.http.routes.research import router as research_router
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
@@ -30,10 +31,18 @@ from tinlance_web_intelligence.api.http.routes.world_intelligence import (
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
+from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.observability.tracing import (
+    configure_tracing,
+    extract_valid_traceparent,
+    start_span,
+)
 from tinlance_web_intelligence.persistence.factory import (
     create_job_repository,
+    create_monitor_repository,
     create_source_evidence_outbox,
 )
+from tinlance_web_intelligence.persistence.monitor_protocol import MonitorRepository
 from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox
 
 
@@ -43,8 +52,10 @@ def create_app(
     repository: JobRepository | None = None,
     verifier: PrincipalVerifier | None = None,
     evidence_outbox: SourceEvidenceOutbox | None = None,
+    monitor_repository: MonitorRepository | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
+    tracer_provider = configure_tracing(config.otel_exporter_endpoint)
     if (
         verifier is None
         and config.identity_issuer
@@ -60,6 +71,7 @@ def create_app(
         raise ConfigurationError("production requires a configured Platform token verifier")
     trusted_verifier = verifier or DenyAllPrincipalVerifier()
     repo = repository or create_job_repository(config)
+    monitors = monitor_repository or create_monitor_repository(config)
     docs_enabled = config.environment in {"development", "test"}
     app = FastAPI(
         title="Tinlance Web Intelligence API",
@@ -69,6 +81,8 @@ def create_app(
         openapi_url="/openapi.json" if docs_enabled else None,
     )
     app.state.repository = repo
+    app.state.monitor_repository = monitors
+    app.state.monitor_service = MonitorService(repository=monitors, job_repository=repo)
     app.state.settings = config
     registry = CollectorRegistry()
     http_requests = Counter(
@@ -106,6 +120,12 @@ def create_app(
         ("status",),
         registry=registry,
     )
+    monitor_counts = Gauge(
+        "twi_monitors_total",
+        "Durable monitor count by lifecycle status.",
+        ("status",),
+        registry=registry,
+    )
     oldest_pending_outbox_age = Gauge(
         "twi_source_evidence_outbox_oldest_pending_age_seconds",
         "Age of the oldest pending source-evidence outbox event in seconds.",
@@ -124,6 +144,10 @@ def create_app(
         app.router.on_shutdown.append(outbox.close)
     if repository is None:
         app.router.on_shutdown.append(repo.close)
+    if monitor_repository is None:
+        app.router.on_shutdown.append(monitors.close)
+    if tracer_provider is not None:
+        app.router.on_shutdown.append(tracer_provider.shutdown)
 
     @app.get("/internal/metrics", include_in_schema=False)
     def metrics() -> Response:
@@ -146,17 +170,24 @@ def create_app(
             oldest_pending_outbox_age.set(
                 outbox_snapshot.get("outbox_oldest_pending_age_seconds", 0.0)
             )
+        try:
+            monitor_snapshot = monitors.metrics_snapshot()
+        except Exception:
+            metrics_collection_errors.labels("monitors").inc()
+        else:
+            for status in ("active", "paused", "deleted"):
+                monitor_counts.labels(status).set(monitor_snapshot.get(f"monitors_{status}", 0.0))
         response = Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
         response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.middleware("http")
-    async def authenticate(
-        request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        method = request.method if request.method in {
-            "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
-        } else "OTHER"
+    async def authenticate(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        method = (
+            request.method
+            if request.method in {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+            else "OTHER"
+        )
         supplied_request_id = request.headers.get("x-request-id", "")
         request_id = (
             supplied_request_id
@@ -167,9 +198,29 @@ def create_app(
         started_at = time.perf_counter()
         http_in_flight.labels(method).inc()
         response: Response | None = None
+
+        async def traced_call_next() -> Response:
+            traceparent = extract_valid_traceparent(request.headers)
+            parent = None
+            if traceparent:
+                from opentelemetry.propagate import extract
+
+                parent = extract({"traceparent": traceparent})
+            with start_span(
+                "twi.http.request",
+                {"operation": method.lower(), "component": "api"},
+                parent=parent,
+            ):
+                return await call_next(request)
+
         try:
-            if request.url.path in {"/health/live", "/health/ready"}:
-                response = await call_next(request)
+            if request.url.path in {
+                "/health/live",
+                "/health/ready",
+                "/health/monitors",
+                "/health/telemetry",
+            }:
+                response = await traced_call_next()
             elif request.url.path == "/internal/metrics":
                 if config.metrics_token is None:
                     response = JSONResponse(status_code=404, content={"detail": "not found"})
@@ -182,7 +233,7 @@ def create_app(
                         headers={"WWW-Authenticate": 'Bearer realm="twi-metrics"'},
                     )
                 else:
-                    response = await call_next(request)
+                    response = await traced_call_next()
             else:
                 authorization = request.headers.get("authorization", "")
                 scheme, separator, token = authorization.partition(" ")
@@ -204,7 +255,7 @@ def create_app(
                             },
                         )
                     else:
-                        response = await call_next(request)
+                        response = await traced_call_next()
             if response is None:
                 raise RuntimeError("request middleware completed without a response")
             response.headers["X-Request-ID"] = request_id
@@ -223,6 +274,7 @@ def create_app(
     app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=65_536)
     app.include_router(health_router)
     app.include_router(jobs_router)
+    app.include_router(monitors_router)
     app.include_router(research_router)
     app.include_router(world_intelligence_router)
     return app

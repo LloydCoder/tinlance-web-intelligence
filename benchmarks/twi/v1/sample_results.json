@@ -66,6 +66,9 @@
         }
       ],
       "failure_mode": "unsupported_claim"
-    }
+    },
+    {"case_id":"synthetic-monitor-private-redirect","retrieved":[],"claims":[],"failure_mode":"blocked_redirect"},
+    {"case_id":"synthetic-monitor-tenant-scope-denial","retrieved":[],"claims":[],"failure_mode":"authorization_denied"},
+    {"case_id":"synthetic-monitor-baseline-failure","retrieved":[],"claims":[],"failure_mode":"capture_failed"}
   ]
 }

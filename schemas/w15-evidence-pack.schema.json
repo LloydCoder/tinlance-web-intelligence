@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"TWI W15 evidence pack",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema_version","source_revision","ready","gates"],
+  "properties":{
+    "schema_version":{"const":"1.0.0"},
+    "source_revision":{"type":"string","pattern":"^[0-9a-f]{40}$"},
+    "ready":{"type":"boolean"},
+    "gates":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["gate","status","owner","observed_at","source_revision","evidence_reference","sha256"],"properties":{"gate":{"type":"string","minLength":1},"status":{"enum":["pass","fail","not_evidenced"]},"owner":{"type":"string","minLength":1},"observed_at":{"type":"string","format":"date-time"},"source_revision":{"type":"string","pattern":"^[0-9a-f]{40}$"},"evidence_reference":{"type":"string"},"sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"expires_at":{"type":"string","format":"date-time"}}}}
+  }
+}

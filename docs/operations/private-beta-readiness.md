@@ -41,3 +41,14 @@ Private beta is a deployment-specific decision, not a repository label. Every it
 - [ ] Authorized owner explicitly approves private beta.
 
 If a box is unchecked or lacks evidence, private beta remains NOT CERTIFIED. Passing repository CI alone is not production-deployment evidence.
+
+## W15 monitor controls
+
+- [ ] Confirm Agent OS owns the monitor recurrence policy and has approved run cadence and budget.
+- [ ] Verify monitor creation, run idempotency, pause/drain, tenant separation and deletion against the target deployment.
+- [ ] Approve URL/query retention and monitor-result retention with a named privacy owner.
+- [ ] Verify PostgreSQL migration 002, backup/restore, active-worker deletion behavior and target egress.
+- [ ] Bind Platform, World Intelligence and TSIC contracts to exact reviewed consumer revisions.
+- [ ] Confirm collector, paging route, on-call owner and a witnessed alert/rollback exercise.
+
+The current W15 pack records a confirmed Platform monitor-tool integration failure, a pinned passing World Intelligence schema check, TSIC conformance as `not_evidenced`, and additional external gates as `not_evidenced`. It reports `ready=false`.

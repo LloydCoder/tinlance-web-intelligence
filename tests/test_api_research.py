@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from jsonschema import Draft202012Validator, FormatChecker  # type: ignore[import-untyped]
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
@@ -48,9 +52,7 @@ def _client(
 ) -> TestClient:
     verifier = FakeVerifier(principal or _principal())
     app = create_app(
-        settings=Settings.from_env(
-            {"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}
-        ),
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
         repository=repository,
         verifier=verifier,
     )
@@ -244,11 +246,13 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
             repository,
             source_url="https://example.com/news?topic=product&access_token=secret-value",
         )
-        scopes = frozenset({
-            "twi:research:verify",
-            "twi:observations:export",
-            "twi:observations:export:read",
-        })
+        scopes = frozenset(
+            {
+                "twi:research:verify",
+                "twi:observations:export",
+                "twi:observations:export:read",
+            }
+        )
         client = _client(repository, _principal(scopes=scopes))
         request_body = {
             "claim_id": "product-launch",
@@ -306,6 +310,71 @@ def test_world_intelligence_export_is_verified_idempotent_and_subject_scoped() -
             headers={"Authorization": "Bearer valid-credential"},
         )
         assert hidden.status_code == 404
+    finally:
+        repository.close()
+
+
+def test_world_intelligence_export_matches_pinned_consumer_schema() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    try:
+        job_id = _completed_fetch(
+            repository,
+            source_url="https://example.com/news?topic=product&access_token=secret-value",
+        )
+        scopes = frozenset({"twi:research:verify", "twi:observations:export"})
+        client = _client(repository, _principal(scopes=scopes))
+        response = client.post(
+            "/v1/integrations/world-intelligence/exports",
+            headers={
+                "Authorization": "Bearer valid-credential",
+                "Idempotency-Key": "wi-export-schema-0001",
+            },
+            json={
+                "claim_id": "launch",
+                "statement": "A product launched in October 2026.",
+                "job_id": job_id,
+                "quote": "launched its new product in October 2026",
+            },
+        )
+        assert response.status_code == 202
+        event = cast(FastAPI, client.app).state.evidence_outbox.get(
+            response.json()["event_id"],
+            sha256(b"tenant-a").hexdigest(),
+            sha256(b"subject-a").hexdigest(),
+        )
+        assert event is not None
+        schema_path = (
+            "contracts/fixtures/world-intelligence/"
+            "a564816faffa5be8e970eae5127f3a504d0a1729/source-evidence.json"
+        )
+        schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))["schema"]
+        validator = Draft202012Validator(schema, format_checker=FormatChecker())
+        assert list(validator.iter_errors(event.payload)) == []
+        assert list(validator.iter_errors({**event.payload, "unexpected": True}))
+    finally:
+        repository.close()
+
+
+def test_health_reports_monitor_and_telemetry_readiness() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    client = _client(repository)
+    monitor_repository = cast(FastAPI, client.app).state.monitor_repository
+    try:
+        with client:
+            monitors = client.get("/health/monitors")
+            telemetry = client.get("/health/telemetry")
+            ready = client.get("/health/ready")
+            with patch.object(monitor_repository, "ping", return_value=False):
+                monitor_down = client.get("/health/monitors")
+                ready_down = client.get("/health/ready")
+        assert monitors.json() == {"status": "ready"}
+        assert telemetry.json() == {
+            "status": "instrumented",
+            "export_mode": "noop",
+        }
+        assert ready.json() == {"status": "ready"}
+        assert monitor_down.status_code == 503
+        assert ready_down.status_code == 503
     finally:
         repository.close()
 

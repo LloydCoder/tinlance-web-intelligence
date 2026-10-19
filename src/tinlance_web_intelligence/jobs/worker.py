@@ -17,6 +17,12 @@ from tinlance_web_intelligence.contracts.provenance import (
     validate_evidence_pack,
 )
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
+from tinlance_web_intelligence.monitors.model import MonitorDeletedError
+from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.observability.tracing import (
+    extract_valid_traceparent,
+    start_span,
+)
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
 
@@ -30,6 +36,7 @@ class JobWorker:
         acquisition: WebAcquisitionService | None = None,
         search_provider: SearchProvider | None = None,
         browser_service: BrowserService | None = None,
+        monitor_service: MonitorService | None = None,
         allowed_kinds: tuple[str, ...] = ("search", "fetch"),
         lease_seconds: int = 180,
     ) -> None:
@@ -39,6 +46,7 @@ class JobWorker:
         self.acquisition = acquisition or WebAcquisitionService(SafeHTTPFetcher())
         self.search_provider = search_provider
         self.browser_service = browser_service
+        self.monitor_service = monitor_service
         self.lease_seconds = lease_seconds
 
     def run_once(self) -> bool:
@@ -50,7 +58,22 @@ class JobWorker:
         if job is None:
             return False
         try:
-            result = self._execute(job)
+            parent = None
+            traceparent = extract_valid_traceparent(
+                {"traceparent": job.traceparent} if job.traceparent else {}
+            )
+            if traceparent:
+                from opentelemetry.propagate import extract
+
+                parent = extract({"traceparent": traceparent})
+            with start_span(
+                "twi.job.execute",
+                {"operation": job.kind, "component": "worker"},
+                parent=parent,
+            ):
+                result = self._execute(job)
+        except MonitorDeletedError:
+            self._fail(job, "monitor_deleted", False)
         except BrowserCaptureError as exc:
             self._fail(job, exc.error_code, exc.retryable)
         except FetchError as exc:
@@ -70,6 +93,10 @@ class JobWorker:
         return True
 
     def _execute(self, job: Job) -> dict[str, Any]:
+        if job.kind == "monitor":
+            if self.monitor_service is None:
+                raise ValueError("monitor service is not configured")
+            return asyncio.run(self.monitor_service.execute(job))
         if job.kind == "browser":
             if self.browser_service is None:
                 raise BrowserCaptureError("browser_not_configured")

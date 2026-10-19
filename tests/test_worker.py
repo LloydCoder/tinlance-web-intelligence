@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, cast
 
 from tinlance_web_intelligence.acquisition.fetcher import FetchError
@@ -9,6 +10,8 @@ from tinlance_web_intelligence.acquisition.models import AcquiredPage, Extracted
 from tinlance_web_intelligence.jobs.model import Job, JobStatus
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.jobs.worker import JobWorker
+from tinlance_web_intelligence.monitors.service import MonitorService
+from tinlance_web_intelligence.persistence.sqlite_monitors import SQLiteMonitorRepository
 from tinlance_web_intelligence.search.base import SearchResult
 
 
@@ -20,8 +23,14 @@ class FakeSearchProvider:
 
 
 class SuccessfulAcquisition:
-    async def acquire_page(self, url: str, *, tenant_id: str = "development") -> AcquiredPage:
-        del tenant_id
+    async def acquire_page(
+        self,
+        url: str,
+        *,
+        tenant_id: str = "development",
+        max_bytes: int | None = None,
+    ) -> AcquiredPage:
+        del tenant_id, max_bytes
         body = b"<html><title>Evidence</title></html>"
         digest = sha256(body).hexdigest()
         fetched = FetchResult(
@@ -45,8 +54,14 @@ class SuccessfulAcquisition:
 
 
 class RetryableAcquisition:
-    async def acquire_page(self, url: str, *, tenant_id: str = "development") -> None:
-        del url, tenant_id
+    async def acquire_page(
+        self,
+        url: str,
+        *,
+        tenant_id: str = "development",
+        max_bytes: int | None = None,
+    ) -> None:
+        del url, tenant_id, max_bytes
         raise FetchError("temporary upstream failure", retryable=True)
 
 
@@ -124,4 +139,89 @@ def test_worker_persists_validated_provenance_for_fetch_job() -> None:
         assert provenance["content_sha256"] == completed.result["content_sha256"]
     finally:
         repository.close()
+
+
+def test_worker_executes_monitor_and_persists_bounded_change_result(tmp_path: Path) -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    monitors = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
+    monitor = monitors.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        target_url="https://example.com/",
+        policy={},
+        idempotency_key="monitor-create-1",
+    )
+    service = MonitorService(
+        repository=monitors,
+        job_repository=jobs,
+        acquisition=SuccessfulAcquisition(),
+    )
+    run = service.enqueue_run(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        monitor_id=monitor.monitor_id,
+        idempotency_key="monitor-run-1",
+        traceparent="00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+    )
+    worker = JobWorker(
+        jobs,
+        worker_id="monitor-worker",
+        monitor_service=service,
+        allowed_kinds=("monitor",),
+    )
+
+    assert worker.run_once()
+    completed = jobs.get(run.job_id, tenant_id="tenant-a", subject_id="subject-a")
+    assert completed is not None and completed.status is JobStatus.SUCCEEDED
+    assert completed.result is not None
+    assert completed.result["outcome"] == "baseline_established"
+    assert completed.result["artifact_id"].startswith("sha256:")
+    assert "text" not in completed.result
+    assert "url" not in completed.result
+    updated = monitors.get(
+        tenant_id="tenant-a", subject_id="subject-a", monitor_id=monitor.monitor_id
+    )
+    assert updated is not None and updated.baseline_version == 1
+    jobs.close()
+    monitors.close()
+
+
+def test_failed_monitor_capture_does_not_advance_baseline(tmp_path: Path) -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    monitors = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
+    monitor = monitors.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        target_url="https://example.com/",
+        policy={},
+        idempotency_key="monitor-create-2",
+    )
+    service = MonitorService(
+        repository=monitors,
+        job_repository=jobs,
+        acquisition=cast(Any, RetryableAcquisition()),
+    )
+    run = service.enqueue_run(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        monitor_id=monitor.monitor_id,
+        idempotency_key="monitor-run-2",
+    )
+    worker = JobWorker(
+        jobs,
+        worker_id="monitor-worker",
+        monitor_service=service,
+        allowed_kinds=("monitor",),
+    )
+
+    assert worker.run_once()
+    updated_job = jobs.get(run.job_id, tenant_id="tenant-a", subject_id="subject-a")
+    assert updated_job is not None and updated_job.status is JobStatus.QUEUED
+    assert updated_job.error_code == "upstream_failure"
+    updated_monitor = monitors.get(
+        tenant_id="tenant-a", subject_id="subject-a", monitor_id=monitor.monitor_id
+    )
+    assert updated_monitor is not None and updated_monitor.baseline_version == 0
+    jobs.close()
+    monitors.close()
 

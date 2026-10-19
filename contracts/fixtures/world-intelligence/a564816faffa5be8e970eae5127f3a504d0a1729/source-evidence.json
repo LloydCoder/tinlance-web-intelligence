@@ -1,0 +1,30 @@
+{
+  "revision": "a564816faffa5be8e970eae5127f3a504d0a1729",
+  "source": "https://github.com/LloydCoder/tinlance-world-intelligence/blob/a564816faffa5be8e970eae5127f3a504d0a1729/schemas/twi-source-evidence-v1.json",
+  "status": "pass",
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "TWI source evidence intake v1",
+    "description": "Candidate source evidence only; not a canonical observation or truth assertion.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema_version", "source_system", "tenant_ref", "source_job_id", "claim_id", "statement", "source_url", "source_url_redacted", "retrieved_at", "media_type", "artifact_sha256", "quote", "quote_sha256", "verifier_version", "report_sha256"],
+    "properties": {
+      "schema_version": {"const": "1.0.0"},
+      "source_system": {"const": "tinlance-web-intelligence"},
+      "tenant_ref": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "source_job_id": {"type": "string", "minLength": 1, "maxLength": 64},
+      "claim_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,64}$"},
+      "statement": {"type": "string", "minLength": 1, "maxLength": 500},
+      "source_url": {"type": "string", "format": "uri", "maxLength": 4096},
+      "source_url_redacted": {"type": "boolean"},
+      "retrieved_at": {"type": "string", "format": "date-time"},
+      "media_type": {"type": "string", "minLength": 1, "maxLength": 128},
+      "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "quote": {"type": "string", "minLength": 8, "maxLength": 350},
+      "quote_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "verifier_version": {"type": "string", "pattern": "^twi-citation-verifier/[0-9]+[.][0-9]+[.][0-9]+$", "maxLength": 64},
+      "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    }
+  }
+}

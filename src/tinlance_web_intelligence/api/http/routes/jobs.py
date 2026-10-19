@@ -14,6 +14,7 @@ from tinlance_web_intelligence.browser.policies import (
     normalize_browser_payload,
 )
 from tinlance_web_intelligence.jobs.model import IdempotencyConflictError, Job, JobStatus
+from tinlance_web_intelligence.observability.tracing import extract_valid_traceparent
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.security.url_validation import UnsafeURLError, validate_url
 
@@ -105,6 +106,7 @@ def create_job(
             kind=body.kind,
             payload=payload,
             idempotency_key=idempotency_key,
+            traceparent=extract_valid_traceparent(request.headers),
         )
     except IdempotencyConflictError as exc:
         raise HTTPException(

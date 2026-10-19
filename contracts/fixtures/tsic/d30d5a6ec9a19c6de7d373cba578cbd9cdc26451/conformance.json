@@ -1,0 +1,8 @@
+{
+  "revision": "d30d5a6ec9a19c6de7d373cba578cbd9cdc26451",
+  "source": "https://github.com/LloydCoder/tinlance-system-integration/blob/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance/requirements/twi-web-intelligence.json",
+  "contract_version": "1.0.0",
+  "status": "not_evidenced",
+  "requirement_ids": ["TSIC-TWI-001", "TSIC-TWI-002", "TSIC-TWI-003", "TSIC-TWI-004", "TSIC-TWI-005", "TSIC-TWI-006", "TSIC-TWI-007", "TSIC-TWI-008"],
+  "reason": "Pinned current requirements are available, but no signed or CI conformance result from TSIC is evidenced."
+}

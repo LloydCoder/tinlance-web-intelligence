@@ -24,6 +24,10 @@ def test_staging_probe_checks_health_auth_and_docs_without_mutation() -> None:
             return 200, b'{"status":"ok"}'
         if url.endswith("/health/ready"):
             return 200, b'{"status":"ready"}'
+        if url.endswith("/health/monitors"):
+            return 200, b'{"status":"ready"}'
+        if url.endswith("/health/telemetry"):
+            return 200, b'{"status":"instrumented","export_mode":"noop"}'
         if url.endswith("/v1/jobs"):
             return 401, b'{"detail":"bearer token required"}'
         if url.endswith("/docs"):
@@ -33,8 +37,8 @@ def test_staging_probe_checks_health_auth_and_docs_without_mutation() -> None:
     result = verify_staging("https://staging.example.test/", requester=requester)
     assert result["ok"] is True
     assert all(check["ok"] for check in result["checks"].values())
-    assert len(seen) == 4
-    assert seen[2][1:] == ("POST", None, b"{}")
+    assert len(seen) == 6
+    assert seen[4][1:] == ("POST", None, b"{}")
 
 
 def test_staging_probe_accepts_a_valid_platform_token_without_creating_a_job() -> None:
@@ -45,10 +49,14 @@ def test_staging_probe_accepts_a_valid_platform_token_without_creating_a_job() -
             return 200, b'{"status":"ok"}'
         if url.endswith("/health/ready"):
             return 200, b'{"status":"ready"}'
+        if url.endswith("/health/monitors"):
+            return 200, b'{"status":"ready"}'
+        if url.endswith("/health/telemetry"):
+            return 200, b'{"status":"instrumented","export_mode":"noop"}'
         if url.endswith("/v1/jobs"):
-            return 401, b'{}'
+            return 401, b"{}"
         if url.endswith("/docs"):
-            return 404, b'{}'
+            return 404, b"{}"
         if "/v1/jobs/" in url:
             assert method == "GET"
             assert token == PROBE_CREDENTIAL
@@ -56,9 +64,7 @@ def test_staging_probe_accepts_a_valid_platform_token_without_creating_a_job() -
             return 404, b'{"detail":"job not found"}'
         raise AssertionError("unexpected request")
 
-    result = verify_staging(
-        "https://staging.example.test", PROBE_CREDENTIAL, requester=requester
-    )
+    result = verify_staging("https://staging.example.test", PROBE_CREDENTIAL, requester=requester)
     assert result["ok"] is True
     assert result["checks"]["platform_token_authenticated"]["status_code"] == 404
 
@@ -71,12 +77,40 @@ def test_staging_probe_fails_closed_when_readiness_is_unhealthy() -> None:
             return 200, b'{"status":"ok"}'
         if url.endswith("/health/ready"):
             return 503, b'{"status":"not_ready"}'
+        if url.endswith("/health/monitors"):
+            return 200, b'{"status":"ready"}'
+        if url.endswith("/health/telemetry"):
+            return 200, b'{"status":"instrumented","export_mode":"noop"}'
         if url.endswith("/v1/jobs"):
-            return 401, b'{}'
+            return 401, b"{}"
         if url.endswith("/docs"):
-            return 404, b'{}'
+            return 404, b"{}"
         raise AssertionError("unexpected request")
 
     result = verify_staging("https://staging.example.test", requester=requester)
     assert result["ok"] is False
     assert result["checks"]["readiness"]["status_code"] == 503
+
+
+def test_staging_probe_fails_when_monitor_or_telemetry_probe_is_invalid() -> None:
+    def requester(
+        url: str, method: str, token: str | None, body: bytes | None
+    ) -> tuple[int, bytes]:
+        if url.endswith("/health/live"):
+            return 200, b'{"status":"ok"}'
+        if url.endswith("/health/ready"):
+            return 200, b'{"status":"ready"}'
+        if url.endswith("/health/monitors"):
+            return 503, b'{"status":"not_ready"}'
+        if url.endswith("/health/telemetry"):
+            return 200, b'{"status":"instrumented","export_mode":"unknown"}'
+        if url.endswith("/v1/jobs"):
+            return 401, b"{}"
+        if url.endswith("/docs"):
+            return 404, b"{}"
+        raise AssertionError("unexpected request")
+
+    result = verify_staging("https://staging.example.test", requester=requester)
+    assert result["ok"] is False
+    assert result["checks"]["monitor_persistence"]["status_code"] == 503
+    assert result["checks"]["telemetry_instrumentation"]["ok"] is False

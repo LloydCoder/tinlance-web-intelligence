@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, cast
+
+import pytest
+from scripts.validate_consumer_contracts import validate
+
+
+def test_current_consumer_findings_are_exact_and_fail_closed() -> None:
+    result = validate(Path("contracts/consumer-matrix.json"))
+    assert result["valid"] is True
+    consumers = cast(list[dict[str, Any]], result["consumers"])
+    assert {row["name"]: row["status"] for row in consumers} == {
+        "agent-platform": "fail",
+        "world-intelligence": "pass",
+        "tsic": "not_evidenced",
+    }
+
+
+def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
+    fixture = json.loads(
+        Path(
+            "contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"
+        ).read_text(encoding="utf-8")
+    )
+    expected = {
+        "twi_monitor_create",
+        "twi_monitor_delete",
+        "twi_monitor_pause",
+        "twi_monitor_read",
+        "twi_monitor_resume",
+        "twi_monitor_run",
+    }
+    assert set(fixture["expected_monitor_tools"]) == expected
+    assert set(fixture["missing_monitor_tools"]) == expected
+    assert not (expected & set(fixture["registered_tools"]))
+
+
+def test_tsic_requirements_are_pinned_without_claiming_external_conformance() -> None:
+    fixture = json.loads(
+        Path(
+            "contracts/fixtures/tsic/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert fixture["status"] == "not_evidenced"
+    assert fixture["requirement_ids"] == [f"TSIC-TWI-{number:03}" for number in range(1, 9)]
+
+
+def test_passing_consumer_requires_exact_fixture_revision(tmp_path: Path) -> None:
+    root = tmp_path
+    (root / "schemas/mcp-tools").mkdir(parents=True)
+    (root / "schemas/mcp-tools/tool.json").write_text('{"name":"tool"}', encoding="utf-8")
+    fixture = root / "fixtures/tool.json"
+    fixture.parent.mkdir()
+    fixture.write_text('{"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}', encoding="utf-8")
+    matrix = root / "contracts/consumer-matrix.json"
+    matrix.parent.mkdir()
+    matrix.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0.0",
+                "consumers": [
+                    {
+                        "name": "x",
+                        "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "status": "pass",
+                        "fixture": "fixtures/tool.json",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="revision mismatch"):
+        validate(matrix)

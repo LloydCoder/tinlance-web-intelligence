@@ -1,5 +1,7 @@
 # Incident response runbook
 
+For monitor-specific incidents, use the scoped pause operation to stop new run enqueues; accepted jobs may drain. If target privacy or tenant isolation is at risk, disable the affected integration and preserve job IDs and source revision without copying URL query values or page content into incident tickets. Delete/redact the monitor only when the data owner authorizes deletion; deletion does not revoke an already leased worker. Record the owner, event time, source revision, scope, containment, and evidence reference.
+
 ## Severity and containment
 
 - **P0 — credential exposure, cross-tenant access, or unsafe internal-network access:** stop affected acquisition/workers, revoke exposed credentials, preserve audit records, and notify the authorized security owner immediately.

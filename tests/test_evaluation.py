@@ -54,9 +54,9 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
     assert report == again
     summary = report["summary"]
     assert isinstance(summary, dict)
-    assert summary["retrieval_recall"] == pytest.approx(5 / 6)
-    assert summary["source_diversity_coverage"] == pytest.approx(5 / 6)
-    assert summary["extraction_coverage"] == pytest.approx(2 / 3)
+    assert summary["retrieval_recall"] == pytest.approx(5 / 12)
+    assert summary["source_diversity_coverage"] == pytest.approx(5 / 12)
+    assert summary["extraction_coverage"] == pytest.approx(1 / 3)
     assert summary["citation_grounding_rate"] == pytest.approx(0.5)
     assert summary["freshness_rate"] == pytest.approx(2 / 3)
     assert summary["failure_calibration_accuracy"] == 1.0

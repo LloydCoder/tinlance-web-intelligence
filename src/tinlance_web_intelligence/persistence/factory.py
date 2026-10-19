@@ -7,8 +7,10 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     SQLiteSourceEvidenceOutbox,
 )
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.monitor_protocol import MonitorRepository
 from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArtifactStore
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
+from tinlance_web_intelligence.persistence.postgres_monitors import PostgresMonitorRepository
 from tinlance_web_intelligence.persistence.postgres_outbox import PostgresSourceEvidenceOutbox
 from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox
 
@@ -29,6 +31,19 @@ def create_source_evidence_outbox(settings: Settings) -> SourceEvidenceOutbox:
     if settings.environment == "production":
         raise ValueError("production requires PostgreSQL persistence")
     return SQLiteSourceEvidenceOutbox(settings.database_path)
+
+
+def create_monitor_repository(settings: Settings) -> MonitorRepository:
+    """Select PostgreSQL for deployed environments and SQLite for local use."""
+    if settings.database_url:
+        return PostgresMonitorRepository(settings.database_url)
+    if settings.environment == "production":
+        raise ValueError("production requires PostgreSQL monitor storage")
+    from tinlance_web_intelligence.persistence.sqlite_monitors import (
+        SQLiteMonitorRepository,
+    )
+
+    return SQLiteMonitorRepository(settings.database_path)
 
 
 def create_artifact_store(settings: Settings) -> ArtifactStore:

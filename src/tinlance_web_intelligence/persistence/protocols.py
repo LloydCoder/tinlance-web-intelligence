@@ -9,7 +9,8 @@ from tinlance_web_intelligence.jobs.model import Job
 
 class JobRepository(Protocol):
     def create(self, *, tenant_id: str, subject_id: str, kind: str,
-               payload: dict[str, Any], idempotency_key: str) -> Job: ...
+               payload: dict[str, Any], idempotency_key: str,
+               traceparent: str | None = None) -> Job: ...
     def get(self, job_id: str, *, tenant_id: str,
             subject_id: str | None = None) -> Job | None: ...
     def claim_next(self, worker_id: str, *, lease_seconds: int = 60,
