@@ -169,7 +169,9 @@ class Settings:
         if self.metrics_token is not None and (
             len(self.metrics_token) < 32 or self.metrics_token != self.metrics_token.strip()
         ):
-            raise ConfigurationError("TWI_METRICS_TOKEN must contain at least 32 non-padded characters")
+            raise ConfigurationError(
+                "TWI_METRICS_TOKEN must contain at least 32 non-padded characters"
+            )
         if self.brave_api_key is not None and not self.brave_api_key.strip():
             raise ConfigurationError("Brave Search API key must be non-empty when configured")
         proxy_values = (
