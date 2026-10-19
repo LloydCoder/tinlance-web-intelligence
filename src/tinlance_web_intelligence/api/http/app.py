@@ -21,6 +21,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
 from tinlance_web_intelligence.api.http.middleware import RequestBodyLimitMiddleware
+from tinlance_web_intelligence.api.http.routes.evidence import router as evidence_router
 from tinlance_web_intelligence.api.http.routes.health import router as health_router
 from tinlance_web_intelligence.api.http.routes.jobs import router as jobs_router
 from tinlance_web_intelligence.api.http.routes.monitors import router as monitors_router
@@ -29,6 +30,7 @@ from tinlance_web_intelligence.api.http.routes.usage import router as usage_rout
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
 )
+from tinlance_web_intelligence.artifacts.store import ArtifactStore
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.commercial.entitlements import EntitlementResolver
@@ -40,6 +42,7 @@ from tinlance_web_intelligence.observability.tracing import (
     start_span,
 )
 from tinlance_web_intelligence.persistence.factory import (
+    create_artifact_store,
     create_job_repository,
     create_monitor_repository,
     create_source_evidence_outbox,
@@ -62,6 +65,7 @@ def create_app(
     monitor_repository: MonitorRepository | None = None,
     usage_ledger: UsageLedger | None = None,
     entitlement_resolver: EntitlementResolver | None = None,
+    artifact_store: ArtifactStore | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
     tracer_provider = configure_tracing(config.otel_exporter_endpoint)
@@ -86,6 +90,7 @@ def create_app(
     repo = repository or create_job_repository(config)
     monitors = monitor_repository or create_monitor_repository(config)
     usage = usage_ledger or create_usage_ledger(config)
+    artifacts = artifact_store or create_artifact_store(config)
     docs_enabled = config.environment in {"development", "test"}
     app = FastAPI(
         title="Tinlance Web Intelligence API",
@@ -97,6 +102,7 @@ def create_app(
     app.state.repository = repo
     app.state.monitor_repository = monitors
     app.state.usage_ledger = usage
+    app.state.artifact_store = artifacts
     app.state.entitlement_resolver = entitlement_resolver
     app.state.monitor_service = MonitorService(repository=monitors, job_repository=repo)
     app.state.settings = config
@@ -164,6 +170,8 @@ def create_app(
         app.router.on_shutdown.append(monitors.close)
     if usage_ledger is None:
         app.router.on_shutdown.append(usage.close)
+    if artifact_store is None:
+        app.router.on_shutdown.append(artifacts.close)
     if tracer_provider is not None:
         app.router.on_shutdown.append(tracer_provider.shutdown)
 
@@ -292,6 +300,7 @@ def create_app(
     app.add_middleware(RequestBodyLimitMiddleware, max_body_bytes=65_536)
     app.include_router(health_router)
     app.include_router(jobs_router)
+    app.include_router(evidence_router)
     app.include_router(monitors_router)
     app.include_router(research_router)
     app.include_router(world_intelligence_router)
