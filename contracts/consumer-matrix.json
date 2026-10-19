@@ -1,8 +1,32 @@
 {
   "schema_version": "1.0.0",
   "consumers": [
-    {"name":"agent-platform","repository":"LloydCoder/tinlance-agent-platform","revision":"db8473b452701d9b3807797ab1bc178b58feb96d","contract_version":"1.0.0","fixture":"contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json","status":"fail","evidence_reference":"https://github.com/LloydCoder/tinlance-agent-platform/blob/db8473b452701d9b3807797ab1bc178b58feb96d/packages/mcp/src/tinlance_agent_platform_mcp/twi.py"},
-    {"name":"world-intelligence","repository":"LloydCoder/tinlance-world-intelligence","revision":"a564816faffa5be8e970eae5127f3a504d0a1729","contract_version":"1.0.0","fixture":"contracts/fixtures/world-intelligence/a564816faffa5be8e970eae5127f3a504d0a1729/source-evidence.json","status":"pass","evidence_reference":"https://github.com/LloydCoder/tinlance-world-intelligence/blob/a564816faffa5be8e970eae5127f3a504d0a1729/schemas/twi-source-evidence-v1.json"},
-    {"name":"tsic","repository":"LloydCoder/tinlance-system-integration","revision":"d30d5a6ec9a19c6de7d373cba578cbd9cdc26451","contract_version":"1.0.0","fixture":"contracts/fixtures/tsic/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance.json","status":"not_evidenced","evidence_reference":"https://github.com/LloydCoder/tinlance-system-integration/blob/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance/requirements/twi-web-intelligence.json"}
+    {
+      "name": "agent-platform",
+      "repository": "LloydCoder/tinlance-agent-platform",
+      "revision": "c5a080c1fb4df68e45070f8cddfc30bf81edd7bb",
+      "contract_version": "1.0.0",
+      "fixture": "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json",
+      "status": "pass",
+      "evidence_reference": "https://github.com/LloydCoder/tinlance-agent-platform/blob/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/packages/mcp/src/tinlance_agent_platform_mcp/twi.py"
+    },
+    {
+      "name": "world-intelligence",
+      "repository": "LloydCoder/tinlance-world-intelligence",
+      "revision": "a564816faffa5be8e970eae5127f3a504d0a1729",
+      "contract_version": "1.0.0",
+      "fixture": "contracts/fixtures/world-intelligence/a564816faffa5be8e970eae5127f3a504d0a1729/source-evidence.json",
+      "status": "pass",
+      "evidence_reference": "https://github.com/LloydCoder/tinlance-world-intelligence/blob/a564816faffa5be8e970eae5127f3a504d0a1729/schemas/twi-source-evidence-v1.json"
+    },
+    {
+      "name": "tsic",
+      "repository": "LloydCoder/tinlance-system-integration",
+      "revision": "d30d5a6ec9a19c6de7d373cba578cbd9cdc26451",
+      "contract_version": "1.0.0",
+      "fixture": "contracts/fixtures/tsic/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance.json",
+      "status": "not_evidenced",
+      "evidence_reference": "https://github.com/LloydCoder/tinlance-system-integration/blob/d30d5a6ec9a19c6de7d373cba578cbd9cdc26451/conformance/requirements/twi-web-intelligence.json"
+    }
   ]
 }
