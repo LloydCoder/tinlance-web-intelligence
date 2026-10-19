@@ -97,16 +97,18 @@ def read_usage(
         raise HTTPException(status_code=422, detail="period_start must include a timezone")
     canonical_period_start = parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
     ledger = request.app.state.usage_ledger
+    read_any = "twi:usage:read:any" in principal.scopes
+    usage_subject_id = None if read_any else principal.subject_id
     after = _decode_cursor(cursor)
     fetched = ledger.list_events(
-        tenant_id=principal.tenant_id, subject_id=principal.subject_id, limit=limit + 1,
+        tenant_id=principal.tenant_id, subject_id=usage_subject_id, limit=limit + 1,
         dimension=dimension, period_start=canonical_period_start, after=after,
     )
     has_more = len(fetched) > limit
     scoped = fetched[:limit]
     next_cursor = _encode_cursor(scoped[-1]) if has_more and scoped else None
     total = ledger.usage_total(
-        tenant_id=principal.tenant_id, subject_id=principal.subject_id,
+        tenant_id=principal.tenant_id, subject_id=usage_subject_id,
         dimension=dimension, period_start=canonical_period_start,
     )
     quota_limit: int | None = None
