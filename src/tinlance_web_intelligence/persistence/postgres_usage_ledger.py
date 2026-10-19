@@ -185,6 +185,9 @@ class PostgresUsageLedger:
         if period_start is not None:
             sql += " AND period_start=%s"
             parameters.append(period_start)
+        if after is not None:
+            sql += " AND (occurred_at > %s OR (occurred_at = %s AND event_id > %s))"
+            parameters.extend((after[0], after[0], after[1]))
         sql += " ORDER BY occurred_at,event_id LIMIT %s"
         parameters.append(limit)
         with self._pool.connection() as conn:
