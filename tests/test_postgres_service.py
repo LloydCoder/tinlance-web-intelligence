@@ -37,8 +37,14 @@ def test_service_file_decodes_uri_credentials_and_is_owner_only(tmp_path: Path) 
     [
         "postgresql://backup:secret@db.example.com/twi_backup",
         "postgresql://backup:secret@db.example.com/twi_backup?sslmode=require",
-        "postgresql://backup:secret@db.example.com/twi_backup?sslmode=verify-full&options=-csearch_path%3Dpublic",
-        "postgresql://backup:secret@db.example.com/twi_backup?sslmode=verify-full&application_name=a&application_name=b",
+        (
+            "postgresql://backup:secret@db.example.com/twi_backup"
+            "?sslmode=verify-full&options=-csearch_path%3Dpublic"
+        ),
+        (
+            "postgresql://backup:secret@db.example.com/twi_backup"
+            "?sslmode=verify-full&application_name=a&application_name=b"
+        ),
         "postgresql://backup:p%0Aword@db.example.com/twi_backup?sslmode=verify-full",
     ],
 )
@@ -70,7 +76,10 @@ def test_restore_target_rejects_primary_identity_and_wrong_target_name() -> None
             expected_database="twi_restore",
         )
 
-    target = "postgresql://restore:secret@recovery.example.com:5432/twi_recovery?sslmode=verify-full"
+    target = (
+        "postgresql://restore:secret@recovery.example.com:5432/twi_recovery"
+        "?sslmode=verify-full"
+    )
     with pytest.raises(ValueError, match="does not match"):
         validate_restore_target(
             target_dsn=target,
@@ -80,7 +89,10 @@ def test_restore_target_rejects_primary_identity_and_wrong_target_name() -> None
     with pytest.raises(ValueError, match="must end in"):
         validate_restore_target(
             target_dsn="postgresql://restore:secret@recovery.example.com/twi?sslmode=verify-full",
-            primary_dsn="postgresql://primary:secret@db.example.com/twi_primary?sslmode=verify-full",
+            primary_dsn=(
+                "postgresql://primary:secret@db.example.com/twi_primary"
+                "?sslmode=verify-full"
+            ),
             expected_database="twi",
         )
 
