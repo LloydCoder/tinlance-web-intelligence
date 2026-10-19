@@ -23,7 +23,7 @@ shell-check:
 	bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
 
 evaluation-check:
-	python scripts/evaluate_twi.py --dataset benchmarks/twi/v1/cases.json --results benchmarks/twi/v1/sample_results.json --now 2026-10-19T12:00:00Z --json-out /tmp/twi-evaluation.json --markdown-out /tmp/twi-evaluation.md
+	python scripts/evaluate_twi.py --dataset benchmarks/twi/v1/cases.json --results benchmarks/twi/v1/sample_results.json --thresholds benchmarks/twi/v1/thresholds.json --now 2026-10-19T12:00:00Z --json-out /tmp/twi-evaluation.json --markdown-out /tmp/twi-evaluation.md
 
 consumer-check:
 	python scripts/validate_consumer_contracts.py --matrix contracts/consumer-matrix.json

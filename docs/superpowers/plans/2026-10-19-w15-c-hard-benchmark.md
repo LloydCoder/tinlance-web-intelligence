@@ -6,9 +6,9 @@
 - [x] C4 — Add outcome-contract correctness, evidence-quality composite, latency/resource metrics, per-class counts, source revision, and deterministic report hash.
 - [x] C5 — Add threshold registry that fails closed as not_evidenced until an authorized owner approves explicit numeric thresholds.
 - [x] C6 — Add strict schema validation and adversarial tests; preserve URL-free reports and the non-truth boundary.
-- [ ] C7 — Run full CI on the final exact PR head, fix blockers, and perform a phase-specific forensic audit.
-- [ ] C8 — Merge only after all required checks pass; verify post-merge main CI before W15-D.
-- [ ] C9 — Reconcile roadmap/readiness documentation with exact SHA, run links, test evidence, and residual external gates.
+- [x] C7 — Full CI passed on exact PR head `57fad22ead23c0b0298eaf0c29d9fd2d7165bfa0` in [PR run #39310534386](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39310534386). Phase-specific forensic audit fixed threshold-registry digest bypasses, unknown failure classifications, stale tests, and strict typing issues.
+- [x] C8 — Merged PR [#62](https://github.com/LloydCoder/tinlance-web-intelligence/pull/62) as `309baed3956cee4b6afdd33244ab5253e900e9a1`; post-merge main CI passed in [run #39311190074](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39311190074).
+- [x] C9 — Reconciled roadmap, benchmark guide, W15-B closeout, and this plan. The checked-in threshold registry remains unapproved and synthetic observations remain non-qualifying; external W15 gates are unchanged.
 
 ## Non-goals
 

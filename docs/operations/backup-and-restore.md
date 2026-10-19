@@ -7,8 +7,9 @@ The production persistence backend stores job state, raw content-addressed artif
 ## Backup requirements
 
 - Use a dedicated database role with only the required read privileges for backup. Artifact retention must use a separate least-privilege `TWI_ARTIFACT_MAINTENANCE_DATABASE_URL` with SELECT/DELETE access limited to artifact tables and no DDL or job/outbox permissions.
-- Supply TWI_DATABASE_URL through the deployment secret manager. Production URLs must use TLS with sslmode=verify-full and a trusted CA.
-- Run scripts/backup_postgres.sh from an approved operations environment with pg_dump and Python 3 installed. The script rejects URLs unless sslmode=verify-full is set.
+- Supply `TWI_BACKUP_DATABASE_URL` through the deployment secret manager. It must use a dedicated read-only backup role, TLS with `sslmode=verify-full`, and a trusted CA. Do not reuse the application runtime role.
+- Run `scripts/backup_postgres.sh` from an approved operations environment with `pg_dump`, Python 3, and the `scripts/` helpers installed. The script validates the dedicated backup DSN, writes a short-lived owner-only libpq service file, and invokes `pg_dump` using only `service=twi_backup`; credentials are not passed in command-line arguments or logged.
+- Set `TWI_BACKUP_DIR` to an absolute, non-symlink path on the approved encrypted backup mount. The script restricts directory and output-file permissions, writes temporary outputs in that directory, and publishes the dump/checksum only after successful completion.
 - Store encrypted backups outside the database failure domain. Restrict access, apply retention, and monitor backup age and failures.
 - Run `python scripts/prune_artifacts.py` for artifact retention. It defaults to a dry run; destructive pruning requires `--apply` and `TWI_CONFIRM_ARTIFACT_PRUNE=YES`. Configure and audit the retention interval before enabling scheduled execution.
 - Run `python scripts/prune_job_data.py` for terminal job payload/result retention. It defaults to a dry run and requires a separate least-privilege `TWI_JOB_MAINTENANCE_DATABASE_URL`; destructive redaction requires `--apply` and `TWI_CONFIRM_JOB_DATA_PRUNE=YES`. The maintenance role must be restricted to the required job columns/operations and must not have DDL, artifact, or outbox privileges.
@@ -17,7 +18,9 @@ The production persistence backend stores job state, raw content-addressed artif
 
 ## Restore requirements
 
-Restore is destructive. Use scripts/restore_postgres.sh only against an explicitly selected recovery target and only after setting TWI_CONFIRM_RESTORE=YES. Never test a restore against the primary production database.
+Restore is destructive. Use `scripts/restore_postgres.sh` only after setting `TWI_CONFIRM_RESTORE=YES`, supplying a dedicated `TWI_RESTORE_DATABASE_URL` with restore privileges, and supplying `TWI_PRIMARY_DATABASE_URL` so the preflight can reject a target with the same normalized host/port/database identity. Set `TWI_RESTORE_TARGET_DATABASE` to the explicitly selected recovery database. The target must end in `_restore`, `_recovery`, or `_staging`. Never test a restore against the primary production database.
+
+The restore script uses a temporary owner-only libpq service file and passes only `service=twi_restore` to `pg_restore`. It validates the checksum manifest against the selected backup file, rejects symlinks and malformed manifests, and verifies the digest directly against the backup bytes. Database identity comparison cannot prove that two different DNS names do not route to the same underlying server; network/account isolation remains a deployment-specific control that must be reviewed.
 
 Before accepting a recovery:
 1. Restore into an isolated recovery database or environment.

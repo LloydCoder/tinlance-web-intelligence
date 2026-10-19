@@ -6,26 +6,53 @@ umask 077
   echo "Destructive restore blocked: set TWI_CONFIRM_RESTORE=YES after review" >&2
   exit 2
 }
-: "${TWI_DATABASE_URL:?TWI_DATABASE_URL must identify the isolated recovery target}"
+: "${TWI_RESTORE_DATABASE_URL:?TWI_RESTORE_DATABASE_URL must identify the isolated recovery target}"
+: "${TWI_PRIMARY_DATABASE_URL:?TWI_PRIMARY_DATABASE_URL must identify the primary database for target comparison}"
 : "${TWI_BACKUP_FILE:?TWI_BACKUP_FILE must identify a verified custom-format dump}"
 : "${TWI_RESTORE_TARGET_DATABASE:?Set the expected recovery database name}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-python3 "$script_dir/check_database_tls.py"
-[[ -f "$TWI_BACKUP_FILE" ]] || { echo "backup file not found" >&2; exit 1; }
-[[ -f "$TWI_BACKUP_FILE.sha256" ]] || { echo "backup checksum file not found" >&2; exit 1; }
-command -v pg_restore >/dev/null 2>&1 || { echo "pg_restore is required" >&2; exit 127; }
-command -v sha256sum >/dev/null 2>&1 || { echo "sha256sum is required" >&2; exit 127; }
-
-target_database="$(python3 -c 'from urllib.parse import urlsplit; import os; print(urlsplit(os.environ["TWI_DATABASE_URL"]).path.lstrip("/"))')"
-[[ "$target_database" == "$TWI_RESTORE_TARGET_DATABASE" ]] || {
-  echo "database name does not match the explicitly confirmed recovery target" >&2
-  exit 2
+python3 "$script_dir/check_database_tls.py" --env TWI_RESTORE_DATABASE_URL
+python3 "$script_dir/check_database_tls.py" --env TWI_PRIMARY_DATABASE_URL
+[[ -f "$TWI_BACKUP_FILE" && ! -L "$TWI_BACKUP_FILE" ]] || {
+  echo "backup file must be a regular non-symlink file" >&2
+  exit 1
 }
-case "$target_database" in
-  *_restore|*_recovery|*_staging) ;;
-  *) echo "restore target must end in _restore, _recovery, or _staging" >&2; exit 2 ;;
-esac
-(cd "$(dirname "$TWI_BACKUP_FILE")" && sha256sum -c "$(basename "$TWI_BACKUP_FILE").sha256")
+checksum_file="$TWI_BACKUP_FILE.sha256"
+[[ -f "$checksum_file" && ! -L "$checksum_file" ]] || {
+  echo "backup checksum must be a regular non-symlink file" >&2
+  exit 1
+}
+command -v pg_restore >/dev/null 2>&1 || { echo "pg_restore is required" >&2; exit 127; }
+
+python3 "$script_dir/validate_restore_target.py" \
+  --target-env TWI_RESTORE_DATABASE_URL \
+  --primary-env TWI_PRIMARY_DATABASE_URL \
+  --expected-database "$TWI_RESTORE_TARGET_DATABASE" \
+  --backup-file "$TWI_BACKUP_FILE" \
+  --checksum-file "$checksum_file"
+
+service_file="$(mktemp "${TMPDIR:-/tmp}/twi-pg-service.XXXXXX")"
+cleanup() { rm -f -- "$service_file"; }
+trap cleanup EXIT
+export PGSERVICEFILE="$service_file"
+TWI_PG_SERVICE_DSN_ENV=TWI_RESTORE_DATABASE_URL \
+  TWI_PG_SERVICE_NAME=twi_restore \
+  TWI_PG_SERVICE_FILE="$service_file" \
+  python3 "$script_dir/create_pg_service.py"
+unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL TWI_DATABASE_URL
+while IFS= read -r environment_name; do
+  case "$environment_name" in *_DATABASE_URL) unset "$environment_name" ;; esac
+done < <(compgen -e)
+unset PGHOST PGHOSTADDR PGPORT PGDATABASE PGUSER PGPASSWORD PGPASSFILE \
+  PGSSLMODE PGSSLROOTCERT PGSSLCRL PGSSLCRLDIR PGSSLCERT PGSSLKEY \
+  PGSSLNEGOTIATION PGSSLMINPROTOCOLVERSION PGSSLMAXPROTOCOLVERSION \
+  PGSSLCOMPRESSION PGSSLKEYLOGFILE PGCHANNELBINDING PGREQUIREAUTH \
+  PGGSSENCMODE PGGSSLIB PGGSSDELEGATION PGKRBSRVNAME PGOPTIONS PGAPPNAME \
+  PGCONNECT_TIMEOUT PGTARGETSESSIONATTRS PGLOADBALANCEHOSTS PGCLIENTENCODING \
+  PGDATESTYLE PGTZ PGSERVICE PGSYSCONFDIR
+export PGSERVICEFILE="$service_file"
+
+# The process argument contains only a libpq service name, never the credential-bearing DSN.
 pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error \
-  --dbname="$TWI_DATABASE_URL" "$TWI_BACKUP_FILE"
+  --dbname="service=twi_restore" "$TWI_BACKUP_FILE"
 echo "Restore command completed. Run the documented recovery validation suite before use."
