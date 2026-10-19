@@ -57,7 +57,7 @@ class SQLiteBillingEventInbox:
     """Single-node/dev inbox. Use PostgreSQL for deployed multi-replica operation."""
 
     def __init__(self, database_path: str) -> None:
-        if not database_path or "\\x00" in database_path:
+        if not database_path or "\x00" in database_path:
             raise ValueError("database path must be non-empty")
         if database_path != ":memory:":
             pathlib.Path(database_path).expanduser().resolve().parent.mkdir(
