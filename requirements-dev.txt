@@ -1,5 +1,7 @@
 setuptools==84.0.0
 wheel==0.48.0
+build==1.6.1
+pyproject-hooks==1.2.0
 pytest==9.1.1
 ruff==0.17.0
 mypy==2.4.0
