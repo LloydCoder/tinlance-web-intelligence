@@ -37,7 +37,11 @@ class Settings:
 
     @classmethod
     def from_env(
-        cls, env: dict[str, str] | None = None, *, require_identity: bool = True
+        cls,
+        env: dict[str, str] | None = None,
+        *,
+        require_identity: bool = True,
+        require_database: bool = True,
     ) -> Settings:
         values = os.environ if env is None else env
         browser_enabled_raw = values.get("TWI_BROWSER_ENABLED", "false").strip().lower()
@@ -70,10 +74,14 @@ class Settings:
             )
         except (TypeError, ValueError) as exc:
             raise ConfigurationError("invalid numeric or list configuration") from exc
-        settings.validate(require_identity=require_identity)
+        settings.validate(
+            require_identity=require_identity, require_database=require_database
+        )
         return settings
 
-    def validate(self, *, require_identity: bool = True) -> None:
+    def validate(
+        self, *, require_identity: bool = True, require_database: bool = True
+    ) -> None:
         if self.environment not in {"development", "test", "staging", "production"}:
             raise ConfigurationError("TWI_ENV must be development, test, staging, or production")
         if self.log_level not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
@@ -92,7 +100,11 @@ class Settings:
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
-        if self.environment in {"staging", "production"} and self.database_url is None:
+        if (
+            require_database
+            and self.environment in {"staging", "production"}
+            and self.database_url is None
+        ):
             raise ConfigurationError(
                 "staging and production require TWI_DATABASE_URL PostgreSQL persistence"
             )
