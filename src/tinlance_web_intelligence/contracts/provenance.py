@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from hashlib import sha256
 from urllib.parse import urlsplit
 
@@ -170,7 +170,7 @@ class AcquisitionProvenance:
         }
 
 
-class FreshnessStatus(str, Enum):
+class FreshnessStatus(StrEnum):
     """Freshness classification; it does not assess factual truth or authority."""
 
     FRESH = "fresh"
