@@ -134,6 +134,20 @@ def test_dataset_rejects_duplicate_case_ids() -> None:
         load_dataset(json.dumps(payload).encode())
 
 
+
+def test_dataset_and_results_reject_unknown_failure_classifications() -> None:
+    dataset_payload = json.loads(_DATASET.read_bytes())
+    dataset_payload["cases"][0]["expected_failure_mode"] = "made_up_failure"
+    with pytest.raises(BenchmarkError, match="expected_failure_mode is invalid"):
+        load_dataset(json.dumps(dataset_payload).encode())
+
+    dataset_id, _ = load_dataset(_DATASET.read_bytes())
+    results_payload = json.loads(_RESULTS.read_bytes())
+    results_payload["cases"][0]["failure_mode"] = "made_up_failure"
+    with pytest.raises(BenchmarkError, match="failure_mode is invalid"):
+        load_observations(json.dumps(results_payload).encode(), dataset_id)
+
+
 def test_results_reject_url_userinfo_and_naive_timestamps() -> None:
     dataset_id, _ = load_dataset(_DATASET.read_bytes())
     payload = json.loads(_RESULTS.read_bytes())
