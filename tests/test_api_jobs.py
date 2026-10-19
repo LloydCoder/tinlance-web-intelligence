@@ -258,8 +258,13 @@ def test_job_submission_enforces_atomic_monthly_quota_and_idempotent_usage() -> 
     replay = client.post("/v1/jobs", json=payload, headers=headers)
     assert first.status_code == replay.status_code == 202
     assert first.json()["job_id"] == replay.json()["job_id"]
-    period_start = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    period = period_start.isoformat().replace("+00:00", "Z")
+    period = usage.list_events(
+        tenant_id="tenant-a", subject_id="subject-a",
+        dimension="search_requests_month",
+        period_start=datetime.now(UTC).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0
+        ).isoformat().replace("+00:00", "Z"),
+    )[0].period_start
     assert usage.usage_total(
         tenant_id="tenant-a", subject_id="subject-a",
         dimension="search_requests_month", period_start=period,
