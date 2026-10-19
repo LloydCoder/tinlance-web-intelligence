@@ -3,6 +3,7 @@ from __future__ import annotations
 import configparser
 import hashlib
 import os
+import shutil
 import stat
 import subprocess
 from pathlib import Path
@@ -27,7 +28,7 @@ def test_service_file_decodes_uri_credentials_and_is_owner_only(tmp_path: Path) 
     parser.read(destination, encoding="utf-8")
     assert parser["twi_backup"]["host"] == "db.example.com"
     assert parser["twi_backup"]["dbname"] == "twi_backup"
-    assert parser["twi_backup"]["password"] == "p:ss%word"
+    assert parser["twi_backup"]["password"] == "p:ss%word"  # nosec B105
     assert parser["twi_backup"]["sslmode"] == "verify-full"
     assert parser["twi_backup"]["sslrootcert"] == "/etc/ssl/root.pem"
     assert parser["twi_backup"]["connect_timeout"] == "5"
@@ -168,6 +169,19 @@ def _write_executable(path: Path, content: str) -> None:
     path.chmod(0o700)
 
 
+
+def _run_shell_script(script_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    bash_path = shutil.which("bash")
+    assert bash_path is not None
+    return subprocess.run(  # nosec B603: fixed repository script, controlled test environment
+        [bash_path, str(script_path)],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
 def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
     tmp_path: Path,
 ) -> None:
@@ -216,13 +230,7 @@ exit 0
         }
     )
 
-    successful = subprocess.run(
-        ["bash", str(root / "scripts/backup_postgres.sh")],
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    successful = _run_shell_script(root / "scripts/backup_postgres.sh", env)
     assert successful.returncode == 0, successful.stderr
     args = args_file.read_text(encoding="utf-8")
     assert "service=twi_backup" in args
@@ -299,13 +307,7 @@ printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
             "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
         }
     )
-    restored = subprocess.run(
-        ["bash", str(root / "scripts/restore_postgres.sh")],
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    restored = _run_shell_script(root / "scripts/restore_postgres.sh", env)
     assert restored.returncode == 0, restored.stderr
     args = args_file.read_text(encoding="utf-8")
     assert "service=twi_restore" in args
