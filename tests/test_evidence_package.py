@@ -7,7 +7,7 @@ from hashlib import sha256
 from pathlib import Path
 
 import pytest
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
 from tinlance_web_intelligence.contracts.evidence_package import (
     EvidencePackageError,
