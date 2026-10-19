@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 
 import pytest
+from psycopg.errors import RaiseException
 
 from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
@@ -284,6 +285,8 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
 
 def test_postgres_usage_ledger_is_idempotent_scoped_and_append_only() -> None:
     assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
     ledger = PostgresUsageLedger(_DSN, min_size=1, max_size=8)
     namespace = uuid.uuid4().hex
     tenant, subject = f"usage-tenant-{namespace}", f"usage-subject-{namespace}"
@@ -325,7 +328,7 @@ def test_postgres_usage_ledger_is_idempotent_scoped_and_append_only() -> None:
         assert ledger.list_events(tenant_id=tenant, subject_id=subject) == [event]
         assert ledger.list_events(tenant_id=f"other-{namespace}", subject_id=subject) == []
         with ledger._pool.connection() as conn:
-            with pytest.raises(Exception, match="append-only"):
+            with pytest.raises(RaiseException, match="append-only"):
                 conn.execute(
                     "UPDATE twi_usage_events SET quantity=9 WHERE event_id=%s", (event.event_id,)
                 )
@@ -335,6 +338,8 @@ def test_postgres_usage_ledger_is_idempotent_scoped_and_append_only() -> None:
 
 def test_postgres_usage_quota_reservations_serialize_concurrent_requests() -> None:
     assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
     ledger = PostgresUsageLedger(_DSN, min_size=1, max_size=10)
     namespace = uuid.uuid4().hex
     tenant, subject = f"quota-tenant-{namespace}", f"quota-subject-{namespace}"
