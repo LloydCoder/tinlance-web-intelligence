@@ -13,13 +13,13 @@ def test_current_consumer_findings_are_exact_and_fail_closed() -> None:
     assert result["valid"] is True
     consumers = cast(list[dict[str, Any]], result["consumers"])
     assert {row["name"]: row["status"] for row in consumers} == {
-        "agent-platform": "fail",
+        "agent-platform": "pass",
         "world-intelligence": "pass",
         "tsic": "not_evidenced",
     }
 
 
-def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
+def test_historical_platform_catalog_records_missing_monitor_operations() -> None:
     fixture = json.loads(
         Path(
             "contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"
@@ -39,6 +39,28 @@ def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
     assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
     assert fixture["missing_evidence_tools"] == ["twi_evidence_export"]
     assert "twi_evidence_export" not in fixture["registered_tools"]
+
+
+def test_current_platform_catalog_registers_all_monitor_and_evidence_tools() -> None:
+    fixture = json.loads(
+        Path(
+            "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"
+        ).read_text(encoding="utf-8")
+    )
+    expected = {
+        "twi_monitor_create",
+        "twi_monitor_delete",
+        "twi_monitor_pause",
+        "twi_monitor_read",
+        "twi_monitor_resume",
+        "twi_monitor_run",
+    }
+    assert fixture["status"] == "pass"
+    assert set(fixture["expected_monitor_tools"]) == expected
+    assert fixture["missing_monitor_tools"] == []
+    assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
+    assert fixture["missing_evidence_tools"] == []
+    assert expected | {"twi_evidence_export"} <= set(fixture["registered_tools"])
 
 
 def test_tsic_requirements_are_pinned_without_claiming_external_conformance() -> None:
