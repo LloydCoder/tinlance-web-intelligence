@@ -265,15 +265,24 @@ class SQLiteUsageLedger:
             ).fetchone()
         return int(row["quantity"])
 
-    def list_events(self, *, tenant_id: str, subject_id: str, limit: int = 100) -> list[UsageEvent]:
+    def list_events(
+        self, *, tenant_id: str, subject_id: str, limit: int = 100,
+        dimension: str | None = None, period_start: str | None = None,
+    ) -> list[UsageEvent]:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
             raise ValueError("limit must be between 1 and 500")
+        sql = "SELECT * FROM twi_usage_events WHERE tenant_id=? AND subject_id=?"
+        parameters: list[str | int] = [tenant_id, subject_id]
+        if dimension is not None:
+            sql += " AND dimension=?"
+            parameters.append(dimension)
+        if period_start is not None:
+            sql += " AND period_start=?"
+            parameters.append(period_start)
+        sql += " ORDER BY occurred_at,event_id LIMIT ?"
+        parameters.append(limit)
         with self._lock:
-            rows = self._connection.execute(
-                """SELECT * FROM twi_usage_events WHERE tenant_id=? AND subject_id=?
-                   ORDER BY occurred_at,event_id LIMIT ?""",
-                (tenant_id, subject_id, limit),
-            ).fetchall()
+            rows = self._connection.execute(sql, parameters).fetchall()
         return [self._to_event(row) for row in rows]
 
     @staticmethod
