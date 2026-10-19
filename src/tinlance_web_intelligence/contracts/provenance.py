@@ -103,9 +103,12 @@ class AcquisitionProvenance:
         integer_fields = ("status_code", "byte_size", "redirect_count")
         if any(type(value.get(field)) is not int for field in integer_fields):
             raise ProvenanceError("manifest contains missing or non-integer fields")
+        retrieved_at_raw = value.get("retrieved_at")
+        if not isinstance(retrieved_at_raw, str):
+            raise ProvenanceError("retrieved_at must be an ISO-8601 string")
         try:
             retrieved_at = datetime.fromisoformat(
-                value["retrieved_at"].replace("Z", "+00:00")  # type: ignore[union-attr]
+                retrieved_at_raw.replace("Z", "+00:00")
             )
         except ValueError as exc:
             raise ProvenanceError("retrieved_at must be a valid ISO-8601 timestamp") from exc
