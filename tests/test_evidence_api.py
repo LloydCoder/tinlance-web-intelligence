@@ -4,6 +4,9 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
+TEST_CREDENTIAL = "valid-credential"
+TEST_JTI = "evidence-api-test"
+
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.artifacts.store import MemoryArtifactStore
 from tinlance_web_intelligence.auth.principal import Principal
@@ -20,7 +23,7 @@ class FakeVerifier:
         self.principal = principal
 
     def verify(self, token: str) -> Principal:
-        if token != "valid-credential":
+        if token != TEST_CREDENTIAL:
             raise PermissionError("invalid credential")
         return self.principal
 
@@ -35,7 +38,7 @@ def principal(
         subject_id=subject_id,
         client_id="test-client",
         principal_type="user",
-        token_id="evidence-api-test",
+        token_id=TEST_JTI,
         scopes=scopes,
         roles=frozenset(),
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
@@ -142,7 +145,7 @@ def test_evidence_export_requires_dedicated_scope_and_source_revision() -> None:
 
 def test_evidence_export_rejects_wrong_job_type_or_missing_artifact() -> None:
     client, repo, artifacts, job_id = setup_client()
-    # Mutate the result through a distinct successful search job; search results are not fetch evidence.
+    # Search results are not fetch evidence.
     search = repo.create(
         tenant_id="tenant-a", subject_id="subject-a", kind="search",
         payload={"query": "test"}, idempotency_key="evidence-api-search-0001",
