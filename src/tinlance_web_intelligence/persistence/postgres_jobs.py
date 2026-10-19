@@ -1,11 +1,11 @@
 """PostgreSQL job repository with transactional idempotency and SKIP LOCKED leases."""
 from __future__ import annotations
 
+import datetime
 import hashlib
 import json
 import time
 import uuid
-from datetime import datetime
 from importlib.resources import files
 from typing import Any
 
@@ -292,7 +292,7 @@ class PostgresJobRepository:
         return snapshot
 
     def count_expired_results(
-        self, cutoff: datetime, *, tenant_id: str | None = None
+        self, cutoff: datetime.datetime, *, tenant_id: str | None = None
     ) -> int:
         """Count terminal jobs with payload/result data older than the retention cutoff."""
         if cutoff.tzinfo is None or cutoff.utcoffset() is None:
