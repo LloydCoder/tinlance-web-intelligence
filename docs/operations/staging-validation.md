@@ -13,6 +13,24 @@ Use only an explicitly approved staging origin. Never point the probe at product
 - Optional: \`TWI_STAGING_PROBE_TOKEN\` containing a short-lived, Platform-issued staging token for the TWI audience. The token is read from the process environment and is never printed.
 - Access to the deployment's request logs and release SHA for evidence correlation.
 
+## Deploy the staging topology
+
+From the repository root, provision an isolated staging host and configure its cloud/host firewall before starting services. The Compose topology binds the API only to loopback and places the browser worker exclusively on internal control/egress networks; the egress proxy is the browser worker's only outbound path.
+
+Required environment variables must be injected from the approved secret manager into the deployment shell or CI environment. Do not create a committed `.env` file. The runtime and migration DSNs must use `sslmode=verify-full` and distinct database usernames. The Platform issuer/JWKS and World Intelligence endpoint must be the intended staging environments.
+
+```bash
+docker compose -f deployments/compose/staging.yml config --quiet
+docker compose -f deployments/compose/staging.yml up -d --build --wait
+docker compose -f deployments/compose/staging.yml ps
+```
+
+Before enabling browser acquisition, prove from the deployed browser-worker network namespace that direct public and metadata IP connections fail while authenticated proxy access works. Compose alone cannot constrain egress for API/HTTP-acquisition/exporter containers attached to the outbound network: the host/cloud firewall must restrict API and exporter egress to approved database/identity/World Intelligence endpoints, and must enforce the documented acquisition-worker egress policy. If those controls cannot be enforced and evidenced, do not enable the staging stack for external traffic.
+
+```bash
+TWI_STAGING_BASE_URL=https://<approved-staging-host> python scripts/verify_staging.py
+```
+
 ## Run
 
 \`\`\`bash
