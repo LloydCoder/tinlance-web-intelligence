@@ -52,7 +52,11 @@ def main() -> int:
         _validate_dsn(migration_dsn, require_verified_tls=False)
 
     migrations = files("tinlance_web_intelligence.persistence.migrations")
-    migration_names = ("001_production_postgres.sql", "002_monitors.sql", "003_commercial_usage.sql")
+    migration_names = (
+        "001_production_postgres.sql",
+        "002_monitors.sql",
+        "003_commercial_usage.sql",
+    )
     if any(not migrations.joinpath(name).is_file() for name in migration_names):
         raise SystemExit("packaged PostgreSQL migration resource is missing")
     pool = ConnectionPool[Connection[dict[str, Any]]](
