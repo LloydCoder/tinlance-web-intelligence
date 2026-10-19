@@ -140,3 +140,65 @@ def test_usage_endpoint_returns_plan_quota_and_remaining_allowance() -> None:
     assert response.json()["plan_version"] == 3
     usage.close()
     jobs.close()
+
+
+
+def test_usage_export_uses_stable_cursor_pagination() -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    for index in range(3):
+        reservation = usage.reserve(
+            tenant_id="tenant-a", subject_id="subject-a", feature="search",
+            dimension="search_requests_month", period_start="2026-10-01T00:00:00Z",
+            quantity=1, limit=10, idempotency_key=f"cursor-event-key-{index:04d}",
+        )
+        usage.commit(
+            tenant_id="tenant-a", subject_id="subject-a",
+            reservation_id=reservation.reservation_id,
+        )
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal()),
+    )
+    client = TestClient(app)
+    headers = {"Authorization": f"Bearer {TEST_CREDENTIAL}"}
+    first = client.get(
+        "/v1/usage",
+        params={
+            "dimension": "search_requests_month",
+            "period_start": "2026-10-01T00:00:00Z",
+            "limit": 2,
+        },
+        headers=headers,
+    )
+    assert first.status_code == 200
+    assert first.json()["has_more"] is True
+    assert first.json()["next_cursor"]
+    second = client.get(
+        "/v1/usage",
+        params={
+            "dimension": "search_requests_month",
+            "period_start": "2026-10-01T00:00:00Z",
+            "limit": 2,
+            "cursor": first.json()["next_cursor"],
+        },
+        headers=headers,
+    )
+    assert second.status_code == 200
+    assert second.json()["has_more"] is False
+    assert second.json()["next_cursor"] is None
+    ids = [event["event_id"] for event in first.json()["events"] + second.json()["events"]]
+    assert len(ids) == len(set(ids)) == 3
+    invalid = client.get(
+        "/v1/usage",
+        params={
+            "dimension": "search_requests_month",
+            "period_start": "2026-10-01T00:00:00Z",
+            "cursor": "not-a-valid-cursor",
+        },
+        headers=headers,
+    )
+    assert invalid.status_code == 422
+    usage.close()
+    jobs.close()
