@@ -11,7 +11,9 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 
-def _client(metrics_token: str | None) -> tuple[TestClient, SQLiteJobRepository, SQLiteSourceEvidenceOutbox]:
+def _client(
+    metrics_token: str | None,
+) -> tuple[TestClient, SQLiteJobRepository, SQLiteSourceEvidenceOutbox]:
     env = {"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}
     if metrics_token is not None:
         env["TWI_METRICS_TOKEN"] = metrics_token
@@ -61,7 +63,9 @@ def test_metrics_endpoint_replaces_invalid_request_id() -> None:
     client, repository, outbox = _client("m" * 32)
     try:
         with client:
-            response = client.get("/health/live", headers={"X-Request-ID": "invalid request id"})
+            response = client.get(
+                "/health/live", headers={"X-Request-ID": "invalid request id"}
+            )
         request_id = response.headers["X-Request-ID"]
         assert response.status_code == 200
         assert request_id != "invalid request id"
