@@ -80,6 +80,35 @@ def test_usage_endpoint_requires_scope_and_uses_verified_identity() -> None:
     jobs.close()
 
 
+def test_usage_read_any_is_tenant_scoped_and_includes_other_subjects() -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    for subject, key in (("subject-a", "tenant-any-key-0001"), ("subject-b", "tenant-any-key-0002")):
+        reservation = usage.reserve(
+            tenant_id="tenant-a", subject_id=subject, feature="fetch",
+            dimension="requests_month", period_start="2026-10-01T00:00:00Z",
+            quantity=1, limit=10, idempotency_key=key,
+        )
+        usage.commit(
+            tenant_id="tenant-a", subject_id=subject, reservation_id=reservation.reservation_id
+        )
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal(scopes=frozenset({"twi:usage:read:any"}))),
+    )
+    response = TestClient(app).get(
+        "/v1/usage?dimension=requests_month&period_start=2026-10-01T00:00:00Z",
+        headers={"Authorization": f"Bearer {TEST_CREDENTIAL}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["used"] == 2
+    assert len(response.json()["events"]) == 2
+    assert all("subject_id" not in event for event in response.json()["events"])
+    usage.close()
+    jobs.close()
+
+
 def test_usage_endpoint_fails_closed_without_read_scope() -> None:
     jobs = SQLiteJobRepository(":memory:")
     usage = SQLiteUsageLedger(":memory:")
