@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import configparser
 import hashlib
-import os
 import stat
 from pathlib import Path
 
