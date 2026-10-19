@@ -32,7 +32,7 @@ make check
 
 PostgreSQL is the production persistence backend for jobs, usage facts, billing-event receipts, raw content-addressed artifacts, and the World Intelligence evidence outbox. Production requires TWI_DATABASE_URL with sslmode=verify-full and an injected entitlement resolver backed by the approved billing boundary; startup fails closed without it. No provider-specific billing adapter or commercial plan catalogue is claimed until explicitly selected and configured. SQLite is limited to development, tests, and the single-host browser-isolation harness. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
 
-`make check` runs tests, lint, typing, security lint, migration synchronization, deterministic evaluation, consumer contract checks, and evidence pack validation. Build a local package with `python -m build --no-isolation` when the host cannot create isolated build environments.
+`make check` runs tests, lint, typing, security lint, migration synchronization, deterministic evaluation, consumer contract checks, W15 evidence pack validation, and GA v1 release-contract validation. Build a local package with `python -m build --no-isolation` when the host cannot create isolated build environments.
 
 Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md). Backup and recovery procedures are documented in [backup and restore](docs/operations/backup-and-restore.md). W6 private-beta readiness is tracked in [the readiness checklist](docs/operations/private-beta-readiness.md).
 
