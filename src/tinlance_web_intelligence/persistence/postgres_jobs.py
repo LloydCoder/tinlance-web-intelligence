@@ -51,33 +51,41 @@ class PostgresJobRepository:
             self._verify_schema()
 
     def _apply_migrations(self) -> None:
-        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
-            "001_production_postgres.sql"
+        migration_names = (
+            "001_production_postgres.sql",
+            "002_monitoring.sql",
         )
-        if not migration.is_file():
-            self._pool.close()
-            raise RuntimeError("production PostgreSQL migration file is missing")
-        sql = migration.read_text(encoding="utf-8")
+        migration_root = files("tinlance_web_intelligence.persistence.migrations")
+        migrations = []
+        for name in migration_names:
+            migration = migration_root.joinpath(name)
+            if not migration.is_file():
+                self._pool.close()
+                raise RuntimeError(f"production PostgreSQL migration {name} is missing")
+            migrations.append(migration.read_text(encoding="utf-8"))
         with self._pool.connection() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
-            conn.execute(sql, prepare=False)
+            for sql in migrations:
+                conn.execute(sql, prepare=False)
 
     def _verify_schema(self) -> None:
         with self._pool.connection() as conn:
             tables = conn.execute(
                 "SELECT to_regclass('jobs') AS jobs, "
                 "to_regclass('twi_source_evidence_outbox') AS outbox, "
-                "to_regclass('twi_schema_migrations') AS migrations"
+                "to_regclass('twi_schema_migrations') AS migrations, "
+                "to_regclass('twi_monitoring_state') AS monitoring_state, "
+                "to_regclass('twi_monitoring_events') AS monitoring_events"
             ).fetchone()
             if tables is None or any(
-                tables[name] is None for name in ("jobs", "outbox", "migrations")
+                tables[name] is None for name in ("jobs", "outbox", "migrations", "monitoring_state", "monitoring_events")
             ):
                 raise RuntimeError("PostgreSQL schema is missing; run the migration job")
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] != 1:
-                raise RuntimeError("unsupported PostgreSQL schema version")
+            if version is None or version["version"] != 2:
+                raise RuntimeError("unsupported PostgreSQL schema version; apply all migrations")
 
     @staticmethod
     def _to_job(row: dict[str, Any]) -> Job:
