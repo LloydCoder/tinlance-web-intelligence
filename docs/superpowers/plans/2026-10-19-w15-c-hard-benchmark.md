@@ -27,3 +27,4 @@
 - Reconciled `docs/evaluation/twi-benchmark.md` with the v1.1.0 dataset/result contract, hard-case matrix, metrics, threshold governance, and interpretation boundaries.
 - Validate the dataset description as a normalized non-empty string and restrict expected/observed failure classifications to the versioned known set; adversarial tests reject unknown labels.
 - Narrow threshold-bound types at the comparison boundary so strict typing verifies the evaluator's fail-closed numeric checks.
+- Bind qualification to the exact raw threshold-registry bytes, verify the SHA-256 at the evaluator boundary, and reject mismatches between the raw registry and a caller-supplied parsed mapping; regression test covers a forged digest.
