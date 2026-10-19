@@ -193,4 +193,4 @@ def test_event_ordering_requires_monotonic_provider_revision() -> None:
     assert decide_event_order(current_revision=5, incoming_revision=5) == "manual_review"
     assert decide_event_order(current_revision=None, incoming_revision=5) == "manual_review"
     with pytest.raises(ValueError):
-        decide_event_order(current_revision=True, incoming_revision=5)  # type: ignore[arg-type]
+        decide_event_order(current_revision=True, incoming_revision=5)
