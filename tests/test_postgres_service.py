@@ -98,7 +98,10 @@ def test_restore_target_rejects_primary_identity_and_wrong_target_name() -> None
 
 
 def test_restore_target_accepts_distinct_recovery_database() -> None:
-    target = "postgresql://restore:secret@recovery.example.com:5432/twi_recovery?sslmode=verify-full"
+    target = (
+        "postgresql://restore:secret@recovery.example.com:5432/twi_recovery"
+        "?sslmode=verify-full"
+    )
     primary = "postgresql://primary:secret@db.example.com:5432/twi?sslmode=verify-full"
     assert validate_restore_target(
         target_dsn=target,
