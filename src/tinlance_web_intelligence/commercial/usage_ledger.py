@@ -61,7 +61,7 @@ def _validate_key(value: str, label: str, maximum: int = 200) -> None:
         not isinstance(value, str)
         or not value
         or value != value.strip()
-        or "\\x00" in value
+        or "\x00" in value
         or len(value) > maximum
     ):
         raise ValueError(f"{label} must be normalized and contain 1 to {maximum} characters")
