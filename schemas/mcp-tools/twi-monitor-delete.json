@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_monitor_delete",
+  "description": "Redact and tombstone a monitor and its stored change summaries.",
+  "operation": "twi.monitors.delete",
+  "api": { "method": "DELETE", "path": "/v1/monitors/{monitor_id}" },
+  "authorization": { "required_scope": "twi:monitors:delete", "capability": "web.monitor.delete", "action": "delete", "resource_pattern": "twi://monitors/{monitor_id}" },
+  "governance": { "read_only": false, "consequential": false, "destructive": true, "open_world": false },
+  "input_schema": { "type": "object", "additionalProperties": false, "required": ["monitor_id"], "properties": { "monitor_id": { "type": "string", "minLength": 1, "maxLength": 64 } } }
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_monitor_create",
+  "description": "Create a tenant-scoped monitor for a policy-checked public web URL.",
+  "operation": "twi.monitors.create",
+  "api": { "method": "POST", "path": "/v1/monitors", "idempotency_header": "Idempotency-Key" },
+  "authorization": { "required_scope": "twi:monitors:write", "capability": "web.monitor.create", "action": "create", "resource_pattern": "web://monitors/*" },
+  "governance": { "read_only": false, "consequential": false, "destructive": false, "open_world": false, "idempotency_argument": "idempotency_key" },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["target_url", "idempotency_key"],
+    "properties": {
+      "target_url": { "type": "string", "format": "uri", "maxLength": 4096 },
+      "policy": { "type": "object", "additionalProperties": false, "properties": { "max_bytes": { "type": "integer", "minimum": 1 } } },
+      "idempotency_key": { "type": "string", "minLength": 16, "maxLength": 256 }
+    }
+  }
+}

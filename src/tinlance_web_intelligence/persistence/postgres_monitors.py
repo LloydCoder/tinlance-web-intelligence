@@ -19,6 +19,7 @@ from tinlance_web_intelligence.monitors.model import (
     MonitorRunResult,
     MonitorRunStatus,
     MonitorStatus,
+    normalize_monitor_policy,
 )
 
 
@@ -76,7 +77,10 @@ class PostgresMonitorRepository:
             raise ValueError("tenant, subject, and idempotency key are required")
         if not target_url or len(target_url) > 4096 or "\x00" in target_url:
             raise ValueError("target URL must be between 1 and 4096 characters")
-        policy_json = json.dumps(policy, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        normalized_policy = normalize_monitor_policy(policy)
+        policy_json = json.dumps(
+            normalized_policy, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         fingerprint = hashlib.sha256(f"{target_url}\0{policy_json}".encode()).hexdigest()
         monitor_id = str(uuid.uuid4())
         with self._pool.connection() as conn:
@@ -92,7 +96,7 @@ class PostgresMonitorRepository:
                     tenant_id,
                     subject_id,
                     target_url,
-                    Jsonb(policy),
+                    Jsonb(normalized_policy),
                     fingerprint,
                     idempotency_key,
                 ),
@@ -150,6 +154,25 @@ class PostgresMonitorRepository:
                 (monitor_status.value, tenant_id, subject_id, monitor_id),
             ).fetchone()
         return self._to_monitor(row) if row is not None else None
+
+    def redact(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor | None:
+        fingerprint = hashlib.sha256(b"twi-deleted-monitor-v1").hexdigest()
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                """UPDATE twi_monitors SET target_url='https://deleted.invalid/',
+                       policy_json='{}', request_fingerprint=%s, status='deleted',
+                       baseline_digest=NULL, baseline_observed_at=NULL,
+                       baseline_version=baseline_version+1, updated_at=now()
+                   WHERE tenant_id=%s AND subject_id=%s AND monitor_id=%s
+                   RETURNING *""",
+                (fingerprint, tenant_id, subject_id, monitor_id),
+            ).fetchone()
+            if row is None:
+                return None
+            conn.execute(
+                "DELETE FROM twi_monitor_run_results WHERE monitor_id=%s", (monitor_id,)
+            )
+        return self._to_monitor(row)
 
     def commit_successful_run(
         self,

@@ -23,7 +23,9 @@ _MAX_NORMALIZED_TEXT_CHARS = 500_000
 
 
 class PageAcquirer(Protocol):
-    async def acquire_page(self, url: str, *, tenant_id: str) -> AcquiredPage: ...
+    async def acquire_page(
+        self, url: str, *, tenant_id: str, max_bytes: int | None = None
+    ) -> AcquiredPage: ...
 
 
 def normalize_text_digest(text: str) -> str:
@@ -47,6 +49,23 @@ class MonitorService:
         self.repository = repository
         self.job_repository = job_repository
         self.acquisition = acquisition
+
+    def create_monitor(
+        self,
+        *,
+        tenant_id: str,
+        subject_id: str,
+        target_url: str,
+        policy: dict[str, object],
+        idempotency_key: str,
+    ) -> Monitor:
+        return self.repository.create(
+            tenant_id=tenant_id,
+            subject_id=subject_id,
+            target_url=target_url,
+            policy=policy,
+            idempotency_key=idempotency_key,
+        )
 
     def enqueue_run(
         self,
@@ -81,6 +100,15 @@ class MonitorService:
         )
 
     def pause(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor:
+        current = self.repository.get(
+            tenant_id=tenant_id, subject_id=subject_id, monitor_id=monitor_id
+        )
+        if current is None:
+            raise KeyError("monitor not found")
+        if current.status is MonitorStatus.DELETED:
+            raise ValueError("deleted monitors cannot be paused")
+        if current.status is MonitorStatus.PAUSED:
+            return current
         monitor = self.repository.set_status(
             tenant_id=tenant_id,
             subject_id=subject_id,
@@ -92,11 +120,30 @@ class MonitorService:
         return monitor
 
     def resume(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor:
+        current = self.repository.get(
+            tenant_id=tenant_id, subject_id=subject_id, monitor_id=monitor_id
+        )
+        if current is None:
+            raise KeyError("monitor not found")
+        if current.status is MonitorStatus.DELETED:
+            raise ValueError("deleted monitors cannot be resumed")
+        if current.status is MonitorStatus.ACTIVE:
+            return current
         monitor = self.repository.set_status(
             tenant_id=tenant_id,
             subject_id=subject_id,
             monitor_id=monitor_id,
             status=MonitorStatus.ACTIVE.value,
+        )
+        if monitor is None:
+            raise KeyError("monitor not found")
+        return monitor
+
+    def delete(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor:
+        monitor = self.repository.redact(
+            tenant_id=tenant_id,
+            subject_id=subject_id,
+            monitor_id=monitor_id,
         )
         if monitor is None:
             raise KeyError("monitor not found")
@@ -161,7 +208,12 @@ class MonitorService:
         )
         if monitor is None:
             raise KeyError("monitor not found")
-        page = await self.acquisition.acquire_page(monitor.target_url, tenant_id=job.tenant_id)
+        max_bytes = monitor.policy.get("max_bytes")
+        page = await self.acquisition.acquire_page(
+            monitor.target_url,
+            tenant_id=job.tenant_id,
+            max_bytes=max_bytes if isinstance(max_bytes, int) else None,
+        )
         try:
             result = self.apply_capture(
                 monitor=monitor,

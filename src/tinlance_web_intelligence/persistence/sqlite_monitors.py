@@ -17,6 +17,7 @@ from tinlance_web_intelligence.monitors.model import (
     MonitorRunResult,
     MonitorRunStatus,
     MonitorStatus,
+    normalize_monitor_policy,
 )
 
 _SCHEMA = """
@@ -97,7 +98,10 @@ class SQLiteMonitorRepository:
             raise ValueError("tenant, subject, and idempotency key are required")
         if not target_url or len(target_url) > 4096 or "\x00" in target_url:
             raise ValueError("target URL must be between 1 and 4096 characters")
-        policy_json = json.dumps(policy, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        normalized_policy = normalize_monitor_policy(policy)
+        policy_json = json.dumps(
+            normalized_policy, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
         fingerprint = hashlib.sha256(f"{target_url}\0{policy_json}".encode()).hexdigest()
         now = _now()
         with self._lock:
@@ -187,6 +191,33 @@ class SQLiteMonitorRepository:
         return self.get(
             tenant_id=tenant_id, subject_id=subject_id, monitor_id=monitor_id
         ) if cursor.rowcount else None
+
+    def redact(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor | None:
+        fingerprint = hashlib.sha256(b"twi-deleted-monitor-v1").hexdigest()
+        with self._lock:
+            self._connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = self._connection.execute(
+                    """UPDATE monitors SET target_url='https://deleted.invalid/',
+                       policy_json='{}', request_fingerprint=?, status='deleted',
+                       baseline_digest=NULL, baseline_observed_at=NULL,
+                       baseline_version=baseline_version+1, updated_at=?
+                       WHERE tenant_id=? AND subject_id=? AND monitor_id=?
+                       RETURNING *""",
+                    (fingerprint, _now().isoformat(), tenant_id, subject_id, monitor_id),
+                ).fetchone()
+                if row is None:
+                    self._connection.commit()
+                    return None
+                self._connection.execute(
+                    "DELETE FROM monitor_run_results WHERE monitor_id=?", (monitor_id,)
+                )
+                self._connection.commit()
+                return self._to_monitor(row)
+            except Exception:
+                if self._connection.in_transaction:
+                    self._connection.rollback()
+                raise
 
     def commit_successful_run(
         self,

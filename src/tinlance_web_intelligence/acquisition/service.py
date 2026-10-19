@@ -29,9 +29,17 @@ class WebAcquisitionService:
         self._artifacts = artifacts or MemoryArtifactStore()
 
     async def acquire_page(
-        self, url: str, *, tenant_id: str = "development"
+        self,
+        url: str,
+        *,
+        tenant_id: str = "development",
+        max_bytes: int | None = None,
     ) -> AcquiredPage:
-        fetched = await self._fetcher.fetch(url)
+        fetched = (
+            await self._fetcher.fetch(url)
+            if max_bytes is None
+            else await self._fetcher.fetch(url, max_bytes=max_bytes)
+        )
         if fetched.content_type not in {"text/html", "application/xhtml+xml"}:
             raise UnsupportedMediaType("only HTML and XHTML are supported in this workstream")
         try:

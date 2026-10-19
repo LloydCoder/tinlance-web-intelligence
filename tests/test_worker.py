@@ -23,8 +23,14 @@ class FakeSearchProvider:
 
 
 class SuccessfulAcquisition:
-    async def acquire_page(self, url: str, *, tenant_id: str = "development") -> AcquiredPage:
-        del tenant_id
+    async def acquire_page(
+        self,
+        url: str,
+        *,
+        tenant_id: str = "development",
+        max_bytes: int | None = None,
+    ) -> AcquiredPage:
+        del tenant_id, max_bytes
         body = b"<html><title>Evidence</title></html>"
         digest = sha256(body).hexdigest()
         fetched = FetchResult(
@@ -48,8 +54,14 @@ class SuccessfulAcquisition:
 
 
 class RetryableAcquisition:
-    async def acquire_page(self, url: str, *, tenant_id: str = "development") -> None:
-        del url, tenant_id
+    async def acquire_page(
+        self,
+        url: str,
+        *,
+        tenant_id: str = "development",
+        max_bytes: int | None = None,
+    ) -> None:
+        del url, tenant_id, max_bytes
         raise FetchError("temporary upstream failure", retryable=True)
 
 

@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_monitor_read",
+  "description": "Read monitor state within the authenticated tenant and subject scope.",
+  "operation": "twi.monitors.read",
+  "api": { "method": "GET", "path": "/v1/monitors/{monitor_id}" },
+  "authorization": { "required_scope": "twi:monitors:read", "capability": "web.monitor.read", "action": "read", "resource_pattern": "twi://monitors/{monitor_id}" },
+  "governance": { "read_only": true, "consequential": false, "destructive": false, "open_world": false },
+  "input_schema": { "type": "object", "additionalProperties": false, "required": ["monitor_id"], "properties": { "monitor_id": { "type": "string", "minLength": 1, "maxLength": 64 } } }
+}

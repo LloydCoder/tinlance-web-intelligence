@@ -36,6 +36,8 @@ class MonitorRepository(Protocol):
         status: str,
     ) -> Monitor | None: ...
 
+    def redact(self, *, tenant_id: str, subject_id: str, monitor_id: str) -> Monitor | None: ...
+
     def commit_successful_run(
         self,
         *,

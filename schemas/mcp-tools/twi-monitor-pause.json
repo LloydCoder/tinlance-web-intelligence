@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_monitor_pause",
+  "description": "Pause future monitor run enqueues while existing work drains.",
+  "operation": "twi.monitors.pause",
+  "api": { "method": "POST", "path": "/v1/monitors/{monitor_id}/pause" },
+  "authorization": { "required_scope": "twi:monitors:write", "capability": "web.monitor.pause", "action": "pause", "resource_pattern": "twi://monitors/{monitor_id}" },
+  "governance": { "read_only": false, "consequential": false, "destructive": false, "open_world": false },
+  "input_schema": { "type": "object", "additionalProperties": false, "required": ["monitor_id"], "properties": { "monitor_id": { "type": "string", "minLength": 1, "maxLength": 64 } } }
+}

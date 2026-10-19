@@ -31,6 +31,18 @@ class BaselineConflictError(RuntimeError):
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
+def normalize_monitor_policy(policy: dict[str, Any]) -> dict[str, int]:
+    """Accept only the optional positive response-byte cap used by safe acquisition."""
+    if set(policy) - {"max_bytes"}:
+        raise ValueError("unsupported monitor policy field")
+    if "max_bytes" not in policy:
+        return {}
+    max_bytes = policy["max_bytes"]
+    if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or max_bytes < 1:
+        raise ValueError("monitor max_bytes must be a positive integer")
+    return {"max_bytes": max_bytes}
+
+
 @dataclass(frozen=True, slots=True)
 class Monitor:
     monitor_id: str

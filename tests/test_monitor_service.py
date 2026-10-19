@@ -165,8 +165,10 @@ def test_pause_does_not_revoke_an_already_leased_run(tmp_path: Path) -> None:
     )
 
     class Acquisition:
-        async def acquire_page(self, url: str, *, tenant_id: str) -> Any:
-            del url, tenant_id
+        async def acquire_page(
+            self, url: str, *, tenant_id: str, max_bytes: int | None = None
+        ) -> Any:
+            del url, tenant_id, max_bytes
             fetched = SimpleNamespace(retrieved_at=datetime(2026, 10, 19, 1, tzinfo=UTC))
             extracted = SimpleNamespace(text="leased capture")
             return SimpleNamespace(
@@ -189,4 +191,38 @@ def test_pause_does_not_revoke_an_already_leased_run(tmp_path: Path) -> None:
         tenant_id="tenant-a", subject_id="subject-a", monitor_id=monitor.monitor_id
     )
     assert updated is not None and updated.baseline_version == 1
+    repository.close()
+
+
+def test_monitor_execution_applies_stored_response_byte_bound(tmp_path: Path) -> None:
+    repository = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
+    monitor = repository.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        target_url="https://example.test/",
+        policy={"max_bytes": 1024},
+        idempotency_key="monitor-1",
+    )
+
+    class Acquisition:
+        max_bytes: int | None = None
+
+        async def acquire_page(
+            self, url: str, *, tenant_id: str, max_bytes: int | None = None
+        ) -> Any:
+            del url, tenant_id
+            self.max_bytes = max_bytes
+            fetched = SimpleNamespace(retrieved_at=datetime(2026, 10, 19, 1, tzinfo=UTC))
+            extracted = SimpleNamespace(text="bounded capture")
+            return SimpleNamespace(
+                fetch=fetched,
+                extracted=extracted,
+                artifact_id="sha256:" + "b" * 64,
+            )
+
+    acquisition = Acquisition()
+    service = MonitorService(repository=repository, acquisition=cast(Any, acquisition))
+    asyncio.run(service.execute(_running_job(monitor.monitor_id, 0, "bounded-run")))
+
+    assert acquisition.max_bytes == 1024
     repository.close()
