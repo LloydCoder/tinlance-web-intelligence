@@ -16,7 +16,7 @@ The current backup scripts violate their own operational contract: both pass a d
 
 1. **Secret-safe libpq connection setup**
    - Add a helper that validates a PostgreSQL URL with `sslmode=verify-full` and writes a short-lived, owner-only libpq service file.
-   - Pass only a service name to `pg_dump`/`pg_restore`; never put credentials in process arguments or logs.
+   - Pass only a service name to `pg_dump`/`pg_restore`; never put credentials in process arguments or logs. Before launching the database client, remove inherited `*_DATABASE_URL` variables and ambient libpq connection overrides, then retain only the temporary `PGSERVICEFILE` pointer.
    - Reject unsupported/duplicate query parameters, malformed URLs, control characters, unsafe service names, symlink targets, and insecure file permissions.
    - Use distinct `TWI_BACKUP_DATABASE_URL` and `TWI_RESTORE_DATABASE_URL` values. Keep `TWI_DATABASE_URL` for the application runtime only.
 
