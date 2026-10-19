@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.commercial.entitlements import evaluate_feature
+from tinlance_web_intelligence.commercial.usage_ledger import (
+    QuotaExceededError,
+    UsageConflictError,
+)
 from tinlance_web_intelligence.browser.policies import (
     BrowserPolicyError,
     normalize_browser_payload,
@@ -99,6 +106,48 @@ def create_job(
     if body.kind == "browser" and not request.app.state.settings.browser_enabled:
         raise HTTPException(status_code=503, detail="browser acquisition is disabled")
     repository: JobRepository = request.app.state.repository
+    usage_ledger = request.app.state.usage_ledger
+    reservation_id: str | None = None
+    resolver = request.app.state.entitlement_resolver
+    if resolver is not None:
+        plan = resolver.resolve(
+            tenant_id=principal.tenant_id, subject_id=principal.subject_id
+        )
+        feature_decision = evaluate_feature(plan, feature=body.kind)
+        if not feature_decision.allowed:
+            if feature_decision.reason == "unknown_plan":
+                raise HTTPException(status_code=503, detail="commercial entitlement state unavailable")
+            raise HTTPException(status_code=403, detail="feature is not included in the current plan")
+        dimension = f"{body.kind}_requests_month"
+        limit = plan.limits.get(dimension) if plan is not None else None
+        if limit is None:
+            raise HTTPException(
+                status_code=503, detail="quota dimension is not configured for this plan"
+            )
+        now = datetime.now(UTC)
+        period_start = datetime(now.year, now.month, 1, tzinfo=UTC).isoformat().replace(
+            "+00:00", "Z"
+        )
+        usage_key = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
+        try:
+            reservation = usage_ledger.reserve(
+                tenant_id=principal.tenant_id,
+                subject_id=principal.subject_id,
+                feature=body.kind,
+                dimension=dimension,
+                period_start=period_start,
+                quantity=1,
+                limit=limit,
+                idempotency_key=usage_key,
+            )
+        except QuotaExceededError as exc:
+            raise HTTPException(status_code=429, detail="plan quota exceeded") from exc
+        except UsageConflictError as exc:
+            raise HTTPException(
+                status_code=409, detail="usage idempotency key conflicts with another operation"
+            ) from exc
+        reservation_id = reservation.reservation_id
+
     try:
         job = repository.create(
             tenant_id=principal.tenant_id,
@@ -109,12 +158,43 @@ def create_job(
             traceparent=extract_valid_traceparent(request.headers),
         )
     except IdempotencyConflictError as exc:
+        if reservation_id is not None:
+            usage_ledger.release(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id,
+                reservation_id=reservation_id,
+            )
         raise HTTPException(
             status_code=409,
             detail="Idempotency-Key conflicts with an existing request",
         ) from exc
     except (TypeError, ValueError) as exc:
+        if reservation_id is not None:
+            usage_ledger.release(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id,
+                reservation_id=reservation_id,
+            )
         raise HTTPException(status_code=422, detail="job payload is not JSON-compatible") from exc
+    except Exception:
+        if reservation_id is not None:
+            usage_ledger.release(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id,
+                reservation_id=reservation_id,
+            )
+        raise
+
+    if reservation_id is not None:
+        try:
+            usage_ledger.commit(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id,
+                reservation_id=reservation_id,
+            )
+        except Exception as exc:
+            # The job and reservation are durable. Retrying with the same idempotency key
+            # safely replays the job and completes the usage commit.
+            raise HTTPException(
+                status_code=503,
+                detail="job accepted; usage accounting is pending recovery, retry the same idempotency key",
+            ) from exc
     return _public_job(job)
 
 
