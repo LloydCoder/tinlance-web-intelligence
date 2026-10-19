@@ -83,7 +83,8 @@ def test_usage_endpoint_requires_scope_and_uses_verified_identity() -> None:
 def test_usage_read_any_is_tenant_scoped_and_includes_other_subjects() -> None:
     jobs = SQLiteJobRepository(":memory:")
     usage = SQLiteUsageLedger(":memory:")
-    for subject, key in (("subject-a", "tenant-any-key-0001"), ("subject-b", "tenant-any-key-0002")):
+    subjects = (("subject-a", "tenant-any-key-0001"), ("subject-b", "tenant-any-key-0002"))
+    for subject, key in subjects:
         reservation = usage.reserve(
             tenant_id="tenant-a", subject_id=subject, feature="fetch",
             dimension="requests_month", period_start="2026-10-01T00:00:00Z",
