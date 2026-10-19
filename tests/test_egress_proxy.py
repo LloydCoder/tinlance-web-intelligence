@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import secrets
+import socket
 
 import pytest
 
@@ -147,7 +148,7 @@ def test_proxy_rejects_mixed_public_and_non_public_dns_answers(
         ) -> list[tuple[object, ...]]:
             results = []
             for address in addresses:
-                family = 10 if ":" in address else 2
+                family = socket.AF_INET6 if ":" in address else socket.AF_INET
                 results.append((family, 1, 6, "", (address, port)))
             return results
 
@@ -171,8 +172,8 @@ def test_proxy_resolves_and_returns_one_validated_ip_for_connection_pinning(
             nonlocal calls
             calls += 1
             return [
-                (2, 1, 6, "", ("8.8.8.8", port)),
-                (2, 1, 6, "", ("1.1.1.1", port)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", port)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", port)),
             ]
 
         monkeypatch.setattr(loop, "getaddrinfo", fake_getaddrinfo)
