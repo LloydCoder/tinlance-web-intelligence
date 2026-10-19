@@ -323,12 +323,15 @@ def test_job_submission_fails_closed_for_unknown_plan_or_missing_quota() -> None
 
 
 def test_production_requires_entitlement_resolver_even_with_platform_verifier() -> None:
-    settings = Settings.from_env({
-        "TWI_ENV": "production",
-        "TWI_IDENTITY_ISSUER": "https://identity.example.test",
-        "TWI_IDENTITY_AUDIENCE": "twi",
-        "TWI_IDENTITY_JWKS_URL": "https://identity.example.test/.well-known/jwks.json",
-    })
+    settings = Settings.from_env(
+        {
+            "TWI_ENV": "production",
+            "TWI_IDENTITY_ISSUER": "https://identity.example.test",
+            "TWI_IDENTITY_AUDIENCE": "twi",
+            "TWI_IDENTITY_JWKS_URL": "https://identity.example.test/.well-known/jwks.json",
+        },
+        require_database=False,
+    )
     with pytest.raises(ConfigurationError, match="entitlement resolver"):
         create_app(settings=settings, verifier=FakeVerifier(principal()))
 
