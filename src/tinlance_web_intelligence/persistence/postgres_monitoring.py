@@ -285,7 +285,8 @@ class PostgresMonitoringRepository:
             rows = conn.execute(
                 "WITH candidates AS ("
                 " SELECT event_id FROM twi_monitoring_events "
-                " WHERE status='pending' AND available_at <= %s AND attempts < %s "
+                " WHERE ((status='pending' AND available_at <= %s) "
+                " OR (status='delivering' AND lease_until < %s)) AND attempts < %s "
                 " ORDER BY created_at, event_id LIMIT %s FOR UPDATE SKIP LOCKED"
                 ") UPDATE twi_monitoring_events AS event SET status='delivering', "
                 " attempts=event.attempts+1, lease_owner=%s, lease_until=%s, updated_at=%s "
@@ -293,6 +294,7 @@ class PostgresMonitoringRepository:
                 "RETURNING event.event_id, event.tenant_id, event.source_fingerprint, "
                 "event.idempotency_key, event.payload_json, event.payload_sha256, event.attempts",
                 (
+                    current.timestamp(),
                     current.timestamp(),
                     max_attempts,
                     limit,
@@ -349,7 +351,7 @@ class PostgresMonitoringRepository:
         now: datetime | None = None,
     ) -> str:
         """Release a lease with bounded backoff; terminal failures remain inspectable."""
-        if _ERROR_CODE.fullmatch(error_code) is None:
+        if not isinstance(error_code, str) or _ERROR_CODE.fullmatch(error_code) is None:
             raise ValueError("error_code must be a normalized low-cardinality code")
         if not 0 <= delay_seconds <= 86400 or not 1 <= max_attempts <= 20:
             raise ValueError("invalid retry policy")
@@ -360,7 +362,7 @@ class PostgresMonitoringRepository:
                 "status=CASE WHEN attempts >= %s THEN 'failed' ELSE 'pending' END, "
                 "available_at=%s, lease_owner=NULL, lease_until=NULL, last_error_code=%s, "
                 "updated_at=%s WHERE event_id=%s AND status='delivering' AND lease_owner=%s "
-                "RETURNING status",
+                "AND lease_until >= %s RETURNING status",
                 (
                     max_attempts,
                     current.timestamp() + delay_seconds,
@@ -368,6 +370,7 @@ class PostgresMonitoringRepository:
                     current,
                     event_id,
                     worker_id,
+                    current.timestamp(),
                 ),
             ).fetchone()
             if row is None:
