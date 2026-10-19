@@ -41,7 +41,11 @@ def export_job_evidence(request: Request, job_id: str) -> Response:
     job = repository.get(job_id, tenant_id=principal.tenant_id, subject_id=principal.subject_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
-    if job.kind != "fetch" or job.status is not JobStatus.SUCCEEDED or not isinstance(job.result, dict):
+    if (
+        job.kind != "fetch"
+        or job.status is not JobStatus.SUCCEEDED
+        or not isinstance(job.result, dict)
+    ):
         raise HTTPException(status_code=409, detail="job has no exportable fetch evidence")
 
     result: dict[str, Any] = job.result
@@ -59,13 +63,17 @@ def export_job_evidence(request: Request, job_id: str) -> Response:
         raise HTTPException(status_code=409, detail="fetch evidence metadata is incomplete")
 
     source_revision = getattr(request.app.state.settings, "source_revision", None)
-    if not isinstance(source_revision, str) or not re.fullmatch(r"[0-9a-f]{40}", source_revision):
+    if not isinstance(source_revision, str) or not re.fullmatch(
+        r"[0-9a-f]{40}", source_revision
+    ):
         raise HTTPException(status_code=503, detail="evidence export source revision is unavailable")
     artifacts: ArtifactStore = request.app.state.artifact_store
     try:
         body = artifacts.get(digest, tenant_id=principal.tenant_id)
     except (ValueError, RuntimeError) as exc:
-        raise HTTPException(status_code=502, detail="stored evidence failed integrity verification") from exc
+        raise HTTPException(
+            status_code=502, detail="stored evidence failed integrity verification"
+        ) from exc
     if body is None:
         raise HTTPException(status_code=404, detail="evidence artifact not found")
 
@@ -77,10 +85,14 @@ def export_job_evidence(request: Request, job_id: str) -> Response:
             source_revision=source_revision,
         )
     except EvidencePackageError as exc:
-        raise HTTPException(status_code=502, detail="stored evidence failed package validation") from exc
+        raise HTTPException(
+            status_code=502, detail="stored evidence failed package validation"
+        ) from exc
 
     response = Response(content=package, media_type=_MEDIA_TYPE)
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Content-Disposition"] = f'attachment; filename="twi-evidence-{job_id}.json"'
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="twi-evidence-{job_id}.json"'
+    )
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
