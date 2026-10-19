@@ -8,8 +8,8 @@ from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.artifacts.store import MemoryArtifactStore
 from tinlance_web_intelligence.auth.principal import Principal
 from tinlance_web_intelligence.config import Settings
-from tinlance_web_intelligence.contracts.provenance import AcquisitionProvenance
 from tinlance_web_intelligence.contracts.evidence_package import validate_evidence_package
+from tinlance_web_intelligence.contracts.provenance import AcquisitionProvenance
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
 _REVISION = "a" * 40
