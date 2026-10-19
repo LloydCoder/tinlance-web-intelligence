@@ -10,7 +10,7 @@ This plan is evidence-gated. Do not mark W15-B complete based on documentation, 
 - [x] B6 — Focused unit/API/schema tests, full CI, Python 3.12/3.13 checks, reproducible artifact validation, and browser isolation passed on exact PR head `c9331b33e997bae010ada4bc4cebd3c36ee42b4a` in [run #39303747429](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39303747429).
 - [x] B7 — Fixed lint and typing blockers; forensic review covered authorization, tenant isolation, metadata redaction, deterministic serialization, tamper validation, artifact integrity, deployment source revision, tool catalog parity, and external consumer mismatch. CI reports lint/type/security/test success on the reviewed head.
 - [ ] B8 — Merge only after required checks are green on the exact reviewed head; verify post-merge main CI.
-- [ ] B9 — Update roadmap/readiness documentation with exact source revision, run URLs, test evidence, residual risks, and external gates before W15-C.
+- [x] B9 — Reconciled roadmap and readiness documentation before W15-C. Post-merge main CI passed in [run #39305123725](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39305123725) on merge commit `8bdf2453dbdcbd7552935ee5c0fac1b106dfe595`; Platform-side tool registration, immutable retention, and external deployment evidence remain unresolved.
 
 ## External constraints
 
