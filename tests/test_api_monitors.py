@@ -136,6 +136,11 @@ def test_monitor_lifecycle_is_idempotent_scoped_and_redacts_urls() -> None:
     )
     assert row is not None and row.target_url == "https://deleted.invalid/"
     assert row.baseline_digest is None
+    hidden_run = client.get(
+        f"/v1/monitors/{monitor_id}/runs/{run.json()['job_id']}",
+        headers={"Authorization": "Bearer valid-credential"},
+    )
+    assert hidden_run.status_code == 404
     client.close()
     jobs.close()
     monitors.close()
