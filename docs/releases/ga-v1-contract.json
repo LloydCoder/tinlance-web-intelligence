@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0.0",
+  "product": "Tinlance Web Intelligence",
+  "product_brand": "Provenel",
+  "release_track": "ga-v1",
+  "decision": "not_certified",
+  "source_revision": null,
+  "evidence_pack_reference": "dist/w15-evidence-pack.json",
+  "evidence_pack_sha256": "",
+  "support_contract": {
+    "published": false,
+    "version": null,
+    "constraints_reference": null
+  },
+  "benchmark_qualification": {
+    "status": "not_evidenced",
+    "threshold_registry_sha256": null,
+    "approval_reference": null
+  },
+  "security_review": {
+    "status": "not_evidenced",
+    "source_revision": null,
+    "evidence_reference": null
+  },
+  "residual_risk": {
+    "status": "not_evidenced",
+    "owner": null,
+    "disposition_reference": null
+  },
+  "release_approval": {
+    "status": "not_evidenced",
+    "approver": null,
+    "approval_reference": null,
+    "approved_at": null
+  },
+  "required_gates": [
+    "repository.monitor_api",
+    "repository.staging_probes",
+    "repository.telemetry_contracts",
+    "repository.telemetry_configuration",
+    "repository.monitor_readiness",
+    "repository.consumer_contracts",
+    "repository.monitor_persistence",
+    "repository.ci_contracts",
+    "repository.evidence_export",
+    "external.ci_run",
+    "external.branch_governance",
+    "external.consumer_approvals",
+    "external.deployment_and_security",
+    "external.slo_alerts_and_oncall",
+    "external.privacy_retention_and_risk",
+    "external.live_quality_and_ga_approval"
+  ],
+  "customer_constraints": {
+    "operations_and_scopes_published": false,
+    "limits_and_quotas_published": false,
+    "privacy_retention_and_deletion_published": false,
+    "deployment_dependencies_published": false,
+    "pricing_and_billing_policy_approved": false,
+    "support_and_incident_policy_published": false
+  },
+  "non_goals": [
+    "self_hosting_not_in_ga_v1_without_separate_approval",
+    "no_truth_or_entailment_guarantee",
+    "no_unrestricted_scraping_or_access_control_bypass",
+    "no_twi_owned_identity_policy_or_scheduler",
+    "no_production_slo_or_sla_without_approval",
+    "no_live_payment_provider_claim_without_integration_evidence"
+  ]
+}
