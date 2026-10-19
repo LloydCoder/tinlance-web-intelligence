@@ -28,6 +28,7 @@ from tinlance_web_intelligence.api.http.routes.research import router as researc
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
 )
+from tinlance_web_intelligence.api.http.routes.usage import router as usage_router
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
@@ -41,6 +42,7 @@ from tinlance_web_intelligence.persistence.factory import (
     create_job_repository,
     create_monitor_repository,
     create_source_evidence_outbox,
+    create_usage_ledger,
 )
 from tinlance_web_intelligence.persistence.monitor_protocol import MonitorRepository
 from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox, UsageLedger
@@ -53,6 +55,7 @@ def create_app(
     verifier: PrincipalVerifier | None = None,
     evidence_outbox: SourceEvidenceOutbox | None = None,
     monitor_repository: MonitorRepository | None = None,
+    usage_ledger: UsageLedger | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
     tracer_provider = configure_tracing(config.otel_exporter_endpoint)
@@ -72,6 +75,7 @@ def create_app(
     trusted_verifier = verifier or DenyAllPrincipalVerifier()
     repo = repository or create_job_repository(config)
     monitors = monitor_repository or create_monitor_repository(config)
+    usage = usage_ledger or create_usage_ledger(config)
     docs_enabled = config.environment in {"development", "test"}
     app = FastAPI(
         title="Tinlance Web Intelligence API",
@@ -82,6 +86,7 @@ def create_app(
     )
     app.state.repository = repo
     app.state.monitor_repository = monitors
+    app.state.usage_ledger = usage
     app.state.monitor_service = MonitorService(repository=monitors, job_repository=repo)
     app.state.settings = config
     registry = CollectorRegistry()
@@ -146,6 +151,8 @@ def create_app(
         app.router.on_shutdown.append(repo.close)
     if monitor_repository is None:
         app.router.on_shutdown.append(monitors.close)
+    if usage_ledger is None:
+        app.router.on_shutdown.append(usage.close)
     if tracer_provider is not None:
         app.router.on_shutdown.append(tracer_provider.shutdown)
 
@@ -277,4 +284,5 @@ def create_app(
     app.include_router(monitors_router)
     app.include_router(research_router)
     app.include_router(world_intelligence_router)
+    app.include_router(usage_router)
     return app
