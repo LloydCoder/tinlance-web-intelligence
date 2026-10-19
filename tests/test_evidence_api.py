@@ -106,8 +106,15 @@ def test_evidence_export_is_authorized_reproducible_and_tenant_scoped() -> None:
     assert b"token=secret" not in first.content
     assert b"https://example.test" not in first.content
 
-    other = setup_client(principal_value=principal(tenant_id="tenant-b", subject_id="subject-b"))[0]
-    hidden = other.get(f"/v1/jobs/{job_id}/evidence", headers=headers)
+    other_app = create_app(
+        settings=Settings.from_env({
+            "TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:", "TWI_SOURCE_REVISION": _REVISION,
+        }),
+        repository=repo,
+        verifier=FakeVerifier(principal(tenant_id="tenant-b", subject_id="subject-b")),
+        artifact_store=artifacts,
+    )
+    hidden = TestClient(other_app).get(f"/v1/jobs/{job_id}/evidence", headers=headers)
     assert hidden.status_code == 404
     repo.close()
     artifacts.close()
