@@ -11,6 +11,8 @@ caller-supplied identity fields are not accepted.
 - `dimension`: 1–80 ASCII letters, digits, underscore, dot, colon, or hyphen.
 - `period_start`: timezone-aware ISO-8601 timestamp. The API normalizes it to UTC.
 - `limit`: optional integer from 1 to 500; defaults to 100.
+- `cursor`: optional opaque keyset cursor returned by a prior response. Cursors are bounded
+  to 1024 characters and are scoped by the same tenant principal, dimension, and period query.
 
 The response contains a schema version, dimension and normalized period, committed usage,
 configured quota/remaining allowance when an entitlement resolver is available, and a
@@ -40,7 +42,9 @@ Example response:
       "schema_version": 1
     }
   ],
-  "returned": 1
+  "returned": 1,
+  "has_more": false,
+  "next_cursor": null
 }
 ```
 
@@ -49,6 +53,8 @@ configured production resolver fails closed with HTTP 503. Missing read scopes r
 This API reports TWI usage facts; it is not a statement of invoice balance, payment settlement,
 tax, refunds, or provider billing status.
 
-The event list is bounded, not an unbounded export interface. Consumers requiring full-period
-exports should use a future cursor-paginated export contract rather than increase `limit`
-beyond 500.
+The event list uses keyset pagination ordered by occurrence time and stable event ID. When
+`has_more` is true, pass `next_cursor` unchanged with the same dimension and period to fetch
+the next page. Each page is bounded; consumers must follow the cursor chain to export a full
+period. The cursor is a pagination position, not an authorization token. Every page remains
+tenant-scoped by the verified principal.
