@@ -25,3 +25,5 @@
 - Revalidate the threshold registry inside `evaluate()`, not only in the CLI loader, so programmatic callers cannot obtain a qualification pass using an incomplete approved-looking mapping.
 - The benchmark remains synthetic-only in checked-in results and the threshold registry remains unapproved; the evaluator must therefore report `not_evidenced` for qualification.
 - Reconciled `docs/evaluation/twi-benchmark.md` with the v1.1.0 dataset/result contract, hard-case matrix, metrics, threshold governance, and interpretation boundaries.
+- Validate the dataset description as a normalized non-empty string and restrict expected/observed failure classifications to the versioned known set; adversarial tests reject unknown labels.
+- Narrow threshold-bound types at the comparison boundary so strict typing verifies the evaluator's fail-closed numeric checks.
