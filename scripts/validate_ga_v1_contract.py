@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
-
 from scripts.validate_w15_evidence_pack import validate as validate_evidence_pack
 
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
