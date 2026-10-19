@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from tinlance_web_intelligence.artifacts.store import ArtifactStore, MemoryArtifactStore
+from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger
 from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     SQLiteSourceEvidenceOutbox,
@@ -12,6 +13,7 @@ from tinlance_web_intelligence.persistence.postgres_artifacts import PostgresArt
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 from tinlance_web_intelligence.persistence.postgres_monitors import PostgresMonitorRepository
 from tinlance_web_intelligence.persistence.postgres_outbox import PostgresSourceEvidenceOutbox
+from tinlance_web_intelligence.persistence.postgres_usage_ledger import PostgresUsageLedger
 from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox
 
 
@@ -53,3 +55,13 @@ def create_artifact_store(settings: Settings) -> ArtifactStore:
     if settings.environment in {"staging", "production"}:
         raise ValueError("staging and production require PostgreSQL artifact storage")
     return MemoryArtifactStore(max_bytes=settings.max_response_bytes)
+
+
+
+def create_usage_ledger(settings: Settings) -> SQLiteUsageLedger | PostgresUsageLedger:
+    """Select PostgreSQL for deployed environments and SQLite for local use."""
+    if settings.database_url:
+        return PostgresUsageLedger(settings.database_url)
+    if settings.environment in {"staging", "production"}:
+        raise ValueError("staging and production require PostgreSQL usage persistence")
+    return SQLiteUsageLedger(settings.database_path)
