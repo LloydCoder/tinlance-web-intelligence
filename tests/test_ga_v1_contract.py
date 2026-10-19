@@ -133,3 +133,22 @@ def test_rejects_evidence_pack_digest_mismatch(tmp_path: Path) -> None:
     _write_json(contract_path, contract)
     with pytest.raises(ValueError, match="SHA-256"):
         validate(contract_path, _SCHEMA, _GATES, evidence_pack_path=pack_path)
+
+
+def test_rejects_evidence_pack_source_revision_mismatch(tmp_path: Path) -> None:
+    contract = json.loads(_CONTRACT.read_text(encoding="utf-8"))
+    contract["source_revision"] = "a" * 40
+    pack = {
+        "schema_version": "1.0.0",
+        "source_revision": "b" * 40,
+        "ready": True,
+        "gates": [],
+    }
+    pack_path = tmp_path / "pack.json"
+    pack_bytes = json.dumps(pack).encode()
+    pack_path.write_bytes(pack_bytes)
+    contract["evidence_pack_sha256"] = hashlib.sha256(pack_bytes).hexdigest()
+    contract_path = tmp_path / "contract.json"
+    _write_json(contract_path, contract)
+    with pytest.raises(ValueError, match="source revision"):
+        validate(contract_path, _SCHEMA, _GATES, evidence_pack_path=pack_path)
