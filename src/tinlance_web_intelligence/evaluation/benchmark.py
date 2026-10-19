@@ -236,13 +236,6 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
                 max_age_seconds=max_age,
                 expected_failure_mode=failure_mode,
                 challenge_class=challenge_class,
-                support_status=_string(row.get("support_status"), "support_status"),
-                expected_completion_status=_string(
-                    row.get("expected_completion_status"), "expected_completion_status"
-                ),
-                evidence_mode=_string(row.get("evidence_mode"), "evidence_mode"),
-                max_duplicate_retrievals=row.get("max_duplicate_retrievals"),
-                challenge_class=challenge_class,
                 support_status=support_status,
                 expected_completion_status=completion_status,
                 evidence_mode=evidence_mode,
