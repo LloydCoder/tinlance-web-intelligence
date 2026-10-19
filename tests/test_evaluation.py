@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -71,6 +72,35 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
     assert report["evidence_mode"] == "synthetic"
     assert "docs.python.org" not in json.dumps(report)
     assert "lexical heuristic" in render_markdown(report)
+
+
+
+def test_approved_thresholds_without_registry_digest_cannot_qualify() -> None:
+    dataset_id, cases, observations, dataset_raw, results_raw = _loaded()
+    live_cases = tuple(replace(case, evidence_mode="live") for case in cases)
+    live_observations = tuple(
+        replace(observation, evidence_mode="live") for observation in observations
+    )
+    report = evaluate(
+        dataset_id,
+        live_cases,
+        live_observations,
+        now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
+        dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
+        results_sha256=hashlib.sha256(results_raw).hexdigest(),
+        source_revision="a" * 40,
+        threshold_registry={
+            "schema_version": "1.0.0",
+            "dataset_id": dataset_id,
+            "approval_status": "approved",
+            "owner": "quality-owner",
+            "approval_reference": "approval-123",
+            "thresholds": {"retrieval_recall": {"min": 0.0}},
+        },
+        thresholds_sha256=None,
+    )
+    assert report["qualification"]["status"] == "not_evidenced"
+    assert report["qualification"]["reason"] == "threshold_registry_hash_missing"
 
 
 def test_results_must_match_dataset_case_ids() -> None:
