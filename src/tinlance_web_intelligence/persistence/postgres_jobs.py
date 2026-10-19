@@ -5,6 +5,7 @@ import hashlib
 import json
 import time
 import uuid
+from datetime import datetime
 from importlib.resources import files
 from typing import Any
 
@@ -19,6 +20,10 @@ from tinlance_web_intelligence.jobs.model import (
     JobStatus,
     LeaseLostError,
 )
+
+
+_RETENTION_REDACTED_PAYLOAD = {"retention_redacted": True, "reason": "retention_expired"}
+_RETENTION_REDACTED_FINGERPRINT = hashlib.sha256(b"twi-retention-redacted-v1").hexdigest()
 
 
 def _iso(value: Any) -> str:
@@ -285,6 +290,58 @@ class PostgresJobRepository:
         age_seconds = oldest["age_seconds"] if oldest is not None else None
         snapshot["jobs_oldest_queued_age_seconds"] = float(age_seconds or 0.0)
         return snapshot
+
+    def count_expired_results(
+        self, cutoff: datetime, *, tenant_id: str | None = None
+    ) -> int:
+        """Count terminal jobs with payload/result data older than the retention cutoff."""
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        if tenant_id is not None and (
+            not tenant_id or tenant_id != tenant_id.strip() or len(tenant_id) > 256
+        ):
+            raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
+        query = (
+            "SELECT count(*) AS count FROM jobs "
+            "WHERE created_at < %s AND status IN ('succeeded', 'failed', 'cancelled') "
+            "AND (payload_json <> %s OR result_json IS NOT NULL)"
+        )
+        parameters: tuple[Any, ...] = (cutoff, Jsonb(_RETENTION_REDACTED_PAYLOAD))
+        if tenant_id is not None:
+            query += " AND tenant_id = %s"
+            parameters += (tenant_id,)
+        with self._pool.connection() as conn:
+            row = conn.execute(query, parameters).fetchone()
+        return int(row["count"]) if row is not None else 0
+
+    def redact_expired_results(
+        self, cutoff: datetime, *, tenant_id: str | None = None
+    ) -> int:
+        """Remove terminal job payload/results while preserving minimal lifecycle metadata."""
+        if cutoff.tzinfo is None or cutoff.utcoffset() is None:
+            raise ValueError("cutoff must be timezone-aware")
+        if tenant_id is not None and (
+            not tenant_id or tenant_id != tenant_id.strip() or len(tenant_id) > 256
+        ):
+            raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
+        query = (
+            "UPDATE jobs SET payload_json = %s, payload_fingerprint = %s, "
+            "result_json = NULL, updated_at = now() "
+            "WHERE created_at < %s AND status IN ('succeeded', 'failed', 'cancelled') "
+            "AND (payload_json <> %s OR result_json IS NOT NULL)"
+        )
+        parameters: tuple[Any, ...] = (
+            Jsonb(_RETENTION_REDACTED_PAYLOAD),
+            _RETENTION_REDACTED_FINGERPRINT,
+            cutoff,
+            Jsonb(_RETENTION_REDACTED_PAYLOAD),
+        )
+        if tenant_id is not None:
+            query += " AND tenant_id = %s"
+            parameters += (tenant_id,)
+        with self._pool.connection() as conn:
+            result = conn.execute(query, parameters)
+            return result.rowcount
 
     def ping(self) -> bool:
         try:
