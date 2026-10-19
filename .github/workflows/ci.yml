@@ -117,7 +117,66 @@ jobs:
       - name: Validate isolated Compose topology
         run: docker compose -f deployments/compose/browser-isolated.yml config --quiet
       - name: Build all isolated service images
+        id: build_isolated_images
         run: docker compose -f deployments/compose/browser-isolated.yml build --parallel
+      - name: Prepare container scan evidence directory
+        run: mkdir -p trivy-results
+      - name: Scan API image for high and critical vulnerabilities
+        id: trivy_api
+        if: ${{ always() && steps.build_isolated_images.outcome == 'success' }}
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: twi-browser-isolation-api:latest
+          version: v0.76.0
+          format: json
+          output: trivy-results/api.json
+          exit-code: '0'
+          ignore-unfixed: 'false'
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+      - name: Scan worker image for high and critical vulnerabilities
+        id: trivy_worker
+        if: ${{ always() && steps.build_isolated_images.outcome == 'success' }}
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: twi-browser-isolation-worker:latest
+          version: v0.76.0
+          format: json
+          output: trivy-results/worker.json
+          exit-code: '0'
+          ignore-unfixed: 'false'
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+      - name: Scan browser worker image for high and critical vulnerabilities
+        id: trivy_browser_worker
+        if: ${{ always() && steps.build_isolated_images.outcome == 'success' }}
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: twi-browser-isolation-browser-worker:latest
+          version: v0.76.0
+          format: json
+          output: trivy-results/browser-worker.json
+          exit-code: '0'
+          ignore-unfixed: 'false'
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+      - name: Scan egress proxy image for high and critical vulnerabilities
+        id: trivy_egress_proxy
+        if: ${{ always() && steps.build_isolated_images.outcome == 'success' }}
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: twi-browser-isolation-egress-proxy:latest
+          version: v0.76.0
+          format: json
+          output: trivy-results/egress-proxy.json
+          exit-code: '0'
+          ignore-unfixed: 'false'
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
       - name: Start egress proxy
         run: docker compose -f deployments/compose/browser-isolated.yml up -d --wait egress-proxy
       - name: Verify browser network cannot bypass the proxy
@@ -148,9 +207,70 @@ jobs:
                   await browser.close()
           asyncio.run(main())
           '
+      - name: Enforce actionable container vulnerability policy
+        if: ${{ always() && steps.build_isolated_images.outcome == 'success' }}
+        env:
+          API_SCAN_OUTCOME: ${{ steps.trivy_api.outcome }}
+          WORKER_SCAN_OUTCOME: ${{ steps.trivy_worker.outcome }}
+          BROWSER_WORKER_SCAN_OUTCOME: ${{ steps.trivy_browser_worker.outcome }}
+          EGRESS_PROXY_SCAN_OUTCOME: ${{ steps.trivy_egress_proxy.outcome }}
+        run: |
+          if [[ "$API_SCAN_OUTCOME" != "success" || "$WORKER_SCAN_OUTCOME" != "success" || "$BROWSER_WORKER_SCAN_OUTCOME" != "success" || "$EGRESS_PROXY_SCAN_OUTCOME" != "success" ]]; then
+            echo "A Trivy scan failed to complete. Review uploaded reports; scanner errors are blockers." >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report_dir = pathlib.Path("trivy-results")
+          reports = sorted(report_dir.glob("*.json"))
+          if len(reports) != 4:
+              raise SystemExit(f"expected 4 container scan reports, found {len(reports)}")
+
+          actionable = []
+          unfixed = []
+          for path in reports:
+              try:
+                  report = json.loads(path.read_text(encoding="utf-8"))
+              except (OSError, json.JSONDecodeError) as exc:
+                  raise SystemExit(f"invalid Trivy report {path}: {exc}") from exc
+              for result in report.get("Results") or []:
+                  for vuln in result.get("Vulnerabilities") or []:
+                      severity = vuln.get("Severity", "UNKNOWN")
+                      if severity not in {"HIGH", "CRITICAL"}:
+                          continue
+                      finding = (
+                          f"{path.name}: {severity} {vuln.get('VulnerabilityID', 'UNKNOWN')} "
+                          f"{vuln.get('PkgName', 'unknown')}@{vuln.get('InstalledVersion', 'unknown')}"
+                      )
+                      if vuln.get("FixedVersion"):
+                          actionable.append(f"{finding} fixed in {vuln['FixedVersion']}")
+                      else:
+                          unfixed.append(finding)
+
+          if actionable:
+              print("Actionable HIGH/CRITICAL container vulnerabilities:", file=sys.stderr)
+              print("\\n".join(actionable), file=sys.stderr)
+              raise SystemExit(1)
+
+          print(f"No fixable HIGH/CRITICAL findings across {len(reports)} images.")
+          print(f"Unfixed HIGH/CRITICAL findings retained for explicit security review: {len(unfixed)}.")
+          if unfixed:
+              print("Unfixed findings are NOT considered cleared; review the uploaded reports and record VEX/risk disposition before staging or release.")
+          PY
       - name: Stop isolated stack
         if: always()
         run: docker compose -f deployments/compose/browser-isolated.yml down --volumes
+      - name: Upload container vulnerability scan reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trivy-container-scan-${{ github.sha }}
+          path: trivy-results/*.json
+          if-no-files-found: warn
+          retention-days: 30
 
 
   release-artifacts:
