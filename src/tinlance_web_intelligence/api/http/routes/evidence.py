@@ -66,7 +66,9 @@ def export_job_evidence(request: Request, job_id: str) -> Response:
     if not isinstance(source_revision, str) or not re.fullmatch(
         r"[0-9a-f]{40}", source_revision
     ):
-        raise HTTPException(status_code=503, detail="evidence export source revision is unavailable")
+        raise HTTPException(
+            status_code=503, detail="evidence export source revision is unavailable"
+        )
     artifacts: ArtifactStore = request.app.state.artifact_store
     try:
         body = artifacts.get(digest, tenant_id=principal.tenant_id)
