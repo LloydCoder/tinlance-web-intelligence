@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from scripts.validate_ga_v1_contract import validate
 
 _ROOT = Path(__file__).resolve().parents[1]
