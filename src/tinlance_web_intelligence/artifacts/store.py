@@ -5,7 +5,6 @@ PostgresArtifactStore, whose reads are tenant-scoped and whose content hashes ar
 """
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
@@ -13,12 +12,16 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 
-_DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}")
+_DIGEST_HEX = frozenset("0123456789abcdef")
 
 
 def validate_artifact_digest(digest: str) -> None:
     """Reject malformed digests rather than treating them as absent artifacts."""
-    if not isinstance(digest, str) or _DIGEST_PATTERN.fullmatch(digest) is None:
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in _DIGEST_HEX for character in digest)
+    ):
         raise ValueError("artifact digest must be a lowercase SHA-256 hex digest")
 
 
