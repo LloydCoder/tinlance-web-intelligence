@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "twi-core-v1",
+  "cases": [
+    {
+      "case_id": "grounded-json-and-datetime",
+      "retrieved": [
+        {
+          "url": "https://docs.python.org/3/library/json.html",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "json — JSON encoder and decoder",
+          "text": "The json.loads function parses JSON text into a Python object. JSON data interchange uses arrays and objects."
+        },
+        {
+          "url": "https://docs.python.org/3/library/datetime.html",
+          "retrieved_at": "2026-10-19T10:30:00Z",
+          "title": "datetime — Basic date and time types",
+          "text": "datetime.fromisoformat parses an ISO-formatted date or datetime string into a datetime object."
+        }
+      ],
+      "claims": [
+        {
+          "text": "json.loads parses JSON text into a Python object",
+          "citations": [
+            "https://docs.python.org/3/library/json.html"
+          ]
+        },
+        {
+          "text": "datetime.fromisoformat parses an ISO-formatted datetime string",
+          "citations": [
+            "https://docs.python.org/3/library/datetime.html"
+          ]
+        }
+      ],
+      "failure_mode": null
+    },
+    {
+      "case_id": "stale-url-parsing-evidence",
+      "retrieved": [
+        {
+          "url": "https://docs.python.org/3/library/urllib.parse.html",
+          "retrieved_at": "2026-10-17T12:00:00Z",
+          "title": "urllib.parse — Parse URLs",
+          "text": "The urlsplit function parses a URL into scheme, network location, path, query, and fragment components."
+        }
+      ],
+      "claims": [],
+      "failure_mode": "stale_evidence"
+    },
+    {
+      "case_id": "missing-source-and-unsupported-claim",
+      "retrieved": [
+        {
+          "url": "https://docs.python.org/3/library/asyncio.html",
+          "retrieved_at": "2026-10-19T11:30:00Z",
+          "title": "asyncio — Asynchronous I/O",
+          "text": "The event loop executes tasks, schedules callbacks, and coordinates asynchronous operations."
+        }
+      ],
+      "claims": [
+        {
+          "text": "asyncio.run supports the top-level entry point for a coroutine",
+          "citations": [
+            "https://docs.python.org/3/library/asyncio.html"
+          ]
+        }
+      ],
+      "failure_mode": "unsupported_claim"
+    }
+  ]
+}

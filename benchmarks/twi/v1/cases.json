@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "twi-core-v1",
+  "description": "Deterministic offline cases for retrieval, extraction, source diversity, citation grounding, freshness, and failure calibration. Fixtures are methodology checks, not assertions of source truth.",
+  "cases": [
+    {
+      "case_id": "grounded-json-and-datetime",
+      "expected_urls": [
+        "https://docs.python.org/3/library/json.html",
+        "https://docs.python.org/3/library/datetime.html"
+      ],
+      "expected_domains": [
+        "docs.python.org"
+      ],
+      "expected_phrases": [
+        "json.loads",
+        "datetime.fromisoformat"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": null
+    },
+    {
+      "case_id": "stale-url-parsing-evidence",
+      "expected_urls": [
+        "https://docs.python.org/3/library/urllib.parse.html"
+      ],
+      "expected_domains": [
+        "docs.python.org"
+      ],
+      "expected_phrases": [
+        "urlsplit"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "stale_evidence"
+    },
+    {
+      "case_id": "missing-source-and-unsupported-claim",
+      "expected_urls": [
+        "https://docs.python.org/3/library/asyncio.html",
+        "https://example.org/asyncio-reference"
+      ],
+      "expected_domains": [
+        "docs.python.org",
+        "example.org"
+      ],
+      "expected_phrases": [
+        "asyncio.run"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "unsupported_claim"
+    }
+  ]
+}
