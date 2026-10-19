@@ -49,13 +49,10 @@ def read_usage(
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise HTTPException(status_code=422, detail="period_start must include a timezone")
     ledger = request.app.state.usage_ledger
-    events = ledger.list_events(
-        tenant_id=principal.tenant_id, subject_id=principal.subject_id, limit=limit
+    scoped = ledger.list_events(
+        tenant_id=principal.tenant_id, subject_id=principal.subject_id, limit=limit,
+        dimension=dimension, period_start=period_start,
     )
-    scoped = [
-        event for event in events
-        if event.dimension == dimension and event.period_start == period_start
-    ]
     total = ledger.usage_total(
         tenant_id=principal.tenant_id, subject_id=principal.subject_id,
         dimension=dimension, period_start=period_start,
