@@ -54,7 +54,7 @@ jobs:
           python -m pip check
           mkdir -p dist
       - name: Audit release dependency environment
-        run: pip-audit --strict --progress-spinner off --format json --output dist/pip-audit.json
+        run: pip-audit --strict --progress-spinner off --format json --output dist/pip-audit.json -r requirements-dev.txt
       - name: Run quality, type, security, dependency, and database tests
         run: |
           ruff check .
