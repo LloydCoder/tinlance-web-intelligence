@@ -35,7 +35,7 @@ A green CI run is repository evidence, not proof of production deployment, branc
 
 - Latest observed `main` commit at recheck: `3b96b06caf9f0afe8a9fdec96ff64e42e3b13246`.
 - Main CI [run 39224876152](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39224876152) passed all four jobs. A separate run previously observed as cancelled is not treated as a failure or as a passing run; use the exact main run above as the current successful evidence.
-- Open-PR search returned no open pull requests at recheck.
+- The initial open-PR search was stale/incomplete: a subsequent live search found PRs #54, #55, and #56 open. PR #54 is a duplicate W12 closeout whose content is already represented on `main`; PR #55 is premature W13 work while W7–W12 release gates remain open; this PR (#56) is the W7 evidence-reconciliation change.
 - `main` is reported unprotected by the branches API and no repository rulesets were returned. This is a confirmed W7 blocker, not a documentation-only issue. The connected integration cannot mutate or fully inspect branch governance because its GitHub installation lacks the required administration permissions.
 - Do not close G1 until an authorized owner enables enforceable rules and effective settings are read back. If inherited organization policy is relied on, capture evidence from the organization-level ruleset scope and prove it applies to this repository.
 
