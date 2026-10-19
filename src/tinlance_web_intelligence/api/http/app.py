@@ -29,6 +29,7 @@ from tinlance_web_intelligence.api.http.routes.usage import router as usage_rout
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
 )
+from tinlance_web_intelligence.commercial.entitlements import EntitlementResolver
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
@@ -60,6 +61,7 @@ def create_app(
     evidence_outbox: SourceEvidenceOutbox | None = None,
     monitor_repository: MonitorRepository | None = None,
     usage_ledger: UsageLedger | None = None,
+    entitlement_resolver: EntitlementResolver | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
     tracer_provider = configure_tracing(config.otel_exporter_endpoint)
@@ -76,6 +78,10 @@ def create_app(
         )
     if config.environment == "production" and verifier is None:
         raise ConfigurationError("production requires a configured Platform token verifier")
+    if config.environment == "production" and entitlement_resolver is None:
+        raise ConfigurationError(
+            "production requires an entitlement resolver from the approved billing boundary"
+        )
     trusted_verifier = verifier or DenyAllPrincipalVerifier()
     repo = repository or create_job_repository(config)
     monitors = monitor_repository or create_monitor_repository(config)
@@ -91,6 +97,7 @@ def create_app(
     app.state.repository = repo
     app.state.monitor_repository = monitors
     app.state.usage_ledger = usage
+    app.state.entitlement_resolver = entitlement_resolver
     app.state.monitor_service = MonitorService(repository=monitors, job_repository=repo)
     app.state.settings = config
     registry = CollectorRegistry()
