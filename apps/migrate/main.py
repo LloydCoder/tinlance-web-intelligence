@@ -11,7 +11,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 
-def _validate_dsn(dsn: str, *, production: bool) -> None:
+def _validate_dsn(dsn: str, *, require_verified_tls: bool) -> None:
     try:
         parsed = urlsplit(dsn)
         sslmode = parse_qs(parsed.query).get("sslmode", [""])[0]
@@ -28,28 +28,28 @@ def _validate_dsn(dsn: str, *, production: bool) -> None:
         raise SystemExit(
             "migration database URL must include PostgreSQL host, credentials and database"
         )
-    if production and sslmode != "verify-full":
-        raise SystemExit("production migration database requires sslmode=verify-full")
+    if require_verified_tls and sslmode != "verify-full":
+        raise SystemExit("staging and production migration database requires sslmode=verify-full")
 
 
 def main() -> int:
     environment = os.environ.get("TWI_ENV", "development").strip().lower()
     runtime_dsn = os.environ.get("TWI_DATABASE_URL", "").strip()
     migration_dsn = os.environ.get("TWI_MIGRATION_DATABASE_URL", "").strip()
-    if environment == "production":
+    if environment in {"staging", "production"}:
         if not migration_dsn:
-            raise SystemExit("production requires TWI_MIGRATION_DATABASE_URL")
+            raise SystemExit(f"{environment} requires TWI_MIGRATION_DATABASE_URL")
         if not runtime_dsn:
-            raise SystemExit("production requires TWI_DATABASE_URL for runtime-role comparison")
-        _validate_dsn(runtime_dsn, production=True)
-        _validate_dsn(migration_dsn, production=True)
+            raise SystemExit(f"{environment} requires TWI_DATABASE_URL for runtime-role comparison")
+        _validate_dsn(runtime_dsn, require_verified_tls=True)
+        _validate_dsn(migration_dsn, require_verified_tls=True)
         if urlsplit(runtime_dsn).username == urlsplit(migration_dsn).username:
-            raise SystemExit("production migration and runtime roles must be distinct")
+            raise SystemExit(f"{environment} migration and runtime roles must be distinct")
     else:
         migration_dsn = migration_dsn or runtime_dsn
         if not migration_dsn:
             raise SystemExit("set TWI_MIGRATION_DATABASE_URL or TWI_DATABASE_URL")
-        _validate_dsn(migration_dsn, production=False)
+        _validate_dsn(migration_dsn, require_verified_tls=False)
 
     migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
         "001_production_postgres.sql"
