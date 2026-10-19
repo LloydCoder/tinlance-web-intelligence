@@ -660,10 +660,18 @@ def evaluate(
                 if not isinstance(metric_value, (int, float)):
                     unavailable.append(name)
                     continue
-                if "min" in bounds and metric_value < bounds["min"]:
-                    failures.append(name)
-                if "max" in bounds and metric_value > bounds["max"]:
-                    failures.append(name)
+                minimum = bounds.get("min")
+                maximum = bounds.get("max")
+                if minimum is not None:
+                    if isinstance(minimum, bool) or not isinstance(minimum, (int, float)):
+                        raise BenchmarkError(f"thresholds.{name}.min must be numeric")
+                    if metric_value < minimum:
+                        failures.append(name)
+                if maximum is not None:
+                    if isinstance(maximum, bool) or not isinstance(maximum, (int, float)):
+                        raise BenchmarkError(f"thresholds.{name}.max must be numeric")
+                    if metric_value > maximum:
+                        failures.append(name)
             if unavailable:
                 qualification_reason = "threshold_metrics_unavailable:" + ",".join(
                     sorted(unavailable)
