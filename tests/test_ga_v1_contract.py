@@ -1,6 +1,7 @@
 """Adversarial tests for the GA v1 release decision contract."""
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -86,3 +87,28 @@ def test_rejects_ga_approval_while_any_gate_is_not_passing(tmp_path: Path) -> No
 def test_rejects_candidate_revision_mismatch() -> None:
     with pytest.raises(ValueError, match="source revision"):
         validate(_CONTRACT, _SCHEMA, _GATES, expected_revision="f" * 40)
+
+
+def test_rejects_evidence_pack_with_incomplete_gate_set(tmp_path: Path) -> None:
+    contract = json.loads(_CONTRACT.read_text(encoding="utf-8"))
+    contract["source_revision"] = "a" * 40
+    pack = {
+        "schema_version": "1.0.0",
+        "source_revision": "a" * 40,
+        "ready": True,
+        "gates": [
+            {
+                "gate": contract["required_gates"][0],
+                "status": "pass",
+                "source_revision": "a" * 40,
+            }
+        ],
+    }
+    pack_path = tmp_path / "pack.json"
+    pack_bytes = json.dumps(pack).encode()
+    pack_path.write_bytes(pack_bytes)
+    contract["evidence_pack_sha256"] = hashlib.sha256(pack_bytes).hexdigest()
+    contract_path = tmp_path / "contract.json"
+    _write_json(contract_path, contract)
+    with pytest.raises(ValueError, match="gate set"):
+        validate(contract_path, _SCHEMA, _GATES, evidence_pack_path=pack_path)
