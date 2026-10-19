@@ -45,7 +45,11 @@ from tinlance_web_intelligence.persistence.factory import (
     create_usage_ledger,
 )
 from tinlance_web_intelligence.persistence.monitor_protocol import MonitorRepository
-from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox, UsageLedger
+from tinlance_web_intelligence.persistence.protocols import (
+    JobRepository,
+    SourceEvidenceOutbox,
+    UsageLedger,
+)
 
 
 def create_app(
