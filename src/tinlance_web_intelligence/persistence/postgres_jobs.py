@@ -1,6 +1,6 @@
 """PostgreSQL job repository with transactional idempotency and SKIP LOCKED leases."""
 
-import datetime
+import datetime  # noqa: I001
 import hashlib
 import json
 import time
