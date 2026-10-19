@@ -26,13 +26,16 @@ tmp_checksum=""
 backup_file=""
 checksum_file=""
 backup_published=0
+checksum_published=0
 published=0
 cleanup() {
   [[ -z "$service_file" ]] || rm -f -- "$service_file"
   [[ -z "$tmp_backup" ]] || rm -f -- "$tmp_backup"
   [[ -z "$tmp_checksum" ]] || rm -f -- "$tmp_checksum"
-  if [[ "$backup_published" == "1" && "$published" == "0" ]]; then
+  if [[ "$published" == "0" && "$backup_published" == "1" ]]; then
     [[ -z "$backup_file" ]] || rm -f -- "$backup_file"
+  fi
+  if [[ "$published" == "0" && "$checksum_published" == "1" ]]; then
     [[ -z "$checksum_file" ]] || rm -f -- "$checksum_file"
   fi
 }
@@ -78,6 +81,7 @@ mv -n -- "$tmp_checksum" "$checksum_file"
   exit 1
 }
 tmp_checksum=""
+checksum_published=1
 chmod 600 -- "$backup_file" "$checksum_file"
 published=1
 echo "Backup created: $backup_file"
