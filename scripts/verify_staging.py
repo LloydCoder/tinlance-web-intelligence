@@ -52,7 +52,7 @@ def _request(url: str, method: str, token: str | None, body: bytes | None) -> Re
         or parsed.fragment
     ):
         raise VerificationError("staging endpoint requests must use a clean HTTPS URL")
-    request = Request(
+    request = Request(  # noqa: S310 - the HTTPS target was validated immediately above
         url,
         data=body,
         method=method,
