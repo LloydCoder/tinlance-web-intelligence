@@ -14,14 +14,14 @@ SQLite is supported only for development, tests, and the single-host browser-iso
 - Acquisition workers need explicit outbound access for approved public-web retrieval; apply destination and egress policy at the deployment network layer.
 - Browser workers must have no direct Internet egress, no database mount or application credentials, and must use the authenticated TWI egress proxy. Preserve Chromium sandboxing and resource limits.
 - The World Intelligence export worker needs outbound access only to the configured World Intelligence endpoint and approved identity/telemetry services.
-- PostgreSQL is reachable only from the application network. Use separate roles for runtime and backup operations, least-privilege grants, connection limits, encrypted storage, and managed backups.
+- PostgreSQL is reachable only from the application network. Use separate least-privilege roles for runtime, migration, backup, restore, artifact retention, and job-data retention; apply connection limits, encrypted storage, and managed backups. Backup uses `TWI_BACKUP_DATABASE_URL`; restore uses `TWI_RESTORE_DATABASE_URL` and compares against `TWI_PRIMARY_DATABASE_URL`. Operational scripts use short-lived owner-only libpq service files rather than DSNs in database-client process arguments.
 - Use the deployment secret manager for Platform identity configuration, Brave API keys, browser broker/proxy credentials, and World Intelligence service credentials.
 
 ## Readiness and operations
 
 Readiness checks verify the configured job repository and outbox database connectivity. Liveness is intentionally independent of downstream readiness. Configure alerts for readiness failures, queue age, retry/dead-letter counts, outbox delivery lag, browser failures, and provider rate limits.
 
-Run scripts/backup_postgres.sh from an approved backup environment. Restore is destructive and requires the explicit confirmation and isolated target checks documented in backup-and-restore.md. Private beta requires a witnessed restore drill and deployment-specific network-policy verification.
+Run `scripts/backup_postgres.sh` from an approved backup environment with a dedicated backup role and an approved encrypted backup mount. Restore is destructive and requires the explicit confirmation, dedicated restore role, primary/target comparison, checksum verification, and isolated target checks documented in `backup-and-restore.md`. Private beta requires a witnessed restore drill and deployment-specific network-policy verification.
 
 ## Limits
 
