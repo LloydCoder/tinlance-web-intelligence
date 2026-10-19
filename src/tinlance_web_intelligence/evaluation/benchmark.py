@@ -339,6 +339,86 @@ def _mean(values: Sequence[float | None]) -> float | None:
     return round(sum(observed) / len(observed), 6)
 
 
+def load_threshold_registry(raw: bytes, expected_dataset_id: str) -> dict[str, object]:
+    """Load a threshold registry; unapproved thresholds must remain empty and fail closed."""
+    try:
+        payload = _mapping(json.loads(raw), "threshold registry")
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BenchmarkError("threshold registry must be valid UTF-8 JSON") from exc
+    required = {
+        "schema_version", "dataset_id", "approval_status", "owner",
+        "approval_reference", "thresholds",
+    }
+    if set(payload) != required:
+        raise BenchmarkError("threshold registry fields do not match schema")
+    if payload["schema_version"] != "1.0.0" or payload["dataset_id"] != expected_dataset_id:
+        raise BenchmarkError("threshold registry version or dataset ID does not match")
+    approval_status = payload["approval_status"]
+    if approval_status not in {"approved", "not_approved"}:
+        raise BenchmarkError("threshold approval_status is invalid")
+    thresholds = _mapping(payload["thresholds"], "thresholds")
+    if approval_status == "not_approved":
+        if payload["owner"] is not None or payload["approval_reference"] is not None or thresholds:
+            raise BenchmarkError("unapproved thresholds must not contain owners or numeric values")
+        return dict(payload)
+    owner = _string(payload["owner"], "threshold owner")
+    approval_reference = _string(payload["approval_reference"], "threshold approval_reference")
+    del owner, approval_reference
+    allowed_metrics = {
+        "retrieval_recall", "source_diversity_coverage", "extraction_coverage",
+        "citation_grounding_rate", "freshness_rate", "failure_calibration_accuracy",
+        "outcome_correctness_rate", "evidence_quality_score", "latency_ms_mean",
+        "latency_ms_p95", "resource_bytes_mean", "request_count_mean", "retry_count_mean",
+    }
+    if not thresholds or not set(thresholds).issubset(allowed_metrics):
+        raise BenchmarkError("approved thresholds must name supported benchmark metrics")
+    for name, raw_bounds in thresholds.items():
+        bounds = _mapping(raw_bounds, f"thresholds.{name}")
+        if not bounds or not set(bounds).issubset({"min", "max"}):
+            raise BenchmarkError(f"thresholds.{name} must contain min and/or max")
+        values: dict[str, float] = {}
+        for bound, value in bounds.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise BenchmarkError(f"thresholds.{name}.{bound} must be a finite number")
+            values[bound] = float(value)
+        if "min" in values and "max" in values and values["min"] > values["max"]:
+            raise BenchmarkError(f"thresholds.{name}.min cannot exceed max")
+    return dict(payload)
+
+
+def _report_digest(report: Mapping[str, object]) -> str:
+    unsigned = {key: value for key, value in report.items() if key != "report_sha256"}
+    canonical = json.dumps(
+        unsigned, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def validate_report(report: Mapping[str, object]) -> None:
+    """Validate the deterministic report digest and the minimum report envelope."""
+    if report.get("schema_version") != _REPORT_SCHEMA_VERSION:
+        raise BenchmarkError("unsupported report schema_version")
+    report_digest = report.get("report_sha256")
+    if not isinstance(report_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", report_digest):
+        raise BenchmarkError("report_sha256 must be a lowercase SHA-256 digest")
+    if _report_digest(report) != report_digest:
+        raise BenchmarkError("benchmark report SHA-256 integrity check failed")
+    for field in ("dataset_sha256", "results_sha256", "thresholds_sha256"):
+        value = report.get(field)
+        if value is not None and (
+            not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value)
+        ):
+            raise BenchmarkError(f"{field} must be a lowercase SHA-256 digest or null")
+
+
+def _p95(values: Sequence[int]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = max(0, math.ceil(0.95 * len(ordered)) - 1)
+    return float(ordered[index])
+
+
 def evaluate(
     dataset_id: str,
     cases: Sequence[BenchmarkCase],
@@ -347,16 +427,31 @@ def evaluate(
     now: datetime,
     dataset_sha256: str,
     results_sha256: str,
+    source_revision: str | None = None,
+    threshold_registry: Mapping[str, object] | None = None,
+    thresholds_sha256: str | None = None,
 ) -> dict[str, object]:
-    """Evaluate recorded observations without network access or nondeterministic time."""
+    """Evaluate recorded observations deterministically; no network or truth judgment is performed."""
     if now.tzinfo is None or now.utcoffset() is None:
         raise BenchmarkError("evaluation now must be timezone-aware")
+    for field, value in (("dataset_sha256", dataset_sha256), ("results_sha256", results_sha256)):
+        if not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise BenchmarkError(f"{field} must be a lowercase SHA-256 digest")
+    if source_revision is not None and not re.fullmatch(r"[0-9a-f]{40}", source_revision):
+        raise BenchmarkError("source_revision must be a full lowercase Git commit SHA or null")
+    if thresholds_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", thresholds_sha256):
+        raise BenchmarkError("thresholds_sha256 must be a lowercase SHA-256 digest or null")
+    registry: Mapping[str, object] = threshold_registry or {
+        "approval_status": "not_approved", "owner": None,
+        "approval_reference": None, "thresholds": {},
+    }
+    approval_status = registry.get("approval_status")
+    threshold_values = _mapping(registry.get("thresholds", {}), "thresholds")
     case_ids = {case.case_id for case in cases}
     result_ids = {result.case_id for result in observations}
     if case_ids != result_ids or len(result_ids) != len(observations):
         raise BenchmarkError("results case IDs must match dataset case IDs exactly")
     observation_by_id = {result.case_id: result for result in observations}
-    case_reports: list[dict[str, object]] = []
     metric_names = (
         "retrieval_recall",
         "source_diversity_coverage",
@@ -364,11 +459,34 @@ def evaluate(
         "citation_grounding_rate",
         "freshness_rate",
         "failure_calibration_accuracy",
+        "outcome_correctness_rate",
+        "evidence_quality_score",
     )
     metric_values: dict[str, list[float | None]] = {name: [] for name in metric_names}
+    case_reports: list[dict[str, object]] = []
+    challenge_counts: dict[str, int] = {}
+    completion_counts: dict[str, int] = {}
+    failure_counts: dict[str, int] = {}
+    support_counts: dict[str, int] = {}
+    evidence_mode_counts: dict[str, int] = {}
     for case in cases:
         observation = observation_by_id[case.case_id]
-        retrieved_urls = {_url(item.url, "retrieved.url") for item in observation.retrieved}
+        if observation.evidence_mode != case.evidence_mode:
+            raise BenchmarkError(f"evidence_mode mismatch for case {case.case_id}")
+        challenge_counts[case.challenge_class] = challenge_counts.get(case.challenge_class, 0) + 1
+        completion_counts[observation.completion_status] = (
+            completion_counts.get(observation.completion_status, 0) + 1
+        )
+        failure_key = observation.failure_mode or "none"
+        failure_counts[failure_key] = failure_counts.get(failure_key, 0) + 1
+        support_counts[case.support_status] = support_counts.get(case.support_status, 0) + 1
+        evidence_mode_counts[observation.evidence_mode] = (
+            evidence_mode_counts.get(observation.evidence_mode, 0) + 1
+        )
+
+        retrieved_urls_list = [_url(item.url, "retrieved.url") for item in observation.retrieved]
+        retrieved_urls = set(retrieved_urls_list)
+        duplicate_count = len(retrieved_urls_list) - len(retrieved_urls)
         retrieved_domains = {
             (urlsplit(item.url).hostname or "").lower().rstrip(".")
             for item in observation.retrieved
@@ -377,7 +495,9 @@ def evaluate(
         diversity_coverage = (
             len(set(case.expected_domains) & retrieved_domains) / len(case.expected_domains)
         )
-        all_text = "\n".join(f"{item.title}\n{item.text}" for item in observation.retrieved).lower()
+        all_text = "\\n".join(
+            f"{item.title}\\n{item.text}" for item in observation.retrieved
+        ).lower()
         extraction_coverage = (
             sum(1 for phrase in case.expected_phrases if phrase.lower() in all_text)
             / len(case.expected_phrases)
@@ -406,6 +526,22 @@ def evaluate(
             else None
         )
         failure_accuracy = float(observation.failure_mode == case.expected_failure_mode)
+        completion_accuracy = float(
+            observation.completion_status == case.expected_completion_status
+        )
+        duplicate_policy_ok = duplicate_count <= case.max_duplicate_retrievals
+        outcome_correctness = float(
+            completion_accuracy == 1.0 and failure_accuracy == 1.0 and duplicate_policy_ok
+        )
+        evidence_quality = _mean(
+            [
+                retrieval_recall,
+                diversity_coverage,
+                extraction_coverage,
+                citation_grounding,
+                freshness_rate,
+            ]
+        )
         metrics: dict[str, float | None] = {
             "retrieval_recall": round(retrieval_recall, 6),
             "source_diversity_coverage": round(diversity_coverage, 6),
@@ -415,40 +551,134 @@ def evaluate(
             ),
             "freshness_rate": round(freshness_rate, 6) if freshness_rate is not None else None,
             "failure_calibration_accuracy": failure_accuracy,
+            "outcome_correctness_rate": outcome_correctness,
+            "evidence_quality_score": round(evidence_quality or 0.0, 6),
         }
         for name, value in metrics.items():
             metric_values[name].append(value)
         case_reports.append(
             {
                 "case_id": case.case_id,
+                "challenge_class": case.challenge_class,
+                "support_status": case.support_status,
+                "evidence_mode": observation.evidence_mode,
+                "completion_status": observation.completion_status,
+                "failure_mode": observation.failure_mode,
                 "retrieved_item_count": len(observation.retrieved),
                 "distinct_domain_count": len(retrieved_domains),
+                "duplicate_retrieval_count": duplicate_count,
+                "expected_max_duplicate_retrievals": case.max_duplicate_retrievals,
                 "metrics": metrics,
+                "measurements": {
+                    "latency_ms": observation.latency_ms,
+                    "resource_bytes": observation.resource_bytes,
+                    "request_count": observation.request_count,
+                    "retry_count": observation.retry_count,
+                },
             }
         )
-    return {
-        "schema_version": _SCHEMA_VERSION,
+    summary: dict[str, float | None] = {
+        name: _mean(values) for name, values in metric_values.items()
+    }
+    summary.update(
+        {
+            "latency_ms_mean": _mean([float(item.latency_ms) for item in observations]),
+            "latency_ms_p95": _p95([item.latency_ms for item in observations]),
+            "resource_bytes_mean": _mean([float(item.resource_bytes) for item in observations]),
+            "request_count_mean": _mean([float(item.request_count) for item in observations]),
+            "retry_count_mean": _mean([float(item.retry_count) for item in observations]),
+        }
+    )
+    modes = set(evidence_mode_counts)
+    overall_evidence_mode = (
+        next(iter(modes)) if len(modes) == 1 else "mixed"
+    )
+    qualification_status = "not_evidenced"
+    qualification_reason = "source_revision_missing"
+    if source_revision is not None:
+        if overall_evidence_mode != "live":
+            qualification_reason = "synthetic_or_mixed_evidence_cannot_qualify_live_quality"
+        elif approval_status != "approved":
+            qualification_reason = "thresholds_not_approved"
+        else:
+            failures: list[str] = []
+            unavailable: list[str] = []
+            for name, raw_bounds in threshold_values.items():
+                bounds = _mapping(raw_bounds, f"thresholds.{name}")
+                value = summary.get(name)
+                if not isinstance(value, (int, float)):
+                    unavailable.append(name)
+                    continue
+                if "min" in bounds and value < bounds["min"]:
+                    failures.append(name)
+                if "max" in bounds and value > bounds["max"]:
+                    failures.append(name)
+            if unavailable:
+                qualification_reason = "threshold_metrics_unavailable:" + ",".join(sorted(unavailable))
+            elif failures:
+                qualification_status = "fail"
+                qualification_reason = "thresholds_failed:" + ",".join(sorted(failures))
+            else:
+                qualification_status = "pass"
+                qualification_reason = "approved_thresholds_satisfied"
+
+    report: dict[str, object] = {
+        "schema_version": _REPORT_SCHEMA_VERSION,
         "dataset_id": dataset_id,
         "dataset_sha256": dataset_sha256,
         "results_sha256": results_sha256,
+        "thresholds_sha256": thresholds_sha256,
+        "source_revision": source_revision,
         "evaluation_time": now.astimezone(UTC).isoformat(),
+        "evidence_mode": overall_evidence_mode,
+        "quality_claim": (
+            "synthetic_contract_fixture_not_live_quality"
+            if overall_evidence_mode == "synthetic"
+            else "mixed_synthetic_and_live_observations"
+            if overall_evidence_mode == "mixed"
+            else "live_observations_require_independent_review"
+        ),
+        "qualification": {
+            "status": qualification_status,
+            "reason": qualification_reason,
+            "threshold_approval_status": approval_status or "not_approved",
+            "threshold_owner": registry.get("owner"),
+            "threshold_approval_reference": registry.get("approval_reference"),
+        },
+        "counts": {
+            "case_count": len(cases),
+            "challenge_class_counts": dict(sorted(challenge_counts.items())),
+            "completion_status_counts": dict(sorted(completion_counts.items())),
+            "failure_mode_counts": dict(sorted(failure_counts.items())),
+            "support_status_counts": dict(sorted(support_counts.items())),
+            "evidence_mode_counts": dict(sorted(evidence_mode_counts.items())),
+        },
         "methodology": {
             "aggregation": "macro-average per case; null metrics are excluded",
             "citation_grounding": (
                 "heuristic lexical overlap; cited URL must exist in retrieved evidence and "
                 "at least 50% of non-stopword claim tokens must occur in one cited source"
             ),
-            "freshness": (
-                "explicit case max_age_seconds and five-minute future clock-skew allowance"
+            "evidence_quality_score": (
+                "mean of retrieval recall, source-diversity coverage, extraction coverage, "
+                "and available citation-grounding/freshness metrics; not factual truth"
             ),
+            "outcome_correctness_rate": (
+                "expected completion status and failure classification match, and duplicate "
+                "retrieval count does not exceed the case limit"
+            ),
+            "latency_p95": "nearest-rank 95th percentile across case latency_ms measurements",
+            "freshness": "explicit case max_age_seconds and five-minute future clock-skew allowance",
             "truth_boundary": (
                 "metrics measure observed retrieval/evidence properties, not factual truth"
             ),
         },
-        "summary": {name: _mean(values) for name, values in metric_values.items()},
+        "summary": summary,
         "cases": case_reports,
     }
-
+    report["report_sha256"] = _report_digest(report)
+    validate_report(report)
+    return report
 
 def _format_metric(value: object) -> str:
     if value is None:
