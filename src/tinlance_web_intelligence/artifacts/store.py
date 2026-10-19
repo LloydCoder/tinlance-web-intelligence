@@ -4,7 +4,7 @@ The memory implementation is for tests and development only. Production workers 
 PostgresArtifactStore, whose reads are tenant-scoped and whose content hashes are verified.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass  # noqa: I001
 from datetime import datetime
 from hashlib import sha256
 from typing import Protocol
