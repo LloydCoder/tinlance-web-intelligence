@@ -88,6 +88,12 @@ _MAX_RESOURCE_BYTES = 100_000_000
 _MAX_REQUEST_COUNT = 10_000
 _MAX_RETRY_COUNT = 100
 _MAX_DUPLICATES = 10_000
+_ALLOWED_CHALLENGE_CLASSES = frozenset({
+    "baseline_retrieval", "stale_evidence", "unsupported_claim", "redirect_ssrf",
+    "tenant_scope_denial", "capture_failure", "javascript_heavy", "pagination_dedup",
+    "conflicting_sources", "transient_recovery", "anti_bot_challenge",
+    "unsupported_content_type",
+})
 
 
 def _mapping(value: object, field: str) -> Mapping[str, object]:
@@ -168,6 +174,8 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
         raise BenchmarkError("dataset must be valid UTF-8 JSON") from exc
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise BenchmarkError("unsupported dataset schema_version")
+    if set(payload) != {"schema_version", "dataset_id", "description", "cases"}:
+        raise BenchmarkError("dataset fields do not match schema version 1.1.0")
     dataset_id = _string(payload.get("dataset_id"), "dataset_id")
     cases: list[BenchmarkCase] = []
     seen: set[str] = set()
@@ -198,6 +206,15 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
             raise BenchmarkError(f"cases[{index}].evidence_mode is invalid")
         if type(max_duplicates) is not int or not 0 <= max_duplicates <= _MAX_DUPLICATES:
             raise BenchmarkError(f"cases[{index}].max_duplicate_retrievals is invalid")
+        if set(row) != {
+            "case_id", "expected_urls", "expected_domains", "expected_phrases",
+            "max_age_seconds", "expected_failure_mode", "challenge_class", "support_status",
+            "expected_completion_status", "evidence_mode", "max_duplicate_retrievals",
+        }:
+            raise BenchmarkError(f"cases[{index}] fields do not match schema version 1.1.0")
+        challenge_class = _string(row.get("challenge_class"), f"cases[{index}].challenge_class")
+        if challenge_class not in _ALLOWED_CHALLENGE_CLASSES:
+            raise BenchmarkError(f"cases[{index}].challenge_class is invalid")
         cases.append(
             BenchmarkCase(
                 case_id=case_id,
@@ -219,6 +236,13 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
                 max_age_seconds=max_age,
                 expected_failure_mode=failure_mode,
                 challenge_class=challenge_class,
+                support_status=_string(row.get("support_status"), "support_status"),
+                expected_completion_status=_string(
+                    row.get("expected_completion_status"), "expected_completion_status"
+                ),
+                evidence_mode=_string(row.get("evidence_mode"), "evidence_mode"),
+                max_duplicate_retrievals=row.get("max_duplicate_retrievals"),
+                challenge_class=challenge_class,
                 support_status=support_status,
                 expected_completion_status=completion_status,
                 evidence_mode=evidence_mode,
@@ -238,12 +262,19 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
         raise BenchmarkError("results must be valid UTF-8 JSON") from exc
     if payload.get("schema_version") != _SCHEMA_VERSION:
         raise BenchmarkError("unsupported results schema_version")
+    if set(payload) != {"schema_version", "dataset_id", "cases"}:
+        raise BenchmarkError("results fields do not match schema version 1.1.0")
     if payload.get("dataset_id") != expected_dataset_id:
         raise BenchmarkError("results dataset_id does not match dataset")
     observations: list[CaseObservation] = []
     seen: set[str] = set()
     for index, item in enumerate(_list(payload.get("cases"), "results.cases")):
         row = _mapping(item, f"results.cases[{index}]")
+        if set(row) != {
+            "case_id", "retrieved", "claims", "failure_mode", "completion_status",
+            "latency_ms", "resource_bytes", "request_count", "retry_count", "evidence_mode",
+        }:
+            raise BenchmarkError(f"results.cases[{index}] fields do not match schema version 1.1.0")
         case_id = _string(row.get("case_id"), f"results.cases[{index}].case_id")
         if case_id in seen:
             raise BenchmarkError(f"duplicate result case_id: {case_id}")
@@ -253,6 +284,8 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
             _list(row.get("retrieved"), f"results.cases[{index}].retrieved")
         ):
             evidence = _mapping(raw_evidence, f"results.cases[{index}].retrieved[{evidence_index}]")
+            if set(evidence) != {"url", "retrieved_at", "title", "text"}:
+                raise BenchmarkError("retrieved evidence fields do not match schema")
             retrieved.append(
                 Evidence(
                     url=_url(evidence.get("url"), "retrieved.url"),
@@ -266,6 +299,8 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
             _list(row.get("claims"), f"results.cases[{index}].claims")
         ):
             claim = _mapping(raw_claim, f"results.cases[{index}].claims[{claim_index}]")
+            if set(claim) != {"text", "citations"}:
+                raise BenchmarkError("claim fields do not match schema")
             citations = tuple(
                 _url(url, "claim.citations[]")
                 for url in _list(claim.get("citations"), "claim.citations")
@@ -434,6 +469,8 @@ def evaluate(
     """Evaluate recorded observations deterministically; no network or truth judgment is performed."""
     if now.tzinfo is None or now.utcoffset() is None:
         raise BenchmarkError("evaluation now must be timezone-aware")
+    if not cases or not observations:
+        raise BenchmarkError("evaluation requires at least one case and one observation")
     for field, value in (("dataset_sha256", dataset_sha256), ("results_sha256", results_sha256)):
         if not re.fullmatch(r"[0-9a-f]{64}", value):
             raise BenchmarkError(f"{field} must be a lowercase SHA-256 digest")
