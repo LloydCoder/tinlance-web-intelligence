@@ -16,6 +16,7 @@ def test_defaults_are_valid() -> None:
     {"TWI_REQUEST_TIMEOUT_SECONDS": "999"},
     {"TWI_ALLOWED_SCHEMES": "file,https"},
     {"TWI_ENV": "prod"},
+    {"TWI_METRICS_TOKEN": "short"},
 ])
 def test_invalid_settings_are_rejected(env: dict[str, str]) -> None:
     with pytest.raises(ConfigurationError):
