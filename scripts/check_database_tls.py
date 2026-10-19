@@ -14,10 +14,13 @@ def validate_database_url(dsn: str) -> None:
         host = parsed.hostname
         username = parsed.username
         password = parsed.password
+        port = parsed.port
     except ValueError as exc:
         raise ValueError("database URL is malformed") from exc
     if parsed.scheme not in {"postgres", "postgresql"} or not host or not parsed.path.strip("/"):
         raise ValueError("a PostgreSQL URL with host and database is required")
+    if port is not None and not 1 <= port <= 65535:
+        raise ValueError("database port must be between 1 and 65535")
     if not username or password is None:
         raise ValueError("database credentials are required")
     if parse_qs(parsed.query, keep_blank_values=True).get("sslmode") != ["verify-full"]:
