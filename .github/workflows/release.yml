@@ -54,6 +54,10 @@ jobs:
           python -m pip install cyclonedx-bom==7.5.0
           python -m pip check
           mkdir -p dist
+      - name: Build and validate exact-SHA W15 evidence index
+        run: |
+          python scripts/build_w15_evidence_pack.py --gates docs/readiness/w15-gates.json --output dist/w15-evidence-pack.json --revision "$GITHUB_SHA"
+          python scripts/validate_w15_evidence_pack.py --pack dist/w15-evidence-pack.json --revision "$GITHUB_SHA"
       - name: Audit release dependency environment
         run: pip-audit --strict --progress-spinner off --format json --output dist/pip-audit.json -r requirements-dev.txt
       - name: Run quality, type, security, dependency, and database tests
