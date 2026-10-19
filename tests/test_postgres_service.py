@@ -136,8 +136,10 @@ def test_backup_and_restore_scripts_use_service_names_not_dsn_arguments() -> Non
     assert "TWI_BACKUP_DATABASE_URL" in backup
     assert '--dbname="service=twi_backup"' in backup
     assert '"$TWI_DATABASE_URL"' not in backup
+    assert "unset TWI_BACKUP_DATABASE_URL" in backup
     assert "TWI_RESTORE_DATABASE_URL" in restore
     assert "TWI_PRIMARY_DATABASE_URL" in restore
     assert '--dbname="service=twi_restore"' in restore
     assert 'python3 "$script_dir/validate_restore_target.py"' in restore
     assert '--dbname="$TWI_DATABASE_URL"' not in restore
+    assert "unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL" in restore
