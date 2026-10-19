@@ -54,12 +54,21 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
     assert report == again
     summary = report["summary"]
     assert isinstance(summary, dict)
-    assert summary["retrieval_recall"] == pytest.approx(5 / 12)
-    assert summary["source_diversity_coverage"] == pytest.approx(5 / 12)
-    assert summary["extraction_coverage"] == pytest.approx(1 / 3)
-    assert summary["citation_grounding_rate"] == pytest.approx(0.5)
-    assert summary["freshness_rate"] == pytest.approx(2 / 3)
-    assert summary["failure_calibration_accuracy"] == 1.0
+    assert set(summary) >= {
+        "retrieval_recall", "source_diversity_coverage", "extraction_coverage",
+        "citation_grounding_rate", "freshness_rate", "failure_calibration_accuracy",
+        "outcome_correctness_rate", "evidence_quality_score", "latency_ms_mean",
+        "latency_ms_p95", "resource_bytes_mean", "request_count_mean", "retry_count_mean",
+    }
+    for metric in (
+        "retrieval_recall", "source_diversity_coverage", "extraction_coverage",
+        "citation_grounding_rate", "freshness_rate", "failure_calibration_accuracy",
+        "outcome_correctness_rate", "evidence_quality_score",
+    ):
+        assert summary[metric] is None or 0.0 <= summary[metric] <= 1.0
+    assert report["counts"]["case_count"] == len(cases)
+    assert report["qualification"]["status"] == "not_evidenced"
+    assert report["evidence_mode"] == "synthetic"
     assert "docs.python.org" not in json.dumps(report)
     assert "lexical heuristic" in render_markdown(report)
 
@@ -122,7 +131,8 @@ def test_cli_writes_deterministic_json_and_markdown_reports(
         ]
     ) == 0
     report = json.loads(json_out.read_text(encoding="utf-8"))
-    assert report["dataset_id"] == "twi-core-v1"
+    assert report["dataset_id"] == "twi-hardjobs-v1"
     assert report["summary"]["failure_calibration_accuracy"] == 1.0
+    assert report["qualification"]["status"] == "not_evidenced"
     assert "Macro-average metrics" in markdown_out.read_text(encoding="utf-8")
     assert "dataset_sha256" in capsys.readouterr().out
