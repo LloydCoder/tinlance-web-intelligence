@@ -284,25 +284,33 @@ class SQLiteUsageLedger:
                     self._connection.rollback()
                 raise
 
-    def usage_total(self, *, tenant_id: str, subject_id: str, dimension: str,
-                    period_start: str) -> int:
+    def usage_total(
+        self, *, tenant_id: str, subject_id: str | None, dimension: str, period_start: str
+    ) -> int:
+        sql = (
+            "SELECT COALESCE(SUM(quantity),0) AS quantity FROM twi_usage_events "
+            "WHERE tenant_id=? AND dimension=? AND period_start=?"
+        )
+        parameters: list[str] = [tenant_id, dimension, period_start]
+        if subject_id is not None:
+            sql += " AND subject_id=?"
+            parameters.append(subject_id)
         with self._lock:
-            row = self._connection.execute(
-                """SELECT COALESCE(SUM(quantity),0) AS quantity FROM twi_usage_events
-                   WHERE tenant_id=? AND subject_id=? AND dimension=? AND period_start=?""",
-                (tenant_id, subject_id, dimension, period_start),
-            ).fetchone()
+            row = self._connection.execute(sql, parameters).fetchone()
         return int(row["quantity"])
 
     def list_events(
-        self, *, tenant_id: str, subject_id: str, limit: int = 100,
+        self, *, tenant_id: str, subject_id: str | None, limit: int = 100,
         dimension: str | None = None, period_start: str | None = None,
         after: tuple[str, str] | None = None,
     ) -> list[UsageEvent]:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 501:
             raise ValueError("limit must be between 1 and 501")
-        sql = "SELECT * FROM twi_usage_events WHERE tenant_id=? AND subject_id=?"
-        parameters: list[str | int] = [tenant_id, subject_id]
+        sql = "SELECT * FROM twi_usage_events WHERE tenant_id=?"
+        parameters: list[str | int] = [tenant_id]
+        if subject_id is not None:
+            sql += " AND subject_id=?"
+            parameters.append(subject_id)
         if dimension is not None:
             sql += " AND dimension=?"
             parameters.append(dimension)
