@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
-
 from scripts.verify_staging import VerificationError, verify_staging
+
+PROBE_CREDENTIAL = "unit-test-value-123"
 
 
 def test_staging_probe_rejects_non_https_and_url_credentials() -> None:
@@ -50,13 +51,13 @@ def test_staging_probe_accepts_a_valid_platform_token_without_creating_a_job() -
             return 404, b'{}'
         if "/v1/jobs/" in url:
             assert method == "GET"
-            assert token == "platform-probe-token"
+            assert token == PROBE_CREDENTIAL
             assert body is None
             return 404, b'{"detail":"job not found"}'
         raise AssertionError("unexpected request")
 
     result = verify_staging(
-        "https://staging.example.test", "platform-probe-token", requester=requester
+        "https://staging.example.test", PROBE_CREDENTIAL, requester=requester
     )
     assert result["ok"] is True
     assert result["checks"]["platform_token_authenticated"]["status_code"] == 404
