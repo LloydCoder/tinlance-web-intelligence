@@ -43,7 +43,10 @@
       ]
     },
     "source_revision": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "pattern": "^[0-9a-f]{40}$"
     },
     "evidence_pack_reference": {
