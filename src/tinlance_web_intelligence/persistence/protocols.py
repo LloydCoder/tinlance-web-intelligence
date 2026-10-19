@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from tinlance_web_intelligence.commercial.usage_ledger import UsageEvent
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import OutboxEvent
 from tinlance_web_intelligence.jobs.model import Job
-from tinlance_web_intelligence.commercial.usage_ledger import UsageEvent
 
 
 class JobRepository(Protocol):
