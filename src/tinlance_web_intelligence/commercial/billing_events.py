@@ -191,3 +191,26 @@ def reconcile_usage(
             )
         )
     return findings
+
+
+
+def decide_event_order(
+    *, current_revision: int | None, incoming_revision: int | None
+) -> str:
+    """Order events only with a provider-guaranteed monotonic resource revision.
+
+    Timestamps alone are not treated as a total order. If the provider cannot supply
+    comparable revisions, the adapter must refresh authoritative state or request review.
+    """
+    for revision in (current_revision, incoming_revision):
+        if revision is not None and (
+            isinstance(revision, bool) or not isinstance(revision, int) or revision < 0
+        ):
+            raise ValueError("provider resource revisions must be non-negative integers")
+    if current_revision is None or incoming_revision is None:
+        return "manual_review"
+    if incoming_revision > current_revision:
+        return "apply"
+    if incoming_revision < current_revision:
+        return "stale"
+    return "manual_review"
