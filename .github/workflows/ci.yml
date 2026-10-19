@@ -89,6 +89,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Validate production-like staging Compose topology
+        env:
+          TWI_DATABASE_URL: postgresql://twi_runtime:ci-runtime-password@db.example/twi?sslmode=verify-full
+          TWI_MIGRATION_DATABASE_URL: postgresql://twi_migrator:ci-migration-password@db.example/twi?sslmode=verify-full
+          TWI_IDENTITY_ISSUER: https://platform.example.test
+          TWI_IDENTITY_AUDIENCE: tinlance-web-intelligence
+          TWI_IDENTITY_JWKS_URL: https://platform.example.test/.well-known/jwks.json
+          TWI_BROWSER_BROKER_TOKEN: ci-only-browser-broker-token-placeholder-2026
+          TWI_BROWSER_PROXY_USERNAME: browser-worker
+          TWI_BROWSER_PROXY_PASSWORD: ci-only-browser-proxy-secret-2026
+          TWI_WORLD_INTELLIGENCE_URL: https://world-intelligence.example.test
+          TWI_WORLD_INTELLIGENCE_TOKEN: ci-only-world-intelligence-token-placeholder-2026
+        run: docker compose -f deployments/compose/staging.yml config --quiet
       - name: Validate isolated Compose topology
         run: docker compose -f deployments/compose/browser-isolated.yml config --quiet
       - name: Build all isolated service images
