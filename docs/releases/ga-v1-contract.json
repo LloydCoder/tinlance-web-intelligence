@@ -4,8 +4,8 @@
   "product_brand": "Provenel",
   "release_track": "ga-v1",
   "decision": "not_certified",
-  "source_revision": "20d0434c0616d993d0a8b857fdd6d856d37f8ff9",
-  "evidence_pack_reference": "docs/readiness/w15-gates.json",
+  "source_revision": null,
+  "evidence_pack_reference": "dist/w15-evidence-pack.json",
   "evidence_pack_sha256": "",
   "support_contract": {
     "published": false,
