@@ -6,7 +6,7 @@
     {"gate":"repository.monitor_persistence","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_monitors_repository.py"},
     {"gate":"repository.ci_matrix","status":"pass","owner":"TWI engineering","evidence_reference":".github/workflows/ci.yml"},
     {"gate":"external.branch_governance","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
-    {"gate":"external.consumer_approvals","status":"not_evidenced","owner":"unassigned","evidence_reference":"contracts/consumer-matrix.json"},
+    {"gate":"external.consumer_approvals","status":"fail","owner":"Platform integration owner","evidence_reference":"contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"},
     {"gate":"external.deployment_and_security","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
     {"gate":"external.slo_alerts_and_oncall","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
     {"gate":"external.privacy_retention_and_risk","status":"not_evidenced","owner":"unassigned","evidence_reference":""},

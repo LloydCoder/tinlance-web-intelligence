@@ -1,4 +1,4 @@
-"""Validate pinned consumer contract metadata without inventing external revisions."""
+"""Validate immutable consumer snapshots and their explicit compatibility status."""
 
 from __future__ import annotations
 
@@ -29,15 +29,23 @@ def validate(matrix_path: Path) -> dict[str, object]:
         fixture = (root / item["fixture"]).resolve()
         if root not in fixture.parents or not fixture.is_file():
             raise ValueError(f"missing or out-of-tree fixture for {name}")
-        if state == "pass":
+        if state in {"pass", "fail"}:
             if not isinstance(revision, str) or not _REVISION.fullmatch(revision):
-                raise ValueError(f"passing consumer {name} requires a full immutable revision")
+                raise ValueError(f"{state} consumer {name} requires a full immutable revision")
             snapshot = json.loads(fixture.read_text(encoding="utf-8"))
             if snapshot.get("revision") != revision:
                 raise ValueError(f"consumer fixture revision mismatch for {name}")
+            if snapshot.get("status") != state:
+                raise ValueError(f"consumer fixture status mismatch for {name}")
         elif state == "not_evidenced":
             if revision is not None:
-                raise ValueError(f"not-evidenced consumer {name} cannot imply a revision")
+                if not isinstance(revision, str) or not _REVISION.fullmatch(revision):
+                    raise ValueError(f"pinned consumer {name} requires a full immutable revision")
+                snapshot = json.loads(fixture.read_text(encoding="utf-8"))
+                if snapshot.get("revision") != revision:
+                    raise ValueError(f"consumer fixture revision mismatch for {name}")
+                if snapshot.get("status") != state:
+                    raise ValueError(f"consumer fixture status mismatch for {name}")
         else:
             raise ValueError(f"invalid consumer status for {name}")
         results.append({"name": name, "status": state})
