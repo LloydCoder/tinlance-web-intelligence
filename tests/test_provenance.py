@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Any
 
@@ -9,7 +9,10 @@ import pytest
 
 from tinlance_web_intelligence.contracts.provenance import (
     AcquisitionProvenance,
+    FreshnessStatus,
     ProvenanceError,
+    assess_freshness,
+    validate_evidence_pack,
 )
 
 
@@ -70,3 +73,49 @@ def test_manifest_rejects_credentials_in_source_url() -> None:
             redirect_count=0,
             extractor_version="twi-html-extractor-v1",
         )
+
+
+def test_freshness_policy_boundaries_and_clock_skew() -> None:
+    now = datetime(2026, 10, 19, 12, 0, tzinfo=UTC)
+    assert assess_freshness(
+        now - timedelta(hours=1), now=now, max_age=timedelta(hours=1)
+    ) is FreshnessStatus.FRESH
+    assert assess_freshness(
+        now - timedelta(hours=1, seconds=1), now=now, max_age=timedelta(hours=1)
+    ) is FreshnessStatus.STALE
+    assert assess_freshness(
+        now + timedelta(minutes=6), now=now, max_age=timedelta(hours=1)
+    ) is FreshnessStatus.FUTURE_DATED
+    assert assess_freshness(
+        now + timedelta(minutes=2), now=now, max_age=timedelta(hours=1)
+    ) is FreshnessStatus.FRESH
+
+
+def test_freshness_policy_rejects_naive_timestamps_and_invalid_age() -> None:
+    now = datetime(2026, 10, 19, 12, 0, tzinfo=UTC)
+    with pytest.raises(ProvenanceError, match="timezone-aware"):
+        assess_freshness(datetime(2026, 10, 19), now=now, max_age=timedelta(hours=1))
+    with pytest.raises(ProvenanceError, match="max_age must be positive"):
+        assess_freshness(now, now=now, max_age=timedelta(0))
+
+
+def test_evidence_pack_requires_consistent_artifact_provenance() -> None:
+    manifest = _manifest()
+    serialized = manifest.to_dict()
+    pack: dict[str, object] = {
+        "artifact_id": f"sha256:{manifest.content_sha256}",
+        "content_sha256": manifest.content_sha256,
+        "status_code": manifest.status_code,
+        "content_type": manifest.content_type,
+        "retrieved_at": manifest.retrieved_at.isoformat(),
+        "provenance": serialized,
+    }
+    validate_evidence_pack(pack)
+    pack["content_sha256"] = "a" * 64
+    with pytest.raises(ProvenanceError, match="does not match provenance"):
+        validate_evidence_pack(pack)
+
+
+def test_evidence_pack_rejects_missing_provenance() -> None:
+    with pytest.raises(ProvenanceError, match="manifest is missing"):
+        validate_evidence_pack({"artifact_id": "sha256:" + "a" * 64})
