@@ -76,6 +76,9 @@ jobs:
             cd "$RUNNER_TEMP/twi-source-2"
             python -m build --outdir "$RUNNER_TEMP/twi-build-2"
           )
+          for archive in "$RUNNER_TEMP"/twi-build-1/*.tar.gz "$RUNNER_TEMP"/twi-build-2/*.tar.gz; do
+            python scripts/normalize_sdist.py "$archive" "$SOURCE_DATE_EPOCH"
+          done
           python - <<'PY'
           import hashlib
           import os
