@@ -9,7 +9,10 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from scripts.check_database_tls import validate_database_url
+if __package__:
+    from scripts.check_database_tls import validate_database_url
+else:  # Executed directly by the operational shell scripts.
+    from check_database_tls import validate_database_url
 
 _SERVICE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,62}$")
 _ENV_NAME = re.compile(r"^TWI_(?:BACKUP|RESTORE|PRIMARY)_DATABASE_URL$")
