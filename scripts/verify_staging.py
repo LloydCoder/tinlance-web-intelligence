@@ -27,8 +27,15 @@ class VerificationError(ValueError):
 
 
 class _NoRedirectHandler(HTTPRedirectHandler):
-    def redirect_request(self, req: Request, fp: Any, code: int, msg: str,
-                         headers: Any, newurl: str) -> None:
+    def redirect_request(
+        self,
+        req: Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> None:
         return None
 
 
@@ -73,10 +80,14 @@ def verify_staging(
     *,
     requester: Requester | None = None,
 ) -> dict[str, Any]:
-    parsed = urlsplit(base_url)
+    try:
+        parsed = urlsplit(base_url)
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise VerificationError("TWI_STAGING_BASE_URL is malformed") from exc
     if (
         parsed.scheme != "https"
-        or not parsed.hostname
+        or not hostname
         or parsed.username is not None
         or parsed.password is not None
         or parsed.query
@@ -118,7 +129,7 @@ def verify_staging(
     if token is not None:
         probe_id = str(uuid.uuid4())
         status, _ = send(f"{base}/v1/jobs/{probe_id}", "GET", token, None)
-        checks["platform_token_accepted"] = {
+        checks["platform_token_authenticated"] = {
             "ok": status in {403, 404},
             "status_code": status,
         }
