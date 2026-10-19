@@ -68,7 +68,7 @@ class PostgresSourceEvidenceOutbox:
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] != 2:
+            if version is None or version["version"] < 3:
                 raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod

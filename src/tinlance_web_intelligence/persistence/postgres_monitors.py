@@ -60,7 +60,7 @@ class PostgresMonitorRepository:
                 or row["monitors"] is None
                 or row["runs"] is None
                 or version is None
-                or version["version"] != 2
+                or version["version"] < 3
             ):
                 raise RuntimeError("PostgreSQL monitor schema is missing; run the migration job")
 

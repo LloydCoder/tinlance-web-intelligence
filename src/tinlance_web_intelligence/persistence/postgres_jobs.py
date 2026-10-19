@@ -54,7 +54,11 @@ class PostgresJobRepository:
         migrations = files("tinlance_web_intelligence.persistence.migrations")
         with self._pool.connection() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
-            for name in ("001_production_postgres.sql", "002_monitors.sql"):
+            for name in (
+                "001_production_postgres.sql",
+                "002_monitors.sql",
+                "003_commercial_usage.sql",
+            ):
                 migration = migrations.joinpath(name)
                 if not migration.is_file():
                     self._pool.close()
@@ -75,7 +79,7 @@ class PostgresJobRepository:
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] != 2:
+            if version is None or version["version"] < 3:
                 raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod
