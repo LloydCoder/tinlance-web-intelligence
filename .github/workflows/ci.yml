@@ -151,11 +151,20 @@ jobs:
           python -m pip check
           python -m pip install cyclonedx-bom==7.5.0
           python -m pip check
-      - name: Build twice and verify byte-for-byte reproducibility
+      - name: Build twice from clean source archives and verify reproducibility
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          python -m build --outdir "$RUNNER_TEMP/twi-build-1"
-          python -m build --outdir "$RUNNER_TEMP/twi-build-2"
+          mkdir -p "$RUNNER_TEMP/twi-source-1" "$RUNNER_TEMP/twi-source-2"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-1"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-2"
+          (
+            cd "$RUNNER_TEMP/twi-source-1"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-1"
+          )
+          (
+            cd "$RUNNER_TEMP/twi-source-2"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-2"
+          )
           python - <<'PY'
           import hashlib
           import os
