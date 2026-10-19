@@ -7,8 +7,8 @@ This plan is evidence-gated. Do not mark W15-B complete based on documentation, 
 - [x] B3 — Implement deterministic package builder and validator with canonical serialization, strict schema checks, stable export IDs, size limits, and integrity verification.
 - [x] B4 — Add dedicated-scope, tenant/subject-scoped export endpoint and deployment source-revision binding.
 - [x] B5 — Add package schema, API docs, and focused adversarial tests.
-- [ ] B6 — Run focused unit/API/schema tests, full `make check`, Python 3.12/3.13 CI, package reproducibility, and browser isolation workflow on exact PR head.
-- [ ] B7 — Fix all test/lint/type/security/contract failures and audit changed code plus existing provenance/artifact boundaries.
+- [x] B6 — Focused unit/API/schema tests, full CI, Python 3.12/3.13 checks, reproducible artifact validation, and browser isolation passed on exact PR head `c9331b33e997bae010ada4bc4cebd3c36ee42b4a` in [run #39303747429](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39303747429).
+- [x] B7 — Fixed lint and typing blockers; forensic review covered authorization, tenant isolation, metadata redaction, deterministic serialization, tamper validation, artifact integrity, deployment source revision, tool catalog parity, and external consumer mismatch. CI reports lint/type/security/test success on the reviewed head.
 - [ ] B8 — Merge only after required checks are green on the exact reviewed head; verify post-merge main CI.
 - [ ] B9 — Update roadmap/readiness documentation with exact source revision, run URLs, test evidence, residual risks, and external gates before W15-C.
 
