@@ -19,17 +19,25 @@ A green CI run is repository evidence, not proof of production deployment, branc
 
 | Area | Current evidence | Classification |
 |---|---|---|
-| TWI main CI | Main revision `cf992a6fd11b0ff44e6de377af40812af1221790`; latest observed main CI completed successfully. | Repository verified |
+| TWI main CI | Baseline revision `cf992a6fd11b0ff44e6de377af40812af1221790`; later main CI also passed on `3b96b06caf9f0afe8a9fdec96ff64e42e3b13246` in [run 39224876152](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39224876152). | Repository verified |
 | Python and test gates | CI runs Python 3.12 and 3.13 quality/type/security lint, unit/contract/PostgreSQL integration tests, migration checks, Chromium smoke tests, and a browser-isolation job. | Repository verified |
 | Browser network isolation | CI builds the isolated Compose services, checks that direct public egress is blocked while proxy access works, and launches Chromium with its sandbox enabled. This proves the CI topology, not the target deployment's network policy. | Repository verified; deployment unverified |
 | Release workflow | `.github/workflows/release.yml` runs on `v*` tags or manual dispatch, runs quality/type/security/database checks, validates the development Compose configuration, builds the Python distribution, installs the wheel, and runs `scripts/verify_release.py`. | Repository verified |
-| Release provenance | The reviewed release workflow does not itself demonstrate a completed signed release, SBOM publication, artifact attestation, or independent provenance verification. Do not infer these from a successful build. | Proposed / unverified |
-| Main branch protection | The connected repository inspection used for this audit did not expose authoritative branch ruleset/protection details. No conclusion is drawn that rulesets are absent or present. | Unverified |
+| Release provenance | W7 PR #26 verified reproducible wheel/sdist outputs and CycloneDX SBOM generation. A completed signed release, published artifact attestation, and independent provenance/signature verification have not yet been evidenced. | Partially repository verified; remaining release evidence unverified |
+| Main branch governance | Recheck on 2026-10-19: the GitHub branches API returned `protected=false`, `protection.enabled=false`, and required status-check enforcement `off` for `main`; the repository rulesets API returned an empty list. The connected GitHub integration's dedicated branch-protection endpoint returned 403 because its installation lacks administration-read access. The successful branch/ruleset responses are direct evidence that no repository-level protection is currently reported; inherited organization rules are not proven by this repository-only read. | Repository-level protection absent; inherited organization rules not verified |
 | TADL ecosystem integration | TADL main commit `e249aef82b096d99345b7482c8f39c031dfee77a`; post-merge Ecosystem Integration run [39208247623](https://github.com/LloydCoder/tinlance-agent-developer/actions/runs/39208247623) completed successfully. | Repository verified |
-| TWI reviewed pin | TADL `ecosystem.lock.json` pins TWI to `cf992a6fd11b0ff44e6de377af40812af1221790`, matching the audited TWI main revision. | Repository verified |
+| TWI reviewed pin | TADL `ecosystem.lock.json` pins TWI to `cf992a6fd11b0ff44e6de377af40812af1221790`, matching the audited TWI main revision at that time. The pin must be reconciled to a reviewed release SHA before a release candidate is certified. | Repository verified at baseline; current release pin reconciliation required |
 | World Intelligence security pin | TADL lock and manifest pin World Intelligence to `a156844575795b5fe9ce80b6e090a0d828e592d4`, the merged Platform-JWT security fix. The follow-up TADL main integration run passed against the updated lock. | Repository verified |
 | Production deployment | No deployment-specific evidence has been supplied or verified for production PostgreSQL, secret-manager rotation, actual API/browser egress, monitoring, backup restore, or on-call response. | Operationally unverified |
 | Private-beta approval | The existing private-beta checklist remains unchecked; no authorized release approval is recorded here. | Not certified |
+
+## Current recheck — 2026-10-19
+
+- Latest observed `main` commit at recheck: `3b96b06caf9f0afe8a9fdec96ff64e42e3b13246`.
+- Main CI [run 39224876152](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39224876152) passed all four jobs. A separate run previously observed as cancelled is not treated as a failure or as a passing run; use the exact main run above as the current successful evidence.
+- Open-PR search returned no open pull requests at recheck.
+- `main` is reported unprotected by the branches API and no repository rulesets were returned. This is a confirmed W7 blocker, not a documentation-only issue. The connected integration cannot mutate or fully inspect branch governance because its GitHub installation lacks the required administration permissions.
+- Do not close G1 until an authorized owner enables enforceable rules and effective settings are read back. If inherited organization policy is relied on, capture evidence from the organization-level ruleset scope and prove it applies to this repository.
 
 ## W7 objective
 
