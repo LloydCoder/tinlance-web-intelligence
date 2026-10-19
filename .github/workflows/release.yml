@@ -3,7 +3,6 @@ name: Release readiness
 on:
   push:
     branches: ["work/w7-attestation-verification"]
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
