@@ -21,7 +21,7 @@ Expose a tenant-authorized, reproducible evidence package for successful fetch j
 - Resolve bytes by the recorded SHA-256 and verified tenant scope. Fail closed on absent content, digest mismatch, malformed provenance, or unavailable source revision.
 - Package format is `application/vnd.tinlance.twi-evidence+json`, schema `1.0.0`; maximum source content is 20 MB and maximum encoded package is 30 MB.
 - Export includes the exact captured bytes as base64, digest and size, content type, acquisition provenance, extractor version, and a full 40-character source commit SHA.
-- Export excludes raw source URLs, URL query values, tenant/subject identifiers, credentials, request tokens, and billing data.
+- Export metadata excludes raw source URLs, URL query parameters, tenant/subject identifiers, and billing data. Captured bytes remain unchanged and can themselves contain sensitive source text; the API is not a content-redaction layer.
 - Package bytes and `export_id` are deterministic for the same artifact, provenance, and source revision.
 - Verification detects content tampering, manifest mismatch, source revision mismatch when requested, and noncanonical serialization.
 - Explicitly state that provenance is an acquisition observation, not a claim of source truth, safety, completeness, or authority.
