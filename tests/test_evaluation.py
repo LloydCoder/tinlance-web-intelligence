@@ -22,7 +22,9 @@ _DATASET = _ROOT / "benchmarks/twi/v1/cases.json"
 _RESULTS = _ROOT / "benchmarks/twi/v1/sample_results.json"
 
 
-def _loaded() -> tuple[str, tuple[BenchmarkCase, ...], tuple[CaseObservation, ...], bytes, bytes]:
+def _loaded() -> tuple[
+    str, tuple[BenchmarkCase, ...], tuple[CaseObservation, ...], bytes, bytes
+]:
     dataset_raw = _DATASET.read_bytes()
     results_raw = _RESULTS.read_bytes()
     dataset_id, cases = load_dataset(dataset_raw)
