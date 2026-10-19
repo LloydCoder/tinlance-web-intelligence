@@ -17,6 +17,7 @@ from tinlance_web_intelligence.contracts.provenance import (
     validate_evidence_pack,
 )
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
+from tinlance_web_intelligence.monitors.service import MonitorService
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
 
@@ -30,6 +31,7 @@ class JobWorker:
         acquisition: WebAcquisitionService | None = None,
         search_provider: SearchProvider | None = None,
         browser_service: BrowserService | None = None,
+        monitor_service: MonitorService | None = None,
         allowed_kinds: tuple[str, ...] = ("search", "fetch"),
         lease_seconds: int = 180,
     ) -> None:
@@ -39,6 +41,7 @@ class JobWorker:
         self.acquisition = acquisition or WebAcquisitionService(SafeHTTPFetcher())
         self.search_provider = search_provider
         self.browser_service = browser_service
+        self.monitor_service = monitor_service
         self.lease_seconds = lease_seconds
 
     def run_once(self) -> bool:
@@ -70,6 +73,10 @@ class JobWorker:
         return True
 
     def _execute(self, job: Job) -> dict[str, Any]:
+        if job.kind == "monitor":
+            if self.monitor_service is None:
+                raise ValueError("monitor service is not configured")
+            return asyncio.run(self.monitor_service.execute(job))
         if job.kind == "browser":
             if self.browser_service is None:
                 raise BrowserCaptureError("browser_not_configured")

@@ -31,9 +31,12 @@ class Job:
     error_code: str | None = None
     cancel_requested: bool = False
     idempotency_key: str = ""
+    traceparent: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        value = asdict(self)
+        value.pop("traceparent", None)
+        return value
 
 
 class IdempotencyConflictError(ValueError):

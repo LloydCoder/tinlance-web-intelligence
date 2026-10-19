@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     subject_id TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser')),
+    kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser', 'monitor')),
     payload_json TEXT NOT NULL,
     payload_fingerprint TEXT NOT NULL,
     status TEXT NOT NULL CHECK (
@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     lease_until REAL,
     cancel_requested INTEGER NOT NULL DEFAULT 0,
     idempotency_key TEXT NOT NULL,
+    traceparent TEXT,
     UNIQUE (tenant_id, subject_id, idempotency_key)
 );
 CREATE INDEX IF NOT EXISTS jobs_claim_idx ON jobs(status, available_at, created_at);
@@ -78,18 +79,25 @@ class SQLiteJobRepository:
             self._connection.execute("PRAGMA journal_mode = WAL")
             self._connection.execute("PRAGMA synchronous = FULL")
         self._connection.executescript(_SCHEMA)
-        self._migrate_browser_job_kind()
+        self._migrate_job_schema()
 
-    def _migrate_browser_job_kind(self) -> None:
-        """Transactionally rebuild a W3 schema to permit browser jobs."""
+    def _migrate_job_schema(self) -> None:
+        """Transactionally extend legacy job-kind constraints and trace storage."""
         row = self._connection.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='jobs'"
         ).fetchone()
-        if row is None or "'browser'" in (row["sql"] or ""):
+        if row is None:
+            return
+        columns = {
+            item["name"] for item in self._connection.execute("PRAGMA table_info(jobs)").fetchall()
+        }
+        if "'monitor'" in (row["sql"] or "") and "traceparent" in columns:
             return
         with self._lock:
             self._connection.execute("BEGIN IMMEDIATE")
             try:
+                if "traceparent" not in columns:
+                    self._connection.execute("ALTER TABLE jobs ADD COLUMN traceparent TEXT")
                 self._connection.execute("DROP INDEX IF EXISTS jobs_claim_idx")
                 self._connection.execute("DROP INDEX IF EXISTS jobs_tenant_idx")
                 self._connection.execute("ALTER TABLE jobs RENAME TO jobs_w3_migration")
@@ -98,7 +106,9 @@ class SQLiteJobRepository:
                         job_id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         subject_id TEXT NOT NULL,
-                        kind TEXT NOT NULL CHECK (kind IN ('search', 'fetch', 'browser')),
+                        kind TEXT NOT NULL CHECK (
+                            kind IN ('search', 'fetch', 'browser', 'monitor')
+                        ),
                         payload_json TEXT NOT NULL,
                         payload_fingerprint TEXT NOT NULL,
                         status TEXT NOT NULL CHECK (
@@ -115,10 +125,22 @@ class SQLiteJobRepository:
                         lease_until REAL,
                         cancel_requested INTEGER NOT NULL DEFAULT 0,
                         idempotency_key TEXT NOT NULL,
+                        traceparent TEXT,
                         UNIQUE (tenant_id, subject_id, idempotency_key)
                     )"""
                 )
-                self._connection.execute("INSERT INTO jobs SELECT * FROM jobs_w3_migration")
+                self._connection.execute(
+                    """INSERT INTO jobs (
+                        job_id, tenant_id, subject_id, kind, payload_json, payload_fingerprint,
+                        status, result_json, error_code, created_at, updated_at, attempts,
+                        max_attempts, available_at, lease_owner, lease_until, cancel_requested,
+                        idempotency_key, traceparent
+                    ) SELECT job_id, tenant_id, subject_id, kind, payload_json,
+                        payload_fingerprint, status, result_json, error_code, created_at,
+                        updated_at, attempts, max_attempts, available_at, lease_owner,
+                        lease_until, cancel_requested, idempotency_key, traceparent
+                        FROM jobs_w3_migration"""
+                )
                 self._connection.execute("DROP TABLE jobs_w3_migration")
                 self._connection.execute(
                     "CREATE INDEX jobs_claim_idx ON jobs(status, available_at, created_at)"
@@ -140,8 +162,9 @@ class SQLiteJobRepository:
         kind: str,
         payload: dict[str, typing.Any],
         idempotency_key: str,
+        traceparent: str | None = None,
     ) -> Job:
-        if kind not in {"search", "fetch", "browser"}:
+        if kind not in {"search", "fetch", "browser", "monitor"}:
             raise ValueError("unsupported job kind")
         if not tenant_id or not subject_id or not idempotency_key:
             raise ValueError("tenant, subject, and idempotency key are required")
@@ -167,8 +190,8 @@ class SQLiteJobRepository:
                     """INSERT INTO jobs (
                         job_id, tenant_id, subject_id, kind, payload_json, payload_fingerprint,
                         status, created_at, updated_at, attempts, max_attempts, available_at,
-                        idempotency_key
-                    ) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, 0, ?, ?, ?)""",
+                        idempotency_key, traceparent
+                    ) VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?, 0, ?, ?, ?, ?)""",
                     (
                         job_id,
                         tenant_id,
@@ -181,6 +204,7 @@ class SQLiteJobRepository:
                         self._max_attempts,
                         time.time(),
                         idempotency_key,
+                        traceparent,
                     ),
                 )
                 row = self._connection.execute(
@@ -221,9 +245,9 @@ class SQLiteJobRepository:
             raise ValueError("worker ID and a 5–3600 second lease are required")
         if allowed_kinds is not None and (
             not allowed_kinds
-            or len(allowed_kinds) > 3
+            or len(allowed_kinds) > 4
             or len(set(allowed_kinds)) != len(allowed_kinds)
-            or any(kind not in {"search", "fetch", "browser"} for kind in allowed_kinds)
+            or any(kind not in {"search", "fetch", "browser", "monitor"} for kind in allowed_kinds)
         ):
             raise ValueError("allowed_kinds must contain unique supported job kinds")
         now = time.time()
@@ -267,6 +291,10 @@ class SQLiteJobRepository:
                     3: """SELECT * FROM jobs
                           WHERE status='queued' AND available_at <= ?
                             AND cancel_requested=0 AND kind IN (?, ?, ?)
+                          ORDER BY created_at, job_id LIMIT 1""",
+                    4: """SELECT * FROM jobs
+                          WHERE status='queued' AND available_at <= ?
+                            AND cancel_requested=0 AND kind IN (?, ?, ?, ?)
                           ORDER BY created_at, job_id LIMIT 1""",
                 }
                 if allowed_kinds is None:
@@ -469,4 +497,5 @@ class SQLiteJobRepository:
             error_code=row["error_code"],
             cancel_requested=bool(row["cancel_requested"]),
             idempotency_key=row["idempotency_key"],
+            traceparent=row["traceparent"],
         )

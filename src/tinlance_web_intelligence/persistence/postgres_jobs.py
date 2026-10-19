@@ -96,11 +96,13 @@ class PostgresJobRepository:
             result=result, error_code=row["error_code"],
             cancel_requested=bool(row["cancel_requested"]),
             idempotency_key=row["idempotency_key"],
+            traceparent=row["traceparent"],
         )
 
     def create(self, *, tenant_id: str, subject_id: str, kind: str,
-               payload: dict[str, Any], idempotency_key: str) -> Job:
-        if kind not in {"search", "fetch", "browser"}:
+               payload: dict[str, Any], idempotency_key: str,
+               traceparent: str | None = None) -> Job:
+        if kind not in {"search", "fetch", "browser", "monitor"}:
             raise ValueError("unsupported job kind")
         if not tenant_id or not subject_id or not idempotency_key:
             raise ValueError("tenant, subject, and idempotency key are required")
@@ -112,12 +114,12 @@ class PostgresJobRepository:
                 """INSERT INTO jobs (
                     job_id, tenant_id, subject_id, kind, payload_json, payload_fingerprint,
                     status, created_at, updated_at, attempts, max_attempts, available_at,
-                    idempotency_key
-                ) VALUES (%s, %s, %s, %s, %s, %s, 'queued', now(), now(), 0, %s, %s, %s)
+                    idempotency_key, traceparent
+                ) VALUES (%s, %s, %s, %s, %s, %s, 'queued', now(), now(), 0, %s, %s, %s, %s)
                 ON CONFLICT (tenant_id, subject_id, idempotency_key) DO NOTHING
                 RETURNING *""",
                 (job_id, tenant_id, subject_id, kind, Jsonb(payload), fingerprint,
-                 self._max_attempts, time.time(), idempotency_key),
+                 self._max_attempts, time.time(), idempotency_key, traceparent),
             ).fetchone()
             if row is None:
                 row = conn.execute(
@@ -149,9 +151,9 @@ class PostgresJobRepository:
         if not worker_id or len(worker_id) > 128 or not 5 <= lease_seconds <= 3600:
             raise ValueError("worker ID and a 5–3600 second lease are required")
         if allowed_kinds is not None and (
-            not allowed_kinds or len(allowed_kinds) > 3
+            not allowed_kinds or len(allowed_kinds) > 4
             or len(set(allowed_kinds)) != len(allowed_kinds)
-            or any(kind not in {"search", "fetch", "browser"} for kind in allowed_kinds)
+            or any(kind not in {"search", "fetch", "browser", "monitor"} for kind in allowed_kinds)
         ):
             raise ValueError("allowed_kinds must contain unique supported job kinds")
         now = time.time()
