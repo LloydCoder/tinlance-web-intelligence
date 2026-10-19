@@ -110,9 +110,14 @@ def create_job(
     reservation_id: str | None = None
     resolver = request.app.state.entitlement_resolver
     if resolver is not None:
-        plan = resolver.resolve(
-            tenant_id=principal.tenant_id, subject_id=principal.subject_id
-        )
+        try:
+            plan = resolver.resolve(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503, detail="commercial entitlement state unavailable"
+            ) from exc
         feature_decision = evaluate_feature(plan, feature=body.kind)
         if not feature_decision.allowed:
             if feature_decision.reason == "unknown_plan":
@@ -193,7 +198,10 @@ def create_job(
             # safely replays the job and completes the usage commit.
             raise HTTPException(
                 status_code=503,
-                detail="job accepted; usage accounting is pending recovery, retry the same idempotency key",
+                detail=(
+                    "job accepted; usage accounting is pending recovery, "
+                    "retry the same idempotency key"
+                ),
             ) from exc
     return _public_job(job)
 
