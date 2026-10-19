@@ -9,7 +9,10 @@ import stat
 import sys
 from pathlib import Path
 
-from scripts.create_pg_service import parse_service_values
+if __package__:
+    from scripts.create_pg_service import parse_service_values
+else:  # Executed directly by the operational shell scripts.
+    from create_pg_service import parse_service_values
 
 _ALLOWED_ENV_NAMES = {"TWI_RESTORE_DATABASE_URL", "TWI_PRIMARY_DATABASE_URL"}
 _MANIFEST = re.compile(r"^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]{0,255})$")
