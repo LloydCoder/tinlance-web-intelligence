@@ -265,6 +265,27 @@ class PostgresJobRepository:
                 updated = row
             return self._to_job(updated) if updated is not None else None
 
+    def metrics_snapshot(self) -> dict[str, float]:
+        """Return low-cardinality queue counts and oldest queued-job age."""
+        with self._pool.connection() as conn:
+            counts = conn.execute(
+                "SELECT status, COUNT(*) AS count FROM jobs GROUP BY status"
+            ).fetchall()
+            oldest = conn.execute(
+                """SELECT GREATEST(
+                       0, EXTRACT(EPOCH FROM (clock_timestamp() - MIN(created_at)))
+                   ) AS age_seconds FROM jobs WHERE status='queued'"""
+            ).fetchone()
+        snapshot = {
+            f"jobs_{status}": 0.0
+            for status in ("queued", "running", "succeeded", "failed", "cancelled")
+        }
+        for row in counts:
+            snapshot[f"jobs_{row['status']}"] = float(row["count"])
+        age_seconds = oldest["age_seconds"] if oldest is not None else None
+        snapshot["jobs_oldest_queued_age_seconds"] = float(age_seconds or 0.0)
+        return snapshot
+
     def ping(self) -> bool:
         try:
             with self._pool.connection() as conn:

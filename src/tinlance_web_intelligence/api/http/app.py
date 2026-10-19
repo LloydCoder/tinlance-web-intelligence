@@ -89,6 +89,34 @@ def create_app(
         ("method",),
         registry=registry,
     )
+    job_counts = Gauge(
+        "twi_jobs_total",
+        "Durable job count by lifecycle status.",
+        ("status",),
+        registry=registry,
+    )
+    oldest_queued_age = Gauge(
+        "twi_jobs_oldest_queued_age_seconds",
+        "Age of the oldest queued job in seconds.",
+        registry=registry,
+    )
+    outbox_counts = Gauge(
+        "twi_source_evidence_outbox_events_total",
+        "Durable source-evidence outbox event count by status.",
+        ("status",),
+        registry=registry,
+    )
+    oldest_pending_outbox_age = Gauge(
+        "twi_source_evidence_outbox_oldest_pending_age_seconds",
+        "Age of the oldest pending source-evidence outbox event in seconds.",
+        registry=registry,
+    )
+    metrics_collection_errors = Counter(
+        "twi_metrics_collection_errors_total",
+        "Failures while collecting durable queue or outbox metrics.",
+        ("component",),
+        registry=registry,
+    )
     app.state.metrics_registry = registry
     outbox = evidence_outbox or create_source_evidence_outbox(config)
     app.state.evidence_outbox = outbox
@@ -99,7 +127,28 @@ def create_app(
 
     @app.get("/internal/metrics", include_in_schema=False)
     def metrics() -> Response:
-        return Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
+        try:
+            jobs_snapshot = repo.metrics_snapshot()
+        except Exception:
+            metrics_collection_errors.labels("jobs").inc()
+        else:
+            for status in ("queued", "running", "succeeded", "failed", "cancelled"):
+                job_counts.labels(status).set(jobs_snapshot.get(f"jobs_{status}", 0.0))
+            oldest_queued_age.set(jobs_snapshot.get("jobs_oldest_queued_age_seconds", 0.0))
+
+        try:
+            outbox_snapshot = outbox.metrics_snapshot()
+        except Exception:
+            metrics_collection_errors.labels("outbox").inc()
+        else:
+            for status in ("pending", "delivering", "delivered", "failed"):
+                outbox_counts.labels(status).set(outbox_snapshot.get(f"outbox_{status}", 0.0))
+            oldest_pending_outbox_age.set(
+                outbox_snapshot.get("outbox_oldest_pending_age_seconds", 0.0)
+            )
+        response = Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.middleware("http")
     async def authenticate(

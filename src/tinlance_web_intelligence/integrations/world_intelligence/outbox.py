@@ -302,6 +302,29 @@ class SQLiteSourceEvidenceOutbox:
             ).fetchone()
         return self._row_to_event(row) if row is not None else None
 
+    def metrics_snapshot(self) -> dict[str, float]:
+        """Return low-cardinality outbox counts and oldest pending-event age."""
+        with self._lock:
+            counts = self._connection.execute(
+                "SELECT status, COUNT(*) AS count "
+                "FROM twi_source_evidence_outbox GROUP BY status"
+            ).fetchall()
+            oldest = self._connection.execute(
+                "SELECT MIN(created_at) AS created_at "
+                "FROM twi_source_evidence_outbox WHERE status='pending'"
+            ).fetchone()
+        snapshot = {
+            f"outbox_{status}": 0.0
+            for status in ("pending", "delivering", "delivered", "failed")
+        }
+        for row in counts:
+            snapshot[f"outbox_{row['status']}"] = float(row["count"])
+        created_at = oldest["created_at"] if oldest is not None else None
+        snapshot["outbox_oldest_pending_age_seconds"] = (
+            max(0.0, time.time() - float(created_at)) if created_at is not None else 0.0
+        )
+        return snapshot
+
     def ping(self) -> bool:
         try:
             with self._lock:

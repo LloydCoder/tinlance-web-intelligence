@@ -210,6 +210,29 @@ class PostgresSourceEvidenceOutbox:
             ).fetchone()
         return self._row_to_event(row) if row is not None else None
 
+    def metrics_snapshot(self) -> dict[str, float]:
+        """Return low-cardinality outbox counts and oldest pending-event age."""
+        with self._pool.connection() as conn:
+            counts = conn.execute(
+                "SELECT status, COUNT(*) AS count "
+                "FROM twi_source_evidence_outbox GROUP BY status"
+            ).fetchall()
+            oldest = conn.execute(
+                """SELECT GREATEST(
+                       0, EXTRACT(EPOCH FROM clock_timestamp()) - MIN(created_at)
+                   ) AS age_seconds
+                   FROM twi_source_evidence_outbox WHERE status='pending'"""
+            ).fetchone()
+        snapshot = {
+            f"outbox_{status}": 0.0
+            for status in ("pending", "delivering", "delivered", "failed")
+        }
+        for row in counts:
+            snapshot[f"outbox_{row['status']}"] = float(row["count"])
+        age_seconds = oldest["age_seconds"] if oldest is not None else None
+        snapshot["outbox_oldest_pending_age_seconds"] = float(age_seconds or 0.0)
+        return snapshot
+
     def ping(self) -> bool:
         try:
             with self._pool.connection() as conn:

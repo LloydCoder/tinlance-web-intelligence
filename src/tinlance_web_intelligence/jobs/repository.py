@@ -399,6 +399,33 @@ class SQLiteJobRepository:
                     self._connection.rollback()
                 raise
 
+    def metrics_snapshot(self) -> dict[str, float]:
+        """Return low-cardinality queue counts and oldest queued-job age."""
+        with self._lock:
+            counts = self._connection.execute(
+                "SELECT status, COUNT(*) AS count FROM jobs GROUP BY status"
+            ).fetchall()
+            oldest = self._connection.execute(
+                "SELECT MIN(created_at) AS created_at FROM jobs WHERE status='queued'"
+            ).fetchone()
+        snapshot = {
+            f"jobs_{status}": 0.0
+            for status in ("queued", "running", "succeeded", "failed", "cancelled")
+        }
+        for row in counts:
+            snapshot[f"jobs_{row['status']}"] = float(row["count"])
+        created_at = oldest["created_at"] if oldest is not None else None
+        age_seconds = 0.0
+        if isinstance(created_at, str):
+            created = datetime.datetime.fromisoformat(created_at)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=datetime.UTC)
+            age_seconds = max(
+                0.0, (datetime.datetime.now(datetime.UTC) - created).total_seconds()
+            )
+        snapshot["jobs_oldest_queued_age_seconds"] = age_seconds
+        return snapshot
+
     def ping(self) -> bool:
         with self._lock:
             row = self._connection.execute("SELECT 1 AS ready").fetchone()

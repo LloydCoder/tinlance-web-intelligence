@@ -21,6 +21,11 @@ Metrics currently emitted by the API process:
 | `twi_http_requests_total` | Counter | Completed HTTP requests by method, route template and status |
 | `twi_http_request_duration_seconds` | Histogram | Request latency by method and route template |
 | `twi_http_in_flight_requests` | Gauge | Requests currently being handled by this process |
+| `twi_jobs_total` | Gauge | Durable job count by lifecycle status |
+| `twi_jobs_oldest_queued_age_seconds` | Gauge | Age of the oldest queued job |
+| `twi_source_evidence_outbox_events_total` | Gauge | Durable source-evidence outbox count by status |
+| `twi_source_evidence_outbox_oldest_pending_age_seconds` | Gauge | Age of the oldest pending outbox event |
+| `twi_metrics_collection_errors_total` | Counter | Durable queue/outbox snapshot collection failures by component |
 
 Each process has an independent registry. Scrape each API replica directly or configure the monitoring collector to discover every replica; do not assume counters are aggregated across processes.
 
@@ -33,8 +38,8 @@ These are initial engineering targets, not observed service performance and not 
 | API availability | 99.5% successful non-5xx requests over a rolling 30 days, excluding intentional 4xx responses | Burn-rate alert on 5xx and probe failures |
 | API latency | p95 under 1.0 s for API control-plane requests, excluding long-running acquisition work | Histogram quantile by route template |
 | Readiness | 99.9% successful readiness probes over 30 days | Alert on repeated `/health/ready` failures |
-| Queue age | Oldest eligible queued job under 2 minutes during supported operating hours | Requires durable queue-age instrumentation; not implemented in this slice |
-| Evidence outbox | Oldest pending delivery under 5 minutes | Requires outbox-age and delivery-result instrumentation; not implemented in this slice |
+| Queue age | Oldest queued job under 2 minutes during supported operating hours | Exposed by `twi_jobs_oldest_queued_age_seconds`; requires deployed scrape/alert validation |
+| Evidence outbox | Oldest pending delivery under 5 minutes | Exposed by `twi_source_evidence_outbox_oldest_pending_age_seconds`; requires deployed scrape/alert validation |
 | Browser execution | At least 99% of browser jobs finish within their declared bounded timeout, excluding policy rejection | Requires browser job outcome and duration metrics; not implemented in this slice |
 
 Do not advertise these targets externally until the owner approves them and at least one representative load-test and staging-observation window supports the numbers.
@@ -64,7 +69,7 @@ Before production/private beta, retain a dated evidence pack containing:
 
 ## Remaining W10 work
 
-- Add queue, outbox, browser, provider and worker outcome/latency/age metrics without high-cardinality labels.
+- Add browser, provider and worker outcome/latency metrics without high-cardinality labels; queue depth and outbox age are now exposed by the API scrape endpoint.
 - Establish real distributed trace propagation across API, worker, broker and World Intelligence export; request IDs alone are correlation, not distributed tracing.
 - Deploy a collector and alerting route in the approved staging environment, then verify delivery.
 - Define capacity budgets from measured load tests and tune concurrency/timeouts from evidence.

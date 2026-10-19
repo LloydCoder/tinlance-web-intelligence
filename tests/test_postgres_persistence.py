@@ -56,6 +56,9 @@ def test_postgres_jobs_are_idempotent_scoped_and_recoverable() -> None:
         )
         assert completed.status == JobStatus.SUCCEEDED
         assert repository.get(created.job_id, tenant_id=tenant, subject_id=subject) == completed
+        metrics = repository.metrics_snapshot()
+        assert metrics["jobs_succeeded"] >= 1
+        assert metrics["jobs_oldest_queued_age_seconds"] >= 0
 
         queued = repository.create(
             tenant_id=tenant, subject_id=subject, kind="fetch",
@@ -138,6 +141,9 @@ def test_postgres_outbox_enforces_idempotency_leases_and_scope() -> None:
             payload=payload, request_id="postgres-outbox-test", traceparent=None,
         )
         assert not replayed and was_replay and first.event_id == replay.event_id
+        metrics = outbox.metrics_snapshot()
+        assert metrics["outbox_pending"] >= 1
+        assert metrics["outbox_oldest_pending_age_seconds"] >= 0
         with pytest.raises(OutboxConflictError):
             outbox.enqueue(
                 tenant_ref=tenant_ref, subject_ref=subject_ref, idempotency_key=key,
