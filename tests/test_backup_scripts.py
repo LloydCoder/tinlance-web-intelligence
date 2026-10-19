@@ -3,12 +3,10 @@ from __future__ import annotations
 import pytest
 from scripts.check_database_tls import main, validate_database_url
 
-
 def test_backup_database_url_requires_hostname_verifying_tls() -> None:
     validate_database_url(
         "postgresql://backup:secret@db.example.com:5432/twi?sslmode=verify-full"
     )
-
 
 @pytest.mark.parametrize(
     "dsn",
@@ -26,8 +24,6 @@ def test_backup_database_url_requires_hostname_verifying_tls() -> None:
 def test_backup_database_url_rejects_noncompliant_tls(dsn: str) -> None:
     with pytest.raises(ValueError):
         validate_database_url(dsn)
-
-
 
 def test_tls_cli_selects_dedicated_dsn_environment_without_printing_secrets(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
