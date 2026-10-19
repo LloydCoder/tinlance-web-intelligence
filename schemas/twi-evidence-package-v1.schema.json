@@ -1,4 +1,4 @@
-<escape>{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tinlance.com/schemas/twi-evidence-package-1.0.0.json",
   "title": "TWI Deterministic Evidence Package",
@@ -99,4 +99,4 @@
       }
     }
   }
-}</escape>
+}
