@@ -386,6 +386,14 @@ def evaluate(
     }
 
 
+def _format_metric(value: object) -> str:
+    if value is None:
+        return "n/a"
+    if not isinstance(value, (int, float)):
+        raise BenchmarkError("metric values must be numeric or null")
+    return f"{value:.3f}"
+
+
 def render_markdown(report: Mapping[str, object]) -> str:
     """Render a compact, URL-free human-readable evaluation report."""
     summary = cast(Mapping[str, object], report["summary"])
@@ -402,7 +410,7 @@ def render_markdown(report: Mapping[str, object]) -> str:
         "|---|---:|",
     ]
     for name, value in summary.items():
-        rendered = "n/a" if value is None else f"{float(value):.3f}"
+        rendered = _format_metric(value)
         lines.append(f"| {name} | {rendered} |")
     lines.extend(
         [
@@ -418,7 +426,7 @@ def render_markdown(report: Mapping[str, object]) -> str:
         case = cast(Mapping[str, object], raw_case)
         metrics = cast(Mapping[str, object], case["metrics"])
         values = [
-            "n/a" if metrics[name] is None else f"{float(metrics[name]):.3f}"
+            _format_metric(metrics[name])
             for name in (
                 "retrieval_recall",
                 "source_diversity_coverage",
