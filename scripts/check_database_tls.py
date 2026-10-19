@@ -6,6 +6,7 @@ import os
 import sys
 from urllib.parse import parse_qs, urlsplit
 
+
 def validate_database_url(dsn: str) -> None:
     """Require a credentialed PostgreSQL URL with hostname-verifying TLS."""
     try:
@@ -30,6 +31,7 @@ def validate_database_url(dsn: str) -> None:
     if parse_qs(parsed.query, keep_blank_values=True).get("sslmode") != ["verify-full"]:
         raise ValueError("sslmode=verify-full is required")
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -48,6 +50,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"database TLS validation failed for {args.env}: {exc}", file=sys.stderr)
         return 2
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
