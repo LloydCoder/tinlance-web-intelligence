@@ -12,7 +12,7 @@ import sqlite3
 import threading
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Literal
 
 
@@ -53,7 +53,7 @@ class UsageEvent:
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _validate_key(value: str, label: str, maximum: int = 200) -> None:
@@ -156,7 +156,9 @@ class SQLiteUsageLedger:
                 ).fetchone()
                 if existing is not None:
                     if existing["request_fingerprint"] != fingerprint:
-                        raise UsageConflictError("idempotency key reused with different quota request")
+                        raise UsageConflictError(
+                            "idempotency key reused with different quota request"
+                        )
                     self._connection.commit()
                     return self._to_reservation(existing)
                 used = self._connection.execute(
@@ -245,7 +247,8 @@ class SQLiteUsageLedger:
             try:
                 cursor = self._connection.execute(
                     """UPDATE twi_usage_reservations SET status='released', updated_at=?
-                       WHERE reservation_id=? AND tenant_id=? AND subject_id=? AND status='reserved'""",
+                       WHERE reservation_id=? AND tenant_id=? AND subject_id=?
+                         AND status='reserved'""",
                     (_utc_now(), reservation_id, tenant_id, subject_id),
                 )
                 self._connection.commit()
