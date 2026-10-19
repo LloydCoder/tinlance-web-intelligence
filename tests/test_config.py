@@ -150,3 +150,22 @@ def test_staging_requires_postgres_with_verified_tls() -> None:
         "TWI_DATABASE_URL": "postgresql://twi:secret@db.example/twi?sslmode=verify-full",
     })
     assert configured.environment == "staging"
+
+
+def test_production_browser_worker_can_start_without_database_credentials() -> None:
+    token = secrets.token_urlsafe(32)
+    settings = Settings.from_env(
+        {
+            "TWI_ENV": "production",
+            "TWI_BROWSER_ENABLED": "true",
+            "TWI_BROWSER_BROKER_URL": "http://browser-broker:8081",
+            "TWI_BROWSER_BROKER_TOKEN": token,
+            "TWI_BROWSER_PROXY_URL": "http://egress-proxy:3128",
+            "TWI_BROWSER_PROXY_USERNAME": "browser-worker",
+            "TWI_BROWSER_PROXY_PASSWORD": "browser-proxy-password-123456",
+        },
+        require_identity=False,
+        require_database=False,
+    )
+    assert settings.database_url is None
+    assert settings.browser_enabled is True
