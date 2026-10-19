@@ -8,7 +8,52 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
+import re
 from typing import Protocol
+from urllib.parse import urlsplit
+
+
+_DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}\\Z")
+
+
+def validate_artifact_digest(digest: str) -> None:
+    """Reject malformed digests rather than treating them as absent artifacts."""
+    if not isinstance(digest, str) or _DIGEST_PATTERN.fullmatch(digest) is None:
+        raise ValueError("artifact digest must be a lowercase SHA-256 hex digest")
+
+
+def validate_artifact_metadata(content_type: str, source_url: str) -> None:
+    """Validate non-network metadata shared by memory and durable artifact stores."""
+    if (
+        not isinstance(content_type, str)
+        or not content_type
+        or len(content_type) > 255
+        or any(ord(character) < 32 or ord(character) == 127 for character in content_type)
+    ):
+        raise ValueError("content_type must contain 1 to 255 printable characters")
+    if (
+        not isinstance(source_url, str)
+        or not source_url
+        or source_url != source_url.strip()
+        or len(source_url) > 4096
+        or any(ord(character) < 32 or ord(character) == 127 for character in source_url)
+    ):
+        raise ValueError("source_url must contain 1 to 4096 normalized characters")
+    try:
+        parsed = urlsplit(source_url)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError("source_url must be a valid absolute HTTP(S) URL") from exc
+    if (
+        parsed.scheme.lower() not in {"http", "https"}
+        or not hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or (port is not None and not 1 <= port <= 65535)
+    ):
+        raise ValueError("source_url must be absolute HTTP(S) without userinfo or fragment")
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +105,7 @@ class MemoryArtifactStore:
             or len(tenant_id) > 256
         ):
             raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
+        validate_artifact_metadata(content_type, source_url)
         if len(body) > self._max_bytes:
             raise ValueError("artifact exceeds configured byte limit")
         if captured_at.tzinfo is None or captured_at.utcoffset() is None:
@@ -83,6 +129,7 @@ class MemoryArtifactStore:
         return record
 
     def get(self, digest: str, *, tenant_id: str = "development") -> bytes | None:
+        validate_artifact_digest(digest)
         return self._content.get((tenant_id, digest))
 
     def count(self, *, tenant_id: str = "development") -> int:
