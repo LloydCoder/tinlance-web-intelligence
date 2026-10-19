@@ -6,16 +6,16 @@ import json
 
 import pytest
 
-from tinlance_web_intelligence.commercial.billing_inbox import (
-    BillingEventReceiptConflict,
-    SQLiteBillingEventInbox,
-)
 from tinlance_web_intelligence.commercial.billing_events import (
     BillingEventError,
     BillingFact,
     UsageFact,
     reconcile_usage,
     verify_signed_billing_event,
+)
+from tinlance_web_intelligence.commercial.billing_inbox import (
+    BillingEventReceiptConflict,
+    SQLiteBillingEventInbox,
 )
 
 _SECRET = b"test-webhook-secret-that-is-at-least-32-bytes"
@@ -46,7 +46,10 @@ def test_signed_event_verifies_raw_bytes_and_returns_no_payload() -> None:
 
 
 def test_signed_event_rejects_bad_signature_timestamp_and_secret() -> None:
-    body = b'{"event_id":"evt_1","event_type":"usage.recorded","occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    body = (
+        b'{"event_id":"evt_1","event_type":"usage.recorded",'
+        b'"occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    )
     with pytest.raises(BillingEventError, match="signature verification"):
         verify_signed_billing_event(
             body, timestamp_header=_TIMESTAMP, signature_header="sha256=" + "0" * 64,
@@ -65,13 +68,19 @@ def test_signed_event_rejects_bad_signature_timestamp_and_secret() -> None:
 
 
 def test_signed_event_rejects_duplicate_keys_and_untrusted_envelope_shape() -> None:
-    duplicate = b'{"event_id":"first","event_id":"second","event_type":"invoice.paid","occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    duplicate = (
+        b'{"event_id":"first","event_id":"second","event_type":"invoice.paid",'
+        b'"occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    )
     with pytest.raises(BillingEventError, match="duplicate keys"):
         verify_signed_billing_event(
             duplicate, timestamp_header=_TIMESTAMP, signature_header=signed_body(duplicate),
             secret=_SECRET, now_epoch=int(_TIMESTAMP),
         )
-    wrong_shape = b'{"event_id":"evt_1","event_type":"invoice.paid","occurred_at":"2026-10-19T10:00:00Z","data":{},"extra":true}'
+    wrong_shape = (
+        b'{"event_id":"evt_1","event_type":"invoice.paid",'
+        b'"occurred_at":"2026-10-19T10:00:00Z","data":{},"extra":true}'
+    )
     with pytest.raises(BillingEventError, match="fields are invalid"):
         verify_signed_billing_event(
             wrong_shape, timestamp_header=_TIMESTAMP, signature_header=signed_body(wrong_shape),
@@ -160,7 +169,10 @@ def test_billing_inbox_is_durable_idempotent_and_payload_free() -> None:
 
 
 def test_billing_inbox_scopes_same_event_id_by_provider() -> None:
-    body = b'{"event_id":"evt_shared","event_type":"invoice.paid","occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    body = (
+        b'{"event_id":"evt_shared","event_type":"invoice.paid",'
+        b'"occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    )
     event = verify_signed_billing_event(
         body, timestamp_header=_TIMESTAMP, signature_header=signed_body(body),
         secret=_SECRET, now_epoch=int(_TIMESTAMP),
