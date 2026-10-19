@@ -474,6 +474,7 @@ def evaluate(
     source_revision: str | None = None,
     threshold_registry: Mapping[str, object] | None = None,
     thresholds_sha256: str | None = None,
+    threshold_registry_raw: bytes | None = None,
 ) -> dict[str, object]:
     """Evaluate recorded observations deterministically.
 
@@ -505,6 +506,14 @@ def evaluate(
     except (TypeError, ValueError, UnicodeEncodeError) as exc:
         raise BenchmarkError("threshold registry must be canonicalizable JSON") from exc
     registry = load_threshold_registry(registry_bytes, dataset_id)
+    if threshold_registry_raw is not None:
+        raw_registry = load_threshold_registry(threshold_registry_raw, dataset_id)
+        if threshold_registry is not None and dict(raw_registry) != dict(registry):
+            raise BenchmarkError("threshold registry mapping does not match raw registry bytes")
+        registry = raw_registry
+        raw_digest = hashlib.sha256(threshold_registry_raw).hexdigest()
+        if thresholds_sha256 is not None and thresholds_sha256 != raw_digest:
+            raise BenchmarkError("thresholds_sha256 does not match raw threshold registry bytes")
     approval_status = registry.get("approval_status")
     threshold_values = _mapping(registry.get("thresholds", {}), "thresholds")
     case_ids = {case.case_id for case in cases}
@@ -662,6 +671,8 @@ def evaluate(
             qualification_reason = "thresholds_not_approved"
         elif thresholds_sha256 is None:
             qualification_reason = "threshold_registry_hash_missing"
+        elif threshold_registry_raw is None:
+            qualification_reason = "threshold_registry_bytes_missing"
         else:
             failures: list[str] = []
             unavailable: list[str] = []
@@ -863,6 +874,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             source_revision=args.source_revision,
             threshold_registry=threshold_registry,
             thresholds_sha256=hashlib.sha256(thresholds_raw).hexdigest(),
+            threshold_registry_raw=thresholds_raw,
         )
         rendered_json = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
         rendered_markdown = render_markdown(report)
