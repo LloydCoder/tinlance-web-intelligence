@@ -17,10 +17,12 @@ else:  # Executed directly by the operational shell scripts.
 _ALLOWED_ENV_NAMES = {"TWI_RESTORE_DATABASE_URL", "TWI_PRIMARY_DATABASE_URL"}
 _MANIFEST = re.compile(r"^([0-9a-f]{64})  ([A-Za-z0-9][A-Za-z0-9._-]{0,255})$")
 
+
 def database_identity(dsn: str) -> tuple[str, int, str]:
     """Return normalized host/port/database identity after strict TLS URL validation."""
     values = parse_service_values(dsn)
     return values["host"].lower(), int(values["port"]), values["dbname"]
+
 
 def validate_restore_target(
     *, target_dsn: str, primary_dsn: str, expected_database: str
@@ -37,6 +39,7 @@ def validate_restore_target(
     if target == primary:
         raise ValueError("restore target matches the primary host, port, and database")
     return target
+
 
 def verify_backup_checksum(
     *, backup_file: str | os.PathLike[str], checksum_file: str | os.PathLike[str]
@@ -80,6 +83,7 @@ def verify_backup_checksum(
         raise ValueError("backup checksum does not match the selected backup file")
     return actual_digest
 
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target-env", choices=sorted(_ALLOWED_ENV_NAMES), required=True)
@@ -103,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"restore preflight failed: {exc}", file=sys.stderr)
         return 2
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
