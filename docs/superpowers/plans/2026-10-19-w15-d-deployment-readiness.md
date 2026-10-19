@@ -6,9 +6,9 @@
 - [x] D4 — Harden restore: dedicated restore role, primary-vs-target identity check, strict target naming/confirmation, and checksum-to-selected-file verification.
 - [x] D5 — Add adversarial tests for URL/service parsing, permissions, credential handling, target isolation, checksum integrity, and cleanup paths.
 - [x] D6 — Reconcile backup/restore and deployment docs, examples, environment variables, and conservative self-hosting exclusion.
-- [ ] D7 — Run lint, typing, security, unit/contract/PostgreSQL, shell, migration, reproducible artifact, and browser-isolation checks on the exact PR head.
-- [ ] D8 — Perform a phase-specific forensic audit; fix every repository-verifiable blocker and document external evidence limits.
-- [ ] D9 — Merge only after all required exact-head checks pass; verify post-merge main CI and update roadmap/readiness evidence.
+- [x] D7 — Exact-head CI passed on `5cc2dc3535a3a428179fc171acbad01f0f72b0b7`: PR run [#39317643771](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39317643771) and push run [#39317635707](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39317635707); Python 3.12, Python 3.13, reproducible release artifact validation, and browser container isolation all passed.
+- [x] D8 — Phase-specific forensic audit completed. It found and fixed Ruff import/security-lint failures, mypy-only operational-script import failures, and an incorrectly escaped newline in the restore checksum fixture. Final exact-head suite: 293 passed, 1 skipped; the browser runtime sandbox test is intentionally run in its dedicated CI step, which passed.
+- [ ] D9 — Merge only after the reviewed exact-head checks pass; then verify post-merge main CI and update roadmap/readiness evidence.
 
 ## Audit findings
 
