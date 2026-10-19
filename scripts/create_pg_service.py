@@ -31,6 +31,7 @@ _ALLOWED_TARGET_SESSION_ATTRS = frozenset(
     {"any", "read-write", "read-only", "primary", "standby", "prefer-standby"}
 )
 
+
 def _safe_value(value: str, label: str) -> str:
     if (
         not value
@@ -39,6 +40,7 @@ def _safe_value(value: str, label: str) -> str:
     ):
         raise ValueError(f"{label} contains invalid or non-normalized characters")
     return value
+
 
 def parse_service_values(dsn: str) -> dict[str, str]:
     """Parse an approved TLS PostgreSQL URL into a bounded libpq service mapping."""
@@ -82,6 +84,7 @@ def parse_service_values(dsn: str) -> dict[str, str]:
         values["target_session_attrs"] = target
     return values
 
+
 def write_service_file(dsn: str, destination: str | os.PathLike[str], service_name: str) -> Path:
     """Write a service file with mode 0600, rejecting symlinks and unsafe values."""
     if not isinstance(service_name, str) or not _SERVICE_NAME.fullmatch(service_name):
@@ -117,6 +120,7 @@ def write_service_file(dsn: str, destination: str | os.PathLike[str], service_na
         path.chmod(0o600)
     return path
 
+
 def main() -> int:
     """Build a service file from named environment variables, never a DSN argument."""
     dsn_env = os.environ.get("TWI_PG_SERVICE_DSN_ENV", "")
@@ -135,6 +139,7 @@ def main() -> int:
         print(f"PostgreSQL service-file creation failed: {exc}", file=sys.stderr)
         return 2
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
