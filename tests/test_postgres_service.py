@@ -180,7 +180,8 @@ def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
         fake_bin / "pg_dump",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_BACKUP_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_BACKUP_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${PGPASSWORD:-}" && -z "${PGHOSTADDR:-}" && -z "${PGOPTIONS:-}" ]] || exit 95
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 91
 [[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 92
 grep -q '^\\[twi_backup\\]$' "$PGSERVICEFILE" || exit 93
@@ -205,6 +206,10 @@ exit 0
                 "?sslmode=verify-full"
             ),
             "TWI_BACKUP_DIR": str(backup_dir),
+            "TWI_OTHER_DATABASE_URL": "postgresql://other:secret@other.example.com/twi?sslmode=verify-full",
+            "PGPASSWORD": "ambient-password",
+            "PGHOSTADDR": "192.0.2.1",
+            "PGOPTIONS": "-csearch_path=public",
             "PG_DUMP_ARGS_FILE": str(args_file),
             "PGSERVICE_PATH_RECORD": str(service_path_file),
             "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
@@ -255,7 +260,8 @@ def test_restore_script_preflights_target_checksum_and_secret_safe_service(
         fake_bin / "pg_restore",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_RESTORE_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_RESTORE_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${PGPASSWORD:-}" && -z "${PGHOSTADDR:-}" && -z "${PGOPTIONS:-}" ]] || exit 95
 [[ -z "${TWI_PRIMARY_DATABASE_URL:-}" ]] || exit 91
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 92
 [[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 93
@@ -284,6 +290,10 @@ printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
             ),
             "TWI_BACKUP_FILE": str(backup),
             "TWI_RESTORE_TARGET_DATABASE": "twi_restore",
+            "TWI_OTHER_DATABASE_URL": "postgresql://other:secret@other.example.com/twi?sslmode=verify-full",
+            "PGPASSWORD": "ambient-password",
+            "PGHOSTADDR": "192.0.2.1",
+            "PGOPTIONS": "-csearch_path=public",
             "PG_RESTORE_ARGS_FILE": str(args_file),
             "PGSERVICE_PATH_RECORD": str(service_path_file),
             "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
