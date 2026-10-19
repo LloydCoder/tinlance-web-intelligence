@@ -18,9 +18,9 @@ Web pages are untrusted input. They may contain prompt injection, hostile JavaSc
 ## Known W4 limitations
 
 - The isolated Compose file is a single-host development and security-test harness, not proof of production network policy.
-- The API and trusted browser broker share the single-node SQLite job store. The browser worker has no database mount or direct database credentials; it receives one leased browser job through the authenticated broker and submits only that lease's result.
+- The development/security-test Compose harness uses the single-node SQLite job store. The broker now uses the shared `JobRepository` contract and selects PostgreSQL when `TWI_DATABASE_URL` is configured; the browser worker remains database-free and receives only leased browser jobs through the authenticated broker. The PostgreSQL broker contract test runs in CI.
 - The browser worker and egress proxy do not share a network with the API. The broker joins only the private browser-control network and the application network; the egress proxy joins only the private browser-egress network and its outbound network.
-- SQLite is a single-node development queue. W6 must validate a production durable store, least-privilege database roles, multi-replica lease/recovery semantics, and production egress enforcement before private beta. No production readiness claim is made.
+- SQLite remains a single-node development queue. Production must use PostgreSQL with separate DDL/runtime roles, `sslmode=verify-full`, tested multi-replica lease/recovery semantics, and environment-enforced egress restrictions. The repository tests do not prove these target-environment controls. No production readiness claim is made.
 
 ## References
 
