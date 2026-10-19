@@ -8,8 +8,11 @@ import re
 import stat
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-if __package__:
+if TYPE_CHECKING:
+    from scripts.create_pg_service import parse_service_values
+elif __package__:
     from scripts.create_pg_service import parse_service_values
 else:  # Executed directly by the operational shell scripts.
     from create_pg_service import parse_service_values
