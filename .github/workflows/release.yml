@@ -11,7 +11,7 @@ permissions:
 jobs:
   release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     permissions:
       contents: read
       id-token: write
@@ -51,6 +51,7 @@ jobs:
           python -m pip install --no-deps -e .
           python -m pip check
           python -m pip install cyclonedx-bom==7.5.0
+          python -m pip check
       - name: Run quality, type, security, dependency, and database tests
         run: |
           ruff check .
@@ -61,16 +62,52 @@ jobs:
           bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
       - name: Validate Compose deployment
         run: docker compose -f deployments/compose/development.yml config --quiet
-      - name: Build release artifacts
+      - name: Build twice from clean source archives and verify reproducibility
         run: |
-          python -m build
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
+          mkdir -p "$RUNNER_TEMP/twi-source-1" "$RUNNER_TEMP/twi-source-2"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-1"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-2"
+          (
+            cd "$RUNNER_TEMP/twi-source-1"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-1"
+          )
+          (
+            cd "$RUNNER_TEMP/twi-source-2"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-2"
+          )
+          for archive in "$RUNNER_TEMP"/twi-build-1/*.tar.gz "$RUNNER_TEMP"/twi-build-2/*.tar.gz; do
+            python scripts/normalize_sdist.py "$archive" "$SOURCE_DATE_EPOCH"
+          done
+          python - <<'PY'
+          import hashlib
+          import os
+          import pathlib
+          import sys
+
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          first = root / "twi-build-1"
+          second = root / "twi-build-2"
+          names1 = sorted(path.name for path in first.iterdir() if path.is_file())
+          names2 = sorted(path.name for path in second.iterdir() if path.is_file())
+          if not names1 or names1 != names2:
+              raise SystemExit("reproducible build artifact sets differ")
+          for name in names1:
+              digest1 = hashlib.sha256((first / name).read_bytes()).hexdigest()
+              digest2 = hashlib.sha256((second / name).read_bytes()).hexdigest()
+              if digest1 != digest2:
+                  print(f"non-reproducible artifact: {name}", file=sys.stderr)
+                  raise SystemExit(1)
+          print(f"reproducibility verified for {len(names1)} artifacts")
+          PY
+          mkdir -p dist
+          cp "$RUNNER_TEMP"/twi-build-1/* dist/
           python -m pip install --force-reinstall --no-deps dist/*.whl
           python scripts/verify_release.py
           python -m pip check
       - name: Generate CycloneDX build-environment SBOM
-        env:
-          SOURCE_DATE_EPOCH: ${{ github.event.repository.pushed_at || github.run_id }}
         run: |
+          export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
           cyclonedx-py environment --pyproject pyproject.toml --output-format JSON --output-file dist/twi-build-environment.cdx.json --output-reproducible
           python -m json.tool dist/twi-build-environment.cdx.json > /dev/null
       - name: Generate release checksums
