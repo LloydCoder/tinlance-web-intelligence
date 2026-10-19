@@ -525,8 +525,8 @@ def evaluate(
         diversity_coverage = (
             len(set(case.expected_domains) & retrieved_domains) / len(case.expected_domains)
         )
-        all_text = "\\n".join(
-            f"{item.title}\\n{item.text}" for item in observation.retrieved
+        all_text = "\n".join(
+            f"{item.title}\n{item.text}" for item in observation.retrieved
         ).lower()
         extraction_coverage = (
             sum(1 for phrase in case.expected_phrases if phrase.lower() in all_text)
