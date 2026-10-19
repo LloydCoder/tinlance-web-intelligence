@@ -226,3 +226,38 @@ def test_monitor_execution_applies_stored_response_byte_bound(tmp_path: Path) ->
 
     assert acquisition.max_bytes == 1024
     repository.close()
+
+
+
+def test_deleted_monitor_run_fails_before_network_acquisition(tmp_path: Path) -> None:
+    repository = SQLiteMonitorRepository(str(tmp_path / "monitors.sqlite3"))
+    monitor = repository.create(
+        tenant_id="tenant-a",
+        subject_id="subject-a",
+        target_url="https://example.test/private-path",
+        policy={},
+        idempotency_key="monitor-deleted-before-run",
+    )
+
+    class Acquisition:
+        called = False
+
+        async def acquire_page(
+            self, url: str, *, tenant_id: str, max_bytes: int | None = None
+        ) -> Any:
+            self.called = True
+            raise AssertionError("deleted monitor must not access the network")
+
+    acquisition = Acquisition()
+    service = MonitorService(repository=repository, acquisition=cast(Any, acquisition))
+    repository.redact(
+        tenant_id="tenant-a", subject_id="subject-a", monitor_id=monitor.monitor_id
+    )
+
+    from tinlance_web_intelligence.monitors.model import MonitorDeletedError
+
+    with pytest.raises(MonitorDeletedError, match="deleted monitors"):
+        asyncio.run(service.execute(_running_job(monitor.monitor_id, 0, "deleted-run")))
+
+    assert acquisition.called is False
+    repository.close()
