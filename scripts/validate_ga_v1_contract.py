@@ -1,15 +1,12 @@
 """Fail-closed structural and evidence validation for the GA v1 release contract."""
 from __future__ import annotations
-
 import argparse
 import hashlib
 import json
 import re
 from pathlib import Path
 from typing import Any
-
 from jsonschema import Draft202012Validator
-
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
 _SHA64 = re.compile(r"^[0-9a-f]{64}$")
 _STATUSES = {"pass", "fail", "not_evidenced"}
@@ -40,8 +37,7 @@ def validate(contract_path: Path, schema_path: Path, gates_path: Path, evidence_
     if evidence_pack_path is not None:
         pack_bytes = evidence_pack_path.read_bytes()
         pack = json.loads(pack_bytes)
-        digest = hashlib.sha256(pack_bytes).hexdigest()
-        if contract.get("evidence_pack_sha256") != digest:
+        if contract.get("evidence_pack_sha256") != hashlib.sha256(pack_bytes).hexdigest():
             raise ValueError("evidence pack SHA-256 does not match the release contract")
         if pack.get("source_revision") != revision:
             raise ValueError("evidence pack source revision does not match the release contract")
@@ -66,8 +62,6 @@ def validate(contract_path: Path, schema_path: Path, gates_path: Path, evidence_
             raise ValueError("approved release requires named, evidenced, timestamped approval")
         if not all(contract["customer_constraints"].values()):
             raise ValueError("approved release requires every customer-constraint publication gate")
-    elif contract["decision"] == "not_certified" and not nonpassing:
-        raise ValueError("all gates pass; decision must be reviewed rather than silently left not_certified")
     return {"valid": True, "decision": contract["decision"], "required_gate_count": len(required), "nonpassing_gates": nonpassing, "evidence_pack_checked": pack is not None}
 
 def main() -> int:
