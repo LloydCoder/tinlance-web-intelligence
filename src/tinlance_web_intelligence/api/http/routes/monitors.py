@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
 from tinlance_web_intelligence.jobs.model import IdempotencyConflictError
-from tinlance_web_intelligence.monitors.model import Monitor
+from tinlance_web_intelligence.monitors.model import Monitor, MonitorStatus
 from tinlance_web_intelligence.monitors.service import MonitorService
 from tinlance_web_intelligence.observability.tracing import extract_valid_traceparent
 from tinlance_web_intelligence.persistence.protocols import JobRepository
@@ -179,7 +179,9 @@ def enqueue_monitor_run(
 
 @router.get("/{monitor_id}/runs/{job_id}")
 def get_monitor_run(request: Request, monitor_id: str, job_id: str) -> dict[str, Any]:
-    principal, _ = _visible_monitor(request, monitor_id)
+    principal, monitor = _visible_monitor(request, monitor_id)
+    if monitor.status is MonitorStatus.DELETED:
+        raise HTTPException(status_code=404, detail="monitor run not found")
     administrative = "twi:monitors:read:any" in principal.scopes
     repository: JobRepository = request.app.state.repository
     job = repository.get(
