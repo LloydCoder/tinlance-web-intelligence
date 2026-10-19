@@ -314,7 +314,7 @@ class PostgresJobRepository:
         return int(row["count"]) if row is not None else 0
 
     def redact_expired_results(
-        self, cutoff: datetime, *, tenant_id: str | None = None
+        self, cutoff: datetime.datetime, *, tenant_id: str | None = None
     ) -> int:
         """Remove terminal job payload/results while preserving minimal lifecycle metadata."""
         if cutoff.tzinfo is None or cutoff.utcoffset() is None:
