@@ -27,7 +27,7 @@ def test_service_file_decodes_uri_credentials_and_is_owner_only(tmp_path: Path) 
     parser.read(destination, encoding="utf-8")
     assert parser["twi_backup"]["host"] == "db.example.com"
     assert parser["twi_backup"]["dbname"] == "twi_backup"
-    assert parser["twi_backup"]["password"] == "p:ss%word"  # nosec B105
+    assert parser["twi_backup"]["password"] == "p:ss%word"  # nosec B105  # noqa: S105
     assert parser["twi_backup"]["sslmode"] == "verify-full"
     assert parser["twi_backup"]["sslrootcert"] == "/etc/ssl/root.pem"
     assert parser["twi_backup"]["connect_timeout"] == "5"
@@ -170,7 +170,7 @@ def _write_executable(path: Path, content: str) -> None:
 def _run_shell_script(script_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     bash_path = shutil.which("bash")
     assert bash_path is not None
-    return subprocess.run(  # nosec B603: fixed repository script, controlled test environment
+    return subprocess.run(  # nosec B603: fixed repository script, controlled test environment  # noqa: S603
         [bash_path, str(script_path)],
         env=env,
         capture_output=True,
