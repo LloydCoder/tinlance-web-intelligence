@@ -55,5 +55,6 @@ class UsageLedger(Protocol):
     def list_events(
         self, *, tenant_id: str, subject_id: str, limit: int = 100,
         dimension: str | None = None, period_start: str | None = None,
+        after: tuple[str, str] | None = None,
     ) -> list[UsageEvent]: ...
     def close(self) -> None: ...
