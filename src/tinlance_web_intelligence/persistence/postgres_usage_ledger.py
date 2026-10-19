@@ -173,9 +173,10 @@ class PostgresUsageLedger:
     def list_events(
         self, *, tenant_id: str, subject_id: str, limit: int = 100,
         dimension: str | None = None, period_start: str | None = None,
+        after: tuple[str, str] | None = None,
     ) -> list[UsageEvent]:
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
-            raise ValueError("limit must be between 1 and 500")
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 501:
+            raise ValueError("limit must be between 1 and 501")
         sql = "SELECT * FROM twi_usage_events WHERE tenant_id=%s AND subject_id=%s"
         parameters: list[Any] = [tenant_id, subject_id]
         if dimension is not None:
