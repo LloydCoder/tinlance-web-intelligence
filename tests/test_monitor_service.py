@@ -9,7 +9,7 @@ from typing import Any, cast
 import pytest
 
 from tinlance_web_intelligence.jobs.model import Job, JobStatus
-from tinlance_web_intelligence.monitors.model import BaselineConflictError
+from tinlance_web_intelligence.monitors.model import BaselineConflictError, MonitorDeletedError
 from tinlance_web_intelligence.monitors.service import MonitorService
 from tinlance_web_intelligence.persistence.sqlite_monitors import SQLiteMonitorRepository
 
@@ -253,8 +253,6 @@ def test_deleted_monitor_run_fails_before_network_acquisition(tmp_path: Path) ->
     repository.redact(
         tenant_id="tenant-a", subject_id="subject-a", monitor_id=monitor.monitor_id
     )
-
-    from tinlance_web_intelligence.monitors.model import MonitorDeletedError
 
     with pytest.raises(MonitorDeletedError, match="deleted monitors"):
         asyncio.run(service.execute(_running_job(monitor.monitor_id, 0, "deleted-run")))
