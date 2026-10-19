@@ -62,18 +62,29 @@ jobs:
           bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
       - name: Validate Compose deployment
         run: docker compose -f deployments/compose/development.yml config --quiet
-      - name: Build and verify reproducible release artifacts
+      - name: Build twice from clean source archives and verify reproducibility
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          python -m build --outdir "$RUNNER_TEMP/twi-build-1"
-          python -m build --outdir "$RUNNER_TEMP/twi-build-2"
+          mkdir -p "$RUNNER_TEMP/twi-source-1" "$RUNNER_TEMP/twi-source-2"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-1"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/twi-source-2"
+          (
+            cd "$RUNNER_TEMP/twi-source-1"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-1"
+          )
+          (
+            cd "$RUNNER_TEMP/twi-source-2"
+            python -m build --outdir "$RUNNER_TEMP/twi-build-2"
+          )
           python - <<'PY'
           import hashlib
+          import os
           import pathlib
           import sys
 
-          first = pathlib.Path(__import__("os").environ["RUNNER_TEMP"]) / "twi-build-1"
-          second = pathlib.Path(__import__("os").environ["RUNNER_TEMP"]) / "twi-build-2"
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          first = root / "twi-build-1"
+          second = root / "twi-build-2"
           names1 = sorted(path.name for path in first.iterdir() if path.is_file())
           names2 = sorted(path.name for path in second.iterdir() if path.is_file())
           if not names1 or names1 != names2:
