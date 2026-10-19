@@ -49,7 +49,9 @@ def validate(
 
     required = contract["required_gates"]
     if set(required) != set(registry_by_name) or len(required) != len(registry_by_name):
-        raise ValueError("GA contract required-gate set differs from the reviewed readiness registry")
+        raise ValueError(
+            "GA contract required-gate set differs from the reviewed readiness registry"
+        )
     nonpassing = sorted(
         name for name in required if registry_by_name[name]["status"] != "pass"
     )
@@ -72,10 +74,17 @@ def validate(
             raise ValueError("evidence pack SHA-256 does not match the release contract")
         if pack.get("source_revision") != revision:
             raise ValueError("evidence pack source revision does not match the release contract")
+        pack_rows = pack.get("gates")
+        if not isinstance(pack_rows, list):
+            raise ValueError("evidence pack gates are malformed")
+        pack_by_name = {row.get("gate"): row for row in pack_rows if isinstance(row, dict)}
+        if len(pack_by_name) != len(pack_rows) or set(pack_by_name) != set(required):
+            raise ValueError("evidence pack gate set does not match the GA contract")
         if pack.get("ready") is not True or any(
-            row.get("status") != "pass" for row in pack.get("gates", [])
+            row.get("status") != "pass" or row.get("source_revision") != revision
+            for row in pack_rows
         ):
-            raise ValueError("evidence pack is not ready")
+            raise ValueError("evidence pack is not ready or is not source-bound")
     elif contract["decision"] == "approved":
         raise ValueError("approved release requires an evidence pack file")
 
@@ -85,8 +94,14 @@ def validate(
         ):
             raise ValueError("approved release requires source revision and evidence-pack digest")
         support = contract["support_contract"]
-        if not support["published"] or not support["version"] or not support["constraints_reference"]:
-            raise ValueError("approved release requires a published versioned customer support contract")
+        if (
+            not support["published"]
+            or not support["version"]
+            or not support["constraints_reference"]
+        ):
+            raise ValueError(
+                "approved release requires a published versioned customer support contract"
+            )
         benchmark = contract["benchmark_qualification"]
         if (
             benchmark["status"] != "pass"
@@ -100,7 +115,9 @@ def validate(
             or security["source_revision"] != revision
             or not security["evidence_reference"]
         ):
-            raise ValueError("approved release requires a passing security review bound to this revision")
+            raise ValueError(
+                "approved release requires a passing security review bound to this revision"
+            )
         risk = contract["residual_risk"]
         if (
             risk["status"] != "accepted"
@@ -131,7 +148,11 @@ def validate(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--contract", type=Path, default=Path("docs/releases/ga-v1-contract.json"))
-    parser.add_argument("--schema", type=Path, default=Path("schemas/ga-v1-release-decision.schema.json"))
+    parser.add_argument(
+        "--schema",
+        type=Path,
+        default=Path("schemas/ga-v1-release-decision.schema.json"),
+    )
     parser.add_argument("--gates", type=Path, default=Path("docs/readiness/w15-gates.json"))
     parser.add_argument("--evidence-pack", type=Path)
     parser.add_argument("--revision")
