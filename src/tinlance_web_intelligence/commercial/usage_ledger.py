@@ -119,6 +119,12 @@ class SQLiteUsageLedger:
         );
         CREATE INDEX IF NOT EXISTS twi_usage_events_scope_time_idx
             ON twi_usage_events(tenant_id, subject_id, occurred_at);
+        CREATE TRIGGER IF NOT EXISTS twi_usage_events_no_update
+            BEFORE UPDATE ON twi_usage_events
+            BEGIN SELECT RAISE(ABORT, 'usage events are append-only'); END;
+        CREATE TRIGGER IF NOT EXISTS twi_usage_events_no_delete
+            BEFORE DELETE ON twi_usage_events
+            BEGIN SELECT RAISE(ABORT, 'usage events are append-only'); END;
         """)
 
     def reserve(
