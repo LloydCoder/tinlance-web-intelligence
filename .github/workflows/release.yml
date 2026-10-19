@@ -16,6 +16,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
+      artifact-metadata: write
     services:
       postgres:
         image: postgres:17-alpine
@@ -122,6 +123,40 @@ jobs:
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "dist/*"
+      - name: Independently verify release artifact provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          artifacts=(dist/*)
+          if (( ${#artifacts[@]} == 0 )); then
+            echo "No release artifacts available for attestation verification" >&2
+            exit 1
+          fi
+          for artifact in "${artifacts[@]}"; do
+            [[ -f "$artifact" ]] || continue
+            gh attestation verify "$artifact" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-digest "$GITHUB_SHA"
+          done
+          wheels=(dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "Expected exactly one wheel for the negative provenance test" >&2
+            exit 1
+          fi
+          tampered="$RUNNER_TEMP/twi-tampered.whl"
+          cp "${wheels[0]}" "$tampered"
+          printf '\nTWI tamper-detection test\n' >> "$tampered"
+          if gh attestation verify "$tampered" \
+            --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-digest "$GITHUB_SHA"; then
+            echo "Tampered artifact unexpectedly passed provenance verification" >&2
+            exit 1
+          fi
+          echo "Tampered artifact correctly rejected"
       - name: Upload release artifacts and evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
