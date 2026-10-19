@@ -1,7 +1,7 @@
 """Tenant-scoped customer usage reads; billing state remains owned externally."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -48,19 +48,20 @@ def read_usage(
         raise HTTPException(status_code=422, detail="period_start must be an ISO-8601 timestamp") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise HTTPException(status_code=422, detail="period_start must include a timezone")
+    canonical_period_start = parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     ledger = request.app.state.usage_ledger
     scoped = ledger.list_events(
         tenant_id=principal.tenant_id, subject_id=principal.subject_id, limit=limit,
-        dimension=dimension, period_start=period_start,
+        dimension=dimension, period_start=canonical_period_start,
     )
     total = ledger.usage_total(
         tenant_id=principal.tenant_id, subject_id=principal.subject_id,
-        dimension=dimension, period_start=period_start,
+        dimension=dimension, period_start=canonical_period_start,
     )
     return {
         "schema_version": 1,
         "dimension": dimension,
-        "period_start": period_start,
+        "period_start": canonical_period_start,
         "used": total,
         "events": [_public_event(event) for event in scoped],
         "returned": len(scoped),
