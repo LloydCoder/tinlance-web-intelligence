@@ -40,3 +40,11 @@ def test_json_tool_manifests_match_python_catalog() -> None:
         assert manifest["operation"] == tool.operation
         assert manifest["authorization"]["required_scope"] == tool.required_scope
         assert manifest["input_schema"] == tool.input_schema
+
+
+def test_monitor_delete_contract_is_consequential_and_idempotent() -> None:
+    delete = next(tool for tool in TWI_PLATFORM_TOOLS if tool.name == "twi_monitor_delete")
+    assert delete.consequential is True
+    assert delete.destructive is True
+    assert delete.idempotency_argument == "idempotency_key"
+    assert {"monitor_id", "idempotency_key"} <= set(delete.input_schema["required"])
