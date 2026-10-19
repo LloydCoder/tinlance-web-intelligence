@@ -27,3 +27,5 @@ W9 turns the existing SSRF and browser isolation policy into repeatable adversar
 ## Release rule
 
 A passing CI suite proves the tested code and CI topology. It does not prove the cloud provider's firewall, private networking, secret manager, database TLS, or deployed container privileges. Keep those items open until deployment evidence is captured. Do not accept a security exception silently; record the owner, rationale, expiry, and compensating controls.
+
+Monitor API adversarial cases cover subject/tenant non-disclosure, unsafe URL rejection, request-field strictness, idempotency and deletion redaction. Monitor capture uses bounded response bytes and baseline-version compare-and-set; failed captures do not advance a baseline. These automated checks do not replace deployed redirect/DNS-rebinding and resource-exhaustion exercises.

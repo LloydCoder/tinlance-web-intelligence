@@ -67,10 +67,16 @@ Before production/private beta, retain a dated evidence pack containing:
 5. A rollback rehearsal to the previous known-good immutable image digest, with health/readiness verification and measured recovery time.
 6. Named on-call owner, escalation path, runbook link, and accepted RPO/RTO.
 
+## W15 monitor and trace controls
+
+Monitor runs are explicit idempotent jobs. Agent OS owns recurrence. Pause blocks new enqueue operations while accepted jobs drain; deletion redacts the stored target, policy, baseline and run summaries. Results contain normalized-text digests and bounded change metadata, not page text or truth claims. See [Monitor API v1](../api/monitors-v1.md).
+
+The API, durable jobs, worker, browser broker and World Intelligence exporter accept only syntactically valid W3C `traceparent`; baggage is not propagated. OpenTelemetry spans use bounded operation/component fields and are no-op unless a provider is configured. Exporter configuration, collector reachability, alert delivery and trace retention have not been verified in a target environment.
+
 ## Remaining W10 work
 
 - Add browser, provider and worker outcome/latency metrics without high-cardinality labels; queue depth and outbox age are now exposed by the API scrape endpoint.
-- Establish real distributed trace propagation across API, worker, broker and World Intelligence export; request IDs alone are correlation, not distributed tracing.
+- Verify trace continuity and exporter behavior in a target environment; request IDs alone are correlation, not distributed tracing.
 - Deploy a collector and alerting route in the approved staging environment, then verify delivery.
 - Define capacity budgets from measured load tests and tune concurrency/timeouts from evidence.
 - Exercise on-call, incident response and rollback against the actual target deployment.

@@ -48,6 +48,30 @@
       ],
       "max_age_seconds": 86400,
       "expected_failure_mode": "unsupported_claim"
+    },
+    {
+      "case_id": "synthetic-monitor-private-redirect",
+      "expected_urls": ["https://public.example.test/target"],
+      "expected_domains": ["public.example.test"],
+      "expected_phrases": ["public content"],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "blocked_redirect"
+    },
+    {
+      "case_id": "synthetic-monitor-tenant-scope-denial",
+      "expected_urls": ["https://public.example.test/tenant-scoped"],
+      "expected_domains": ["public.example.test"],
+      "expected_phrases": ["tenant scoped"],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "authorization_denied"
+    },
+    {
+      "case_id": "synthetic-monitor-baseline-failure",
+      "expected_urls": ["https://public.example.test/baseline"],
+      "expected_domains": ["public.example.test"],
+      "expected_phrases": ["baseline"],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "capture_failed"
     }
   ]
 }

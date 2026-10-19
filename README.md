@@ -19,6 +19,8 @@ TWI owns web search and retrieval adapters, safe HTTP acquisition, isolated brow
 
 TWI is a service/product layer, not an authority plane. It must not bypass Platform policy or duplicate World Intelligence semantics. It publishes operation manifests for the existing Platform MCP gateway rather than hosting a competing MCP server.
 
+The versioned monitor API stores tenant-scoped monitor definitions and explicit durable capture runs. Agent OS controls recurrence. Results expose bounded deterministic change digests and do not claim truth; see [Monitor API v1](docs/api/monitors-v1.md). The [W15 evidence pack](docs/readiness/w15-gates.json) is source-bound and fail-closed; external owner and deployment gates remain open until evidenced.
+
 ## Development
 
 Requires Python 3.12+ or 3.13.
@@ -29,6 +31,8 @@ make check
 ```
 
 PostgreSQL is the production persistence backend for jobs, raw content-addressed artifacts, and the World Intelligence evidence outbox. Production requires TWI_DATABASE_URL with sslmode=verify-full; SQLite is limited to development, tests, and the single-host browser-isolation harness. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
+
+`make check` runs tests, lint, typing, security lint, migration synchronization, deterministic evaluation, consumer contract checks, and evidence pack validation. Build a local package with `python -m build --no-isolation` when the host cannot create isolated build environments.
 
 Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md). Backup and recovery procedures are documented in [backup and restore](docs/operations/backup-and-restore.md). W6 private-beta readiness is tracked in [the readiness checklist](docs/operations/private-beta-readiness.md).
 

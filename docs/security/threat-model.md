@@ -30,3 +30,13 @@
 ## Residual risks
 
 A domain can resolve differently between validation and connection. A compliant production transport and network-level egress enforcement are mandatory before live acquisition is considered safe.
+
+## Monitor-specific threats
+
+- **Target and query disclosure:** monitor targets are persisted for execution. Public API results omit targets; logs, traces, metrics, and evidence must not include URL query values. Deletion redacts target and policy.
+- **Baseline races and replay:** capture results use a stored baseline version compare-and-set. Idempotency conflicts are rejected, and failed/stale captures do not advance the baseline.
+- **Tenant/subject leakage:** every monitor and associated job read is tenant scoped, with explicit same-tenant administrative scopes; negative API tests cover subject separation.
+- **Trace data leakage:** only validated `traceparent` is accepted. Baggage is omitted and span attributes are allowlisted. Export remains a no-op by default.
+- **Operational controls:** monitor creation and run enqueue do not schedule recurrence. Agent OS owns cadence; pause prevents new enqueues while accepted work drains.
+
+These are repository controls. Live DNS/redirect behavior, target egress, trace collector configuration, retention approval, and independent security assessment remain environment evidence gates.
