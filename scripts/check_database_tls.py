@@ -1,6 +1,7 @@
 """Fail-closed TLS validation for operational PostgreSQL backup and restore commands."""
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from urllib.parse import parse_qs, urlsplit
@@ -23,11 +24,22 @@ def validate_database_url(dsn: str) -> None:
         raise ValueError("sslmode=verify-full is required")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--env",
+        choices=(
+            "TWI_DATABASE_URL", "TWI_BACKUP_DATABASE_URL",
+            "TWI_RESTORE_DATABASE_URL", "TWI_PRIMARY_DATABASE_URL",
+        ),
+        default="TWI_DATABASE_URL",
+        help="name of the environment variable containing the DSN (never pass the DSN itself)",
+    )
+    args = parser.parse_args(argv)
     try:
-        validate_database_url(os.environ["TWI_DATABASE_URL"])
+        validate_database_url(os.environ[args.env])
     except (KeyError, ValueError) as exc:
-        print(f"database TLS validation failed: {exc}", file=sys.stderr)
+        print(f"database TLS validation failed for {args.env}: {exc}", file=sys.stderr)
         return 2
     return 0
 
