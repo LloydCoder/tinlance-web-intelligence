@@ -44,3 +44,22 @@ A6. Run focused tests, complete CI, audit the exact PR head, fix all findings, m
 ## Explicit non-claims
 
 A green CI run does not establish live billing, provider settlement, pricing approval, production entitlement configuration, or legal/tax compliance. Those remain external release gates.
+
+
+## Implementation evidence and residual boundaries
+
+The current W15-A implementation branch contains:
+
+- Versioned immutable plan snapshots and fail-closed feature/quota decisions.
+- Atomic quota reservations at the durable job-submission boundary. PostgreSQL reservations use a transaction-scoped advisory lock keyed by tenant, quota dimension, and period; SQLite serializes writers with an immediate transaction.
+- Idempotent usage commit and retry recovery. If the job is durable but usage commit fails, the API returns 503 with an instruction to retry the same idempotency key; the durable reservation remains recoverable.
+- Append-only usage facts protected by database triggers in both SQLite and PostgreSQL.
+- A provider-neutral HMAC-SHA256 verifier that validates raw request bytes, timestamp freshness, strict envelope fields, duplicate JSON keys, and payload digest without returning raw billing payload data.
+- A durable payload-free billing receipt inbox with provider/event identity, digest-conflict detection, retry status, and a conservative ordering helper that refuses to order events without comparable provider-guaranteed revisions.
+- Deterministic reconciliation classifications and tenant-scoped usage/quota reads with bounded keyset pagination.
+
+Evidence files: `tests/test_commercial_entitlements.py`, `tests/test_commercial_usage_ledger.py`,
+`tests/test_commercial_usage_migration.py`, `tests/test_billing_events.py`,
+`tests/test_api_jobs.py`, `tests/test_api_usage.py`, and `tests/test_postgres_persistence.py`.
+
+The provider-specific webhook endpoint/adapter, production entitlement resolver implementation, live provider sandbox contract, commercial plan identifiers and limits, and external billing-system authority are intentionally not fabricated. Production application startup fails closed without an injected entitlement resolver. These items remain external integration/release gates and must be recorded as not evidenced until an approved provider and plan catalogue are configured and verified.
