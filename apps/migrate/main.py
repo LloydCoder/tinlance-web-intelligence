@@ -51,10 +51,9 @@ def main() -> int:
             raise SystemExit("set TWI_MIGRATION_DATABASE_URL or TWI_DATABASE_URL")
         _validate_dsn(migration_dsn, require_verified_tls=False)
 
-    migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
-        "001_production_postgres.sql"
-    )
-    if not migration.is_file():
+    migrations = files("tinlance_web_intelligence.persistence.migrations")
+    migration_names = ("001_production_postgres.sql", "002_monitors.sql")
+    if any(not migrations.joinpath(name).is_file() for name in migration_names):
         raise SystemExit("packaged PostgreSQL migration resource is missing")
     pool = ConnectionPool[Connection[dict[str, Any]]](
         conninfo=migration_dsn,
@@ -68,11 +67,12 @@ def main() -> int:
         pool.wait(timeout=10)
         with pool.connection() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
-            conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
+            for name in migration_names:
+                conn.execute(migrations.joinpath(name).read_text(encoding="utf-8"), prepare=False)
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] != 1:
+            if version is None or version["version"] != 2:
                 raise RuntimeError("PostgreSQL migration version verification failed")
     finally:
         pool.close()

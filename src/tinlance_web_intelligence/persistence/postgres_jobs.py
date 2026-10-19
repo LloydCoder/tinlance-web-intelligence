@@ -51,16 +51,15 @@ class PostgresJobRepository:
             self._verify_schema()
 
     def _apply_migrations(self) -> None:
-        migration = files("tinlance_web_intelligence.persistence.migrations").joinpath(
-            "001_production_postgres.sql"
-        )
-        if not migration.is_file():
-            self._pool.close()
-            raise RuntimeError("production PostgreSQL migration file is missing")
-        sql = migration.read_text(encoding="utf-8")
+        migrations = files("tinlance_web_intelligence.persistence.migrations")
         with self._pool.connection() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
-            conn.execute(sql, prepare=False)
+            for name in ("001_production_postgres.sql", "002_monitors.sql"):
+                migration = migrations.joinpath(name)
+                if not migration.is_file():
+                    self._pool.close()
+                    raise RuntimeError(f"production PostgreSQL migration file is missing: {name}")
+                conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
 
     def _verify_schema(self) -> None:
         with self._pool.connection() as conn:
@@ -76,7 +75,7 @@ class PostgresJobRepository:
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] != 1:
+            if version is None or version["version"] != 2:
                 raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod
