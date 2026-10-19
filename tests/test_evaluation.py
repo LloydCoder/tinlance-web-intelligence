@@ -67,8 +67,12 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
         "outcome_correctness_rate", "evidence_quality_score",
     ):
         assert summary[metric] is None or 0.0 <= summary[metric] <= 1.0
-    assert report["counts"]["case_count"] == len(cases)
-    assert report["qualification"]["status"] == "not_evidenced"
+    counts = report["counts"]
+    qualification = report["qualification"]
+    assert isinstance(counts, dict)
+    assert isinstance(qualification, dict)
+    assert counts["case_count"] == len(cases)
+    assert qualification["status"] == "not_evidenced"
     assert report["evidence_mode"] == "synthetic"
     assert "docs.python.org" not in json.dumps(report)
     assert "lexical heuristic" in render_markdown(report)
@@ -99,8 +103,10 @@ def test_approved_thresholds_without_registry_digest_cannot_qualify() -> None:
         },
         thresholds_sha256=None,
     )
-    assert report["qualification"]["status"] == "not_evidenced"
-    assert report["qualification"]["reason"] == "threshold_registry_hash_missing"
+    qualification = report["qualification"]
+    assert isinstance(qualification, dict)
+    assert qualification["status"] == "not_evidenced"
+    assert qualification["reason"] == "threshold_registry_hash_missing"
 
 
 def test_results_must_match_dataset_case_ids() -> None:
