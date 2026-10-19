@@ -409,7 +409,7 @@ def render_markdown(report: Mapping[str, object]) -> str:
             "",
             "## Per-case metrics",
             "",
-            "| Case | Items | Domains | Recall | Diversity | Extract | Grounding | Fresh | Failure match |",
+            "| Case | Items | Domains | Recall | Diversity | Extract | Grounding | Fresh | Failure |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
