@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinlance.com/schemas/ga-v1-release-decision.schema.json",
+  "title": "TWI GA v1 release decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "product",
+    "product_brand",
+    "release_track",
+    "decision",
+    "source_revision",
+    "evidence_pack_reference",
+    "evidence_pack_sha256",
+    "support_contract",
+    "benchmark_qualification",
+    "security_review",
+    "residual_risk",
+    "release_approval",
+    "required_gates",
+    "customer_constraints",
+    "non_goals"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "product": {
+      "const": "Tinlance Web Intelligence"
+    },
+    "product_brand": {
+      "const": "Provenel"
+    },
+    "release_track": {
+      "const": "ga-v1"
+    },
+    "decision": {
+      "enum": [
+        "not_certified",
+        "blocked",
+        "approved"
+      ]
+    },
+    "source_revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "evidence_pack_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_pack_sha256": {
+      "type": "string",
+      "pattern": "^([0-9a-f]{64})?$"
+    },
+    "support_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "published",
+        "version",
+        "constraints_reference"
+      ],
+      "properties": {
+        "published": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "constraints_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "benchmark_qualification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "threshold_registry_sha256",
+        "approval_reference"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_evidenced"
+          ]
+        },
+        "threshold_registry_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "approval_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "security_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_revision",
+        "evidence_reference"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_evidenced"
+          ]
+        },
+        "source_revision": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "evidence_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "residual_risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "owner",
+        "disposition_reference"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "not_evidenced"
+          ]
+        },
+        "owner": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "disposition_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "release_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approver",
+        "approval_reference",
+        "approved_at"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "approved",
+            "rejected",
+            "not_evidenced"
+          ]
+        },
+        "approver": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "approval_reference": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "approved_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "required_gates": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "customer_constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operations_and_scopes_published",
+        "limits_and_quotas_published",
+        "privacy_retention_and_deletion_published",
+        "deployment_dependencies_published",
+        "pricing_and_billing_policy_approved",
+        "support_and_incident_policy_published"
+      ],
+      "properties": {
+        "operations_and_scopes_published": {
+          "type": "boolean"
+        },
+        "limits_and_quotas_published": {
+          "type": "boolean"
+        },
+        "privacy_retention_and_deletion_published": {
+          "type": "boolean"
+        },
+        "deployment_dependencies_published": {
+          "type": "boolean"
+        },
+        "pricing_and_billing_policy_approved": {
+          "type": "boolean"
+        },
+        "support_and_incident_policy_published": {
+          "type": "boolean"
+        }
+      }
+    },
+    "non_goals": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
