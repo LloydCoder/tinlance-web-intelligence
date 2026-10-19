@@ -11,6 +11,7 @@ The production persistence backend stores job state, raw content-addressed artif
 - Run scripts/backup_postgres.sh from an approved operations environment with pg_dump and Python 3 installed. The script rejects URLs unless sslmode=verify-full is set.
 - Store encrypted backups outside the database failure domain. Restrict access, apply retention, and monitor backup age and failures.
 - Run `python scripts/prune_artifacts.py` for artifact retention. It defaults to a dry run; destructive pruning requires `--apply` and `TWI_CONFIRM_ARTIFACT_PRUNE=YES`. Configure and audit the retention interval before enabling scheduled execution.
+- Run `python scripts/prune_job_data.py` for terminal job payload/result retention. It defaults to a dry run and requires a separate least-privilege `TWI_JOB_MAINTENANCE_DATABASE_URL`; destructive redaction requires `--apply` and `TWI_CONFIRM_JOB_DATA_PRUNE=YES`. The maintenance role must be restricted to the required job columns/operations and must not have DDL, artifact, or outbox privileges.
 - Preserve the SHA-256 checksum and backup metadata with the backup; do not log the DSN or source data.
 - Keep a documented retention schedule and delete expired copies according to policy.
 

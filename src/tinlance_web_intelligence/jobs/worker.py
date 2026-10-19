@@ -12,7 +12,10 @@ from tinlance_web_intelligence.acquisition.service import (
     WebAcquisitionService,
 )
 from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
-from tinlance_web_intelligence.contracts.provenance import AcquisitionProvenance
+from tinlance_web_intelligence.contracts.provenance import (
+    AcquisitionProvenance,
+    validate_evidence_pack,
+)
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
@@ -104,7 +107,7 @@ class JobWorker:
             )
             if provenance.content_sha256 != page.content_sha256:
                 raise RuntimeError("artifact digest does not match acquisition provenance")
-            return {
+            result = {
                 "source_url": page.fetch.final_url,
                 "retrieved_at": page.fetch.retrieved_at.isoformat(),
                 "status_code": page.fetch.status_code,
@@ -118,6 +121,8 @@ class JobWorker:
                 "text": page.extracted.text,
                 "links": list(page.extracted.links[:100]),
             }
+            validate_evidence_pack(result)
+            return result
         raise ValueError("unsupported job kind")
 
     def _fail(self, job: Job, error_code: str, retryable: bool) -> None:
