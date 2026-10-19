@@ -86,6 +86,12 @@ def _string(value: object, field: str) -> str:
     return value
 
 
+def _text(value: object, field: str) -> str:
+    if not isinstance(value, str) or len(value) > 5_000_000:
+        raise BenchmarkError(f"{field} must be text no larger than five million characters")
+    return value
+
+
 def _string_list(value: object, field: str) -> tuple[str, ...]:
     items = tuple(_string(item, f"{field}[]") for item in _list(value, field))
     if not items or len(set(items)) != len(items):
@@ -207,8 +213,8 @@ def load_observations(raw: bytes, expected_dataset_id: str) -> tuple[CaseObserva
                 Evidence(
                     url=_url(evidence.get("url"), "retrieved.url"),
                     retrieved_at=_timestamp(evidence.get("retrieved_at"), "retrieved.retrieved_at"),
-                    title=_string(evidence.get("title"), "retrieved.title"),
-                    text=_string(evidence.get("text"), "retrieved.text"),
+                    title=_text(evidence.get("title"), "retrieved.title"),
+                    text=_text(evidence.get("text"), "retrieved.text"),
                 )
             )
         claims: list[Claim] = []
