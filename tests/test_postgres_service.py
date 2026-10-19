@@ -193,7 +193,9 @@ def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
         fake_bin / "pg_dump",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_BACKUP_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_BACKUP_DATABASE_URL:-}" \\
+  && -z "${TWI_DATABASE_URL:-}" \\
+  && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
 [[ -z "${PGPASSWORD:-}" && -z "${PGHOSTADDR:-}" && -z "${PGOPTIONS:-}" ]] || exit 95
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 91
 [[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 92
@@ -219,7 +221,10 @@ exit 0
                 "?sslmode=verify-full"
             ),
             "TWI_BACKUP_DIR": str(backup_dir),
-            "TWI_OTHER_DATABASE_URL": "postgresql://other:secret@other.example.com/twi?sslmode=verify-full",
+            "TWI_OTHER_DATABASE_URL": (
+                "postgresql://other:secret@other.example.com/twi"
+                "?sslmode=verify-full"
+            ),
             "PGPASSWORD": "ambient-password",
             "PGHOSTADDR": "192.0.2.1",
             "PGOPTIONS": "-csearch_path=public",
@@ -261,7 +266,9 @@ def test_restore_script_preflights_target_checksum_and_secret_safe_service(
         fake_bin / "pg_restore",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_RESTORE_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_RESTORE_DATABASE_URL:-}" \\
+  && -z "${TWI_DATABASE_URL:-}" \\
+  && -z "${TWI_OTHER_DATABASE_URL:-}" ]] || exit 90
 [[ -z "${PGPASSWORD:-}" && -z "${PGHOSTADDR:-}" && -z "${PGOPTIONS:-}" ]] || exit 95
 [[ -z "${TWI_PRIMARY_DATABASE_URL:-}" ]] || exit 91
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 92
