@@ -178,6 +178,15 @@ MONITOR_RUN_SCHEMA: dict[str, Any] = {
         "idempotency_key": {"type": "string", "minLength": 16, "maxLength": 256},
     },
 }
+MONITOR_DELETE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["monitor_id", "idempotency_key"],
+    "properties": {
+        "monitor_id": {"type": "string", "minLength": 1, "maxLength": 64},
+        "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{16,128}$"},
+    },
+}
 
 TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
     PlatformToolContract(
@@ -403,10 +412,11 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         action="delete",
         resource_pattern="twi://monitors/{monitor_id}",
         required_scope="twi:monitors:delete",
-        input_schema=MONITOR_ID_SCHEMA,
+        input_schema=MONITOR_DELETE_SCHEMA,
         read_only=False,
-        consequential=False,
+        consequential=True,
         destructive=True,
         open_world=False,
+        idempotency_argument="idempotency_key",
     ),
 )
