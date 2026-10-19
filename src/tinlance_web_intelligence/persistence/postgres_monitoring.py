@@ -282,6 +282,12 @@ class PostgresMonitoringRepository:
             raise ValueError("invalid monitoring claim limits")
         current = _validate_observed_at(now or datetime.now(UTC))
         with self._pool.connection() as conn:
+            conn.execute(
+                "UPDATE twi_monitoring_events SET status='failed', lease_owner=NULL, "
+                "lease_until=NULL, last_error_code='lease_expired_max_attempts', updated_at=%s "
+                "WHERE status='delivering' AND lease_until < %s AND attempts >= %s",
+                (current, current.timestamp(), max_attempts),
+            )
             rows = conn.execute(
                 "WITH candidates AS ("
                 " SELECT event_id FROM twi_monitoring_events "
@@ -385,9 +391,9 @@ class PostgresMonitoringRepository:
                 "SELECT status, COUNT(*) AS count FROM twi_monitoring_events GROUP BY status"
             ).fetchall()
             oldest = conn.execute(
-                "SELECT GREATEST(0, %s - MIN(available_at)) AS age_seconds "
-                "FROM twi_monitoring_events WHERE status='pending'",
-                (current.timestamp(),),
+                "SELECT GREATEST(0, EXTRACT(EPOCH FROM (%s - MIN(created_at)))) "
+                "AS age_seconds FROM twi_monitoring_events WHERE status='pending'",
+                (current,),
             ).fetchone()
         result = {
             f"monitoring_events_{status}": 0.0
