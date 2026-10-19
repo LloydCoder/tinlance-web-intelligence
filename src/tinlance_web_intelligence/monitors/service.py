@@ -12,6 +12,7 @@ from tinlance_web_intelligence.jobs.model import Job
 from tinlance_web_intelligence.monitors.model import (
     BaselineConflictError,
     Monitor,
+    MonitorDeletedError,
     MonitorRunResult,
     MonitorRunStatus,
     MonitorStatus,
@@ -208,6 +209,8 @@ class MonitorService:
         )
         if monitor is None:
             raise KeyError("monitor not found")
+        if monitor.status is MonitorStatus.DELETED:
+            raise MonitorDeletedError("deleted monitors cannot execute queued runs")
         max_bytes = monitor.policy.get("max_bytes")
         page = await self.acquisition.acquire_page(
             monitor.target_url,
