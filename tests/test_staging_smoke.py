@@ -59,7 +59,7 @@ def test_staging_probe_accepts_a_valid_platform_token_without_creating_a_job() -
         "https://staging.example.test", "platform-probe-token", requester=requester
     )
     assert result["ok"] is True
-    assert result["checks"]["platform_token_accepted"]["status_code"] == 404
+    assert result["checks"]["platform_token_authenticated"]["status_code"] == 404
 
 
 def test_staging_probe_fails_closed_when_readiness_is_unhealthy() -> None:
