@@ -19,7 +19,7 @@ TWI owns web search and retrieval adapters, safe HTTP acquisition, isolated brow
 
 TWI is a service/product layer, not an authority plane. It must not bypass Platform policy or duplicate World Intelligence semantics. It publishes operation manifests for the existing Platform MCP gateway rather than hosting a competing MCP server.
 
-The versioned monitor API stores tenant-scoped monitor definitions and explicit durable capture runs. Agent OS controls recurrence. Results expose bounded deterministic change digests and do not claim truth; see [Monitor API v1](docs/api/monitors-v1.md). The [W15 evidence pack](docs/readiness/w15-gates.json) is source-bound and fail-closed; external owner and deployment gates remain open until evidenced.
+The versioned monitor API stores tenant-scoped monitor definitions and explicit durable capture runs. Agent OS controls recurrence. Results expose bounded deterministic change digests and do not claim truth; see [Monitor API v1](docs/api/monitors-v1.md). The commercial boundary provides atomic operation quotas, append-only usage facts, provider-neutral signed-event primitives, and a tenant-scoped [Usage API v1](docs/api/usage-v1.md). The [W15 evidence pack](docs/readiness/w15-gates.json) is source-bound and fail-closed; external owner and deployment gates remain open until evidenced.
 
 ## Development
 
@@ -30,7 +30,7 @@ make install
 make check
 ```
 
-PostgreSQL is the production persistence backend for jobs, raw content-addressed artifacts, and the World Intelligence evidence outbox. Production requires TWI_DATABASE_URL with sslmode=verify-full; SQLite is limited to development, tests, and the single-host browser-isolation harness. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
+PostgreSQL is the production persistence backend for jobs, usage facts, billing-event receipts, raw content-addressed artifacts, and the World Intelligence evidence outbox. Production requires TWI_DATABASE_URL with sslmode=verify-full and an injected entitlement resolver backed by the approved billing boundary; startup fails closed without it. No provider-specific billing adapter or commercial plan catalogue is claimed until explicitly selected and configured. SQLite is limited to development, tests, and the single-host browser-isolation harness. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
 
 `make check` runs tests, lint, typing, security lint, migration synchronization, deterministic evaluation, consumer contract checks, and evidence pack validation. Build a local package with `python -m build --no-isolation` when the host cannot create isolated build environments.
 
