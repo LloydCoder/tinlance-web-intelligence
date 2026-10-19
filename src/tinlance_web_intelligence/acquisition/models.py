@@ -16,6 +16,7 @@ class FetchResult:
     body: bytes
     retrieved_at: datetime
     headers: Mapping[str, str]
+    redirect_count: int = 0
 
 
 @dataclass(frozen=True, slots=True)

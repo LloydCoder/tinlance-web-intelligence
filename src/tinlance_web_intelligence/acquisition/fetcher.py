@@ -151,6 +151,7 @@ class SafeHTTPFetcher:
                             body=bytes(body),
                             retrieved_at=datetime.now(UTC),
                             headers=safe_headers,
+                            redirect_count=redirect_count,
                         )
         except (aiohttp.ClientError, TimeoutError) as exc:
             raise FetchError("upstream request failed", retryable=True) from exc

@@ -1,7 +1,6 @@
 """Tenant-scoped PostgreSQL artifact store for durable production capture."""
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from hashlib import sha256
 from typing import Any
@@ -10,9 +9,11 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from tinlance_web_intelligence.artifacts.store import ArtifactRecord
-
-_DIGEST = re.compile(r"^[0-9a-f]{64}")
+from tinlance_web_intelligence.artifacts.store import (
+    ArtifactRecord,
+    validate_artifact_digest,
+    validate_artifact_metadata,
+)
 
 
 class PostgresArtifactStore:
@@ -61,10 +62,7 @@ class PostgresArtifactStore:
             raise ValueError("tenant_id must be normalized and contain 1 to 256 characters")
         if len(body) > self._max_bytes:
             raise ValueError("artifact exceeds configured byte limit")
-        if not content_type or len(content_type) > 255:
-            raise ValueError("content_type must contain 1 to 255 characters")
-        if not source_url or len(source_url) > 4096:
-            raise ValueError("source_url must contain 1 to 4096 characters")
+        validate_artifact_metadata(content_type, source_url)
         if captured_at.tzinfo is None or captured_at.utcoffset() is None:
             raise ValueError("captured_at must be timezone-aware")
         digest = sha256(body).hexdigest()
@@ -111,8 +109,7 @@ class PostgresArtifactStore:
             )
 
     def get(self, digest: str, *, tenant_id: str = "development") -> bytes | None:
-        if not _DIGEST.fullmatch(digest) or len(digest) != 64:
-            raise ValueError("digest must be a lowercase SHA-256 hex string")
+        validate_artifact_digest(digest)
         with self._pool.connection() as conn:
             row = conn.execute(
                 "SELECT body, byte_size FROM twi_artifact_content "

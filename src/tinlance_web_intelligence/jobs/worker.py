@@ -12,6 +12,7 @@ from tinlance_web_intelligence.acquisition.service import (
     WebAcquisitionService,
 )
 from tinlance_web_intelligence.browser.service import BrowserCaptureError, BrowserService
+from tinlance_web_intelligence.contracts.provenance import AcquisitionProvenance
 from tinlance_web_intelligence.jobs.model import Job, LeaseLostError
 from tinlance_web_intelligence.persistence.protocols import JobRepository
 from tinlance_web_intelligence.search.base import SearchProvider, SearchProviderError
@@ -91,6 +92,18 @@ class JobWorker:
             page = asyncio.run(
                 self.acquisition.acquire_page(job.payload["url"], tenant_id=job.tenant_id)
             )
+            provenance = AcquisitionProvenance.from_capture(
+                requested_url=page.fetch.requested_url,
+                final_url=page.fetch.final_url,
+                status_code=page.fetch.status_code,
+                content_type=page.fetch.content_type,
+                body=page.fetch.body,
+                retrieved_at=page.fetch.retrieved_at,
+                redirect_count=page.fetch.redirect_count,
+                extractor_version="twi-html-extractor-v1",
+            )
+            if provenance.content_sha256 != page.content_sha256:
+                raise RuntimeError("artifact digest does not match acquisition provenance")
             return {
                 "source_url": page.fetch.final_url,
                 "retrieved_at": page.fetch.retrieved_at.isoformat(),
@@ -98,6 +111,7 @@ class JobWorker:
                 "content_type": page.fetch.content_type,
                 "artifact_id": page.artifact_id,
                 "content_sha256": page.content_sha256,
+                "provenance": provenance.to_dict(),
                 "title": page.extracted.title,
                 "description": page.extracted.description,
                 "canonical_url": page.extracted.canonical_url,

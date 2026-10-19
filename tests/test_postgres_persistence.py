@@ -95,6 +95,17 @@ def test_postgres_jobs_are_idempotent_scoped_and_recoverable() -> None:
             retryable.job_id, "retry-worker", error_code="temporary_error", retryable=True
         )
         assert retried.status == JobStatus.QUEUED and retried.error_code == "temporary_error"
+        cutoff = datetime.now(UTC) + timedelta(days=1)
+        assert repository.count_expired_results(cutoff, tenant_id=tenant) >= 3
+        assert repository.redact_expired_results(cutoff, tenant_id=tenant) >= 3
+        redacted = repository.get(created.job_id, tenant_id=tenant, subject_id=subject)
+        assert redacted is not None and redacted.status is JobStatus.SUCCEEDED
+        assert redacted.payload == {
+            "retention_redacted": True,
+            "reason": "retention_expired",
+        }
+        assert redacted.result is None
+        assert repository.count_expired_results(cutoff, tenant_id=tenant) == 0
         assert repository.ping()
     finally:
         repository.close()

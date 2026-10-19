@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from tinlance_web_intelligence.artifacts.store import MemoryArtifactStore
 
 
@@ -53,3 +55,31 @@ def test_artifact_retention_prunes_only_expired_capture_records() -> None:
     assert store.prune_before(cutoff, tenant_id="tenant-a") == 1
     assert store.count(tenant_id="tenant-a") == 1
     assert store.get(old.sha256, tenant_id="tenant-a") == b"shared content"
+
+def test_artifact_store_rejects_malformed_digest_and_source_metadata() -> None:
+    store = MemoryArtifactStore()
+    with pytest.raises(ValueError, match="SHA-256"):
+        store.get("a" * 64 + "suffix")
+    now = datetime(2026, 10, 18, tzinfo=UTC)
+    with pytest.raises(ValueError, match="absolute HTTP"):
+        store.put(
+            body=b"body",
+            content_type="text/html",
+            source_url="file:///etc/passwd",
+            captured_at=now,
+        )
+    with pytest.raises(ValueError, match="userinfo"):
+        store.put(
+            body=b"body",
+            content_type="text/html",
+            source_url="https://user:password@example.com/",
+            captured_at=now,
+        )
+    with pytest.raises(ValueError, match="content_type"):
+        store.put(
+            body=b"body",
+            content_type="text/html" + chr(10) + "X-Injected: true",
+            source_url="https://example.com/",
+            captured_at=now,
+        )
+
