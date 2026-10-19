@@ -177,6 +177,7 @@ def load_dataset(raw: bytes) -> tuple[str, tuple[BenchmarkCase, ...]]:
     if set(payload) != {"schema_version", "dataset_id", "description", "cases"}:
         raise BenchmarkError("dataset fields do not match schema version 1.1.0")
     dataset_id = _string(payload.get("dataset_id"), "dataset_id")
+    _string(payload.get("description"), "description")
     cases: list[BenchmarkCase] = []
     seen: set[str] = set()
     for index, item in enumerate(_list(payload.get("cases"), "cases")):
@@ -478,10 +479,21 @@ def evaluate(
         raise BenchmarkError("source_revision must be a full lowercase Git commit SHA or null")
     if thresholds_sha256 is not None and not re.fullmatch(r"[0-9a-f]{64}", thresholds_sha256):
         raise BenchmarkError("thresholds_sha256 must be a lowercase SHA-256 digest or null")
-    registry: Mapping[str, object] = threshold_registry or {
-        "approval_status": "not_approved", "owner": None,
-        "approval_reference": None, "thresholds": {},
+    registry_input: Mapping[str, object] = threshold_registry or {
+        "schema_version": "1.0.0",
+        "dataset_id": dataset_id,
+        "approval_status": "not_approved",
+        "owner": None,
+        "approval_reference": None,
+        "thresholds": {},
     }
+    try:
+        registry_bytes = json.dumps(
+            dict(registry_input), sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
+    except (TypeError, ValueError, UnicodeEncodeError) as exc:
+        raise BenchmarkError("threshold registry must be canonicalizable JSON") from exc
+    registry = load_threshold_registry(registry_bytes, dataset_id)
     approval_status = registry.get("approval_status")
     threshold_values = _mapping(registry.get("thresholds", {}), "thresholds")
     case_ids = {case.case_id for case in cases}
