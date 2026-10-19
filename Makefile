@@ -1,4 +1,4 @@
-.PHONY: install lint test typecheck security migration-check shell-check evaluation-check consumer-check evidence-pack readiness-check check
+.PHONY: install lint test typecheck security migration-check shell-check evaluation-check consumer-check evidence-pack readiness-check ga-contract-check check
 
 install:
 	python -m pip install -r requirements-dev.txt
@@ -34,4 +34,7 @@ evidence-pack:
 readiness-check: evidence-pack
 	python scripts/validate_w15_evidence_pack.py --pack dist/w15-evidence-pack.json --revision "$$(git rev-parse HEAD)"
 
-check: lint typecheck security test migration-check shell-check evaluation-check consumer-check readiness-check
+ga-contract-check:
+	python scripts/validate_ga_v1_contract.py
+
+check: lint typecheck security test migration-check shell-check evaluation-check consumer-check readiness-check ga-contract-check
