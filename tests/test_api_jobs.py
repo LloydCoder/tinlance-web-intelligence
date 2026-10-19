@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
 from tinlance_web_intelligence.commercial.entitlements import PlanEntitlements
-from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger
+from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger, UsageEvent
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 
@@ -330,3 +330,52 @@ def test_production_requires_entitlement_resolver_even_with_platform_verifier() 
     })
     with pytest.raises(ConfigurationError, match="entitlement resolver"):
         create_app(settings=settings, verifier=FakeVerifier(principal()))
+
+
+
+class FailOnceSQLiteUsageLedger(SQLiteUsageLedger):
+    def __init__(self) -> None:
+        super().__init__(":memory:")
+        self.fail_next_commit = True
+
+    def commit(self, *, tenant_id: str, subject_id: str, reservation_id: str) -> UsageEvent:
+        if self.fail_next_commit:
+            self.fail_next_commit = False
+            raise RuntimeError("simulated transient accounting failure")
+        return super().commit(
+            tenant_id=tenant_id, subject_id=subject_id, reservation_id=reservation_id
+        )
+
+
+def test_job_usage_commit_recovers_on_same_idempotency_key() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    usage = FailOnceSQLiteUsageLedger()
+    plan = PlanEntitlements(
+        plan_id="test-basic", version=1, features=frozenset({"search"}),
+        limits={"search_requests_month": 1},
+    )
+    client = TestClient(create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=repository, usage_ledger=usage,
+        verifier=FakeVerifier(principal()),
+        entitlement_resolver=FakeEntitlementResolver(plan),
+    ))
+    headers = {
+        "Authorization": "Bearer valid-credential",
+        "Idempotency-Key": "recovery-request-key-0001",
+    }
+    payload = {"kind": "search", "payload": {"query": "recover accounting"}}
+    first = client.post("/v1/jobs", json=payload, headers=headers)
+    assert first.status_code == 503
+    replay = client.post("/v1/jobs", json=payload, headers=headers)
+    assert replay.status_code == 202
+    assert usage.usage_total(
+        tenant_id="tenant-a", subject_id="subject-a",
+        dimension="search_requests_month",
+        period_start=usage.list_events(
+            tenant_id="tenant-a", subject_id="subject-a",
+            dimension="search_requests_month",
+        )[0].period_start,
+    ) == 1
+    usage.close()
+    repository.close()
