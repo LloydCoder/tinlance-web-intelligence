@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.commercial.entitlements import PlanEntitlements
 from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger
 from tinlance_web_intelligence.config import Settings
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
@@ -92,5 +93,50 @@ def test_usage_endpoint_fails_closed_without_read_scope() -> None:
         headers={"Authorization": "Bearer valid-credential"},
     )
     assert response.status_code == 403
+    usage.close()
+    jobs.close()
+
+
+
+class FakeEntitlementResolver:
+    def __init__(self, plan: PlanEntitlements | None) -> None:
+        self.plan = plan
+
+    def resolve(self, *, tenant_id: str, subject_id: str) -> PlanEntitlements | None:
+        assert tenant_id and subject_id
+        return self.plan
+
+
+def test_usage_endpoint_returns_plan_quota_and_remaining_allowance() -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    reservation = usage.reserve(
+        tenant_id="tenant-a", subject_id="subject-a", feature="search",
+        dimension="search_requests_month", period_start="2026-10-01T00:00:00Z",
+        quantity=2, limit=5, idempotency_key="quota-view-event-0001",
+    )
+    usage.commit(
+        tenant_id="tenant-a", subject_id="subject-a",
+        reservation_id=reservation.reservation_id,
+    )
+    plan = PlanEntitlements(
+        plan_id="customer-basic", version=3, features=frozenset({"search"}),
+        limits={"search_requests_month": 5},
+    )
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal()),
+        entitlement_resolver=FakeEntitlementResolver(plan),
+    )
+    response = TestClient(app).get(
+        "/v1/usage?dimension=search_requests_month&period_start=2026-10-01T00:00:00Z",
+        headers={"Authorization": f"Bearer {TEST_CREDENTIAL}"},
+    )
+    assert response.status_code == 200
+    assert response.json()["quota_limit"] == 5
+    assert response.json()["remaining"] == 3
+    assert response.json()["plan_id"] == "customer-basic"
+    assert response.json()["plan_version"] == 3
     usage.close()
     jobs.close()
