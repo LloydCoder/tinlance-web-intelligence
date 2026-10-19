@@ -34,19 +34,19 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
     dataset_id, cases, observations, dataset_raw, results_raw = _loaded()
     report = evaluate(
         dataset_id,
-        cases
-        observations
+        cases,
+        observations,
         now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
         dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
         results_sha256=hashlib.sha256(results_raw).hexdigest(),
     )
     again = evaluate(
         dataset_id,
-        cases,  # type: ignore[arg-type]
-        observations,  # type: ignore[arg-type]
+        cases,
+        observations,
         now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
-        dataset_sha256=__import__("hashlib").sha256(dataset_raw).hexdigest(),
-        results_sha256=__import__("hashlib").sha256(results_raw).hexdigest(),
+        dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
+        results_sha256=hashlib.sha256(results_raw).hexdigest(),
     )
     assert report == again
     summary = report["summary"]
@@ -71,7 +71,7 @@ def test_results_must_match_dataset_case_ids() -> None:
     with pytest.raises(BenchmarkError, match="case IDs must match"):
         evaluate(
             dataset_id,
-            cases,  # type: ignore[arg-type]
+            cases,
             bad_observations,
             now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
             dataset_sha256="a" * 64,
