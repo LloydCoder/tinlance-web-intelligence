@@ -43,7 +43,7 @@ from tinlance_web_intelligence.persistence.factory import (
     create_source_evidence_outbox,
 )
 from tinlance_web_intelligence.persistence.monitor_protocol import MonitorRepository
-from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox
+from tinlance_web_intelligence.persistence.protocols import JobRepository, SourceEvidenceOutbox, UsageLedger
 
 
 def create_app(
