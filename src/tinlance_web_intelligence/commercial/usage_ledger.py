@@ -289,6 +289,9 @@ class SQLiteUsageLedger:
         if period_start is not None:
             sql += " AND period_start=?"
             parameters.append(period_start)
+        if after is not None:
+            sql += " AND (occurred_at > ? OR (occurred_at = ? AND event_id > ?))"
+            parameters.extend((after[0], after[0], after[1]))
         sql += " ORDER BY occurred_at,event_id LIMIT ?"
         parameters.append(limit)
         with self._lock:
