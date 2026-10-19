@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from psycopg import Connection
@@ -21,7 +21,7 @@ from tinlance_web_intelligence.commercial.usage_ledger import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class PostgresUsageLedger:
@@ -206,7 +206,11 @@ class PostgresUsageLedger:
             event_id=row["event_id"], tenant_id=row["tenant_id"], subject_id=row["subject_id"],
             feature=row["feature"], dimension=row["dimension"], period_start=row["period_start"],
             quantity=int(row["quantity"]),
-            occurred_at=occurred_at.isoformat() if hasattr(occurred_at, "isoformat") else str(occurred_at),
+            occurred_at=(
+                occurred_at.isoformat()
+                if hasattr(occurred_at, "isoformat")
+                else str(occurred_at)
+            ),
             schema_version=int(row["schema_version"]), reservation_id=row["reservation_id"],
             idempotency_key=row["idempotency_key"],
         )
