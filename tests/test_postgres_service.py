@@ -153,13 +153,13 @@ def test_backup_and_restore_scripts_use_service_names_not_dsn_arguments() -> Non
     assert "TWI_BACKUP_DATABASE_URL" in backup
     assert '--dbname="service=twi_backup"' in backup
     assert '"$TWI_DATABASE_URL"' not in backup
-    assert "unset TWI_BACKUP_DATABASE_URL" in backup
+    assert "unset TWI_BACKUP_DATABASE_URL TWI_DATABASE_URL" in backup
     assert "TWI_RESTORE_DATABASE_URL" in restore
     assert "TWI_PRIMARY_DATABASE_URL" in restore
     assert '--dbname="service=twi_restore"' in restore
     assert 'python3 "$script_dir/validate_restore_target.py"' in restore
     assert '--dbname="$TWI_DATABASE_URL"' not in restore
-    assert "unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL" in restore
+    assert "unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL TWI_DATABASE_URL" in restore
 
 
 
@@ -180,7 +180,7 @@ def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
         fake_bin / "pg_dump",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_BACKUP_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_BACKUP_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" ]] || exit 90
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 91
 [[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 92
 grep -q '^\\[twi_backup\\]$' "$PGSERVICEFILE" || exit 93
@@ -255,7 +255,7 @@ def test_restore_script_preflights_target_checksum_and_secret_safe_service(
         fake_bin / "pg_restore",
         """#!/usr/bin/env bash
 set -Eeuo pipefail
-[[ -z "${TWI_RESTORE_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_RESTORE_DATABASE_URL:-}" && -z "${TWI_DATABASE_URL:-}" ]] || exit 90
 [[ -z "${TWI_PRIMARY_DATABASE_URL:-}" ]] || exit 91
 [[ -f "${PGSERVICEFILE:-}" ]] || exit 92
 [[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 93
