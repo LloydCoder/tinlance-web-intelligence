@@ -48,7 +48,6 @@ DROP TRIGGER IF EXISTS twi_usage_events_no_delete ON twi_usage_events;
 CREATE TRIGGER twi_usage_events_no_delete BEFORE DELETE ON twi_usage_events
     FOR EACH ROW EXECUTE FUNCTION twi_reject_usage_event_mutation();
 
-
 -- Durable, payload-free receipt inbox for verified provider webhooks.
 CREATE TABLE IF NOT EXISTS twi_billing_event_receipts (
     provider_key TEXT NOT NULL,
@@ -57,9 +56,7 @@ CREATE TABLE IF NOT EXISTS twi_billing_event_receipts (
     occurred_at TEXT NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     payload_sha256 CHAR(64) NOT NULL
-        CHECK (length(btrim(payload_sha256)) = 64 AND payload_sha256 ~ '^[0-9a-f]{64}
-ON CONFLICT (version) DO NOTHING;
-),
+        CHECK (length(btrim(payload_sha256)) = 64 AND payload_sha256 ~ '^[0-9a-f]{64}$'),
     status TEXT NOT NULL CHECK (status IN ('received', 'processed', 'failed', 'ignored')),
     attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
     last_error_code TEXT,
