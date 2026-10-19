@@ -44,7 +44,7 @@ Aggregate quality metrics are macro-averaged by case; undefined metrics are excl
 
 ## Qualification and threshold governance
 
-`benchmarks/twi/v1/thresholds.json` is the only qualification threshold registry. It is deliberately unapproved and contains no numeric limits. Until an authorized owner, approval reference, and numeric thresholds are recorded, qualification remains `not_evidenced`. The evaluator validates the registry again at the evaluation boundary; callers cannot bypass owner/reference/schema validation by passing a raw mapping. A full source revision is required for source-bound qualification, and synthetic or mixed evidence cannot qualify live quality.
+`benchmarks/twi/v1/thresholds.json` is the only qualification threshold registry. It is deliberately unapproved and contains no numeric limits. Until an authorized owner, approval reference, and numeric thresholds are recorded, qualification remains `not_evidenced`. The evaluator validates the registry again at the evaluation boundary; callers cannot bypass owner/reference/schema validation by passing a raw mapping. Qualification requires the exact raw registry bytes, verifies that the supplied SHA-256 matches those bytes, and verifies that any supplied parsed mapping matches the raw registry. A digest string alone cannot qualify a result. A full source revision is required for source-bound qualification, and synthetic or mixed evidence cannot qualify live quality.
 
 No threshold is inferred from the sample results or selected merely to make CI pass. Threshold approval is a separate product/quality governance decision.
 
