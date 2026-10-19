@@ -1,7 +1,7 @@
 {
-  "schema_version": "1.0.0",
-  "dataset_id": "twi-core-v1",
-  "description": "Deterministic offline cases for retrieval, extraction, source diversity, citation grounding, freshness, and failure calibration. Fixtures are methodology checks, not assertions of source truth.",
+  "schema_version": "1.1.0",
+  "dataset_id": "twi-hardjobs-v1",
+  "description": "Versioned deterministic offline hard-job cases covering acquisition correctness, evidence quality, failure classification, latency, and resource use. All checked-in observations are synthetic contract fixtures, not live quality evidence.",
   "cases": [
     {
       "case_id": "grounded-json-and-datetime",
@@ -17,7 +17,12 @@
         "datetime.fromisoformat"
       ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": null
+      "expected_failure_mode": null,
+      "challenge_class": "baseline_retrieval",
+      "support_status": "supported",
+      "expected_completion_status": "completed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
     },
     {
       "case_id": "stale-url-parsing-evidence",
@@ -31,7 +36,12 @@
         "urlsplit"
       ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": "stale_evidence"
+      "expected_failure_mode": "stale_evidence",
+      "challenge_class": "stale_evidence",
+      "support_status": "supported",
+      "expected_completion_status": "failed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
     },
     {
       "case_id": "missing-source-and-unsupported-claim",
@@ -47,31 +57,189 @@
         "asyncio.run"
       ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": "unsupported_claim"
+      "expected_failure_mode": "unsupported_claim",
+      "challenge_class": "unsupported_claim",
+      "support_status": "supported",
+      "expected_completion_status": "failed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
     },
     {
       "case_id": "synthetic-monitor-private-redirect",
-      "expected_urls": ["https://public.example.test/target"],
-      "expected_domains": ["public.example.test"],
-      "expected_phrases": ["public content"],
+      "expected_urls": [
+        "https://public.example.test/target"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "public content"
+      ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": "blocked_redirect"
+      "expected_failure_mode": "blocked_redirect",
+      "challenge_class": "redirect_ssrf",
+      "support_status": "supported",
+      "expected_completion_status": "failed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
     },
     {
       "case_id": "synthetic-monitor-tenant-scope-denial",
-      "expected_urls": ["https://public.example.test/tenant-scoped"],
-      "expected_domains": ["public.example.test"],
-      "expected_phrases": ["tenant scoped"],
+      "expected_urls": [
+        "https://public.example.test/tenant-scoped"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "tenant scoped"
+      ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": "authorization_denied"
+      "expected_failure_mode": "authorization_denied",
+      "challenge_class": "tenant_scope_denial",
+      "support_status": "supported",
+      "expected_completion_status": "failed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
     },
     {
       "case_id": "synthetic-monitor-baseline-failure",
-      "expected_urls": ["https://public.example.test/baseline"],
-      "expected_domains": ["public.example.test"],
-      "expected_phrases": ["baseline"],
+      "expected_urls": [
+        "https://public.example.test/baseline"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "baseline"
+      ],
       "max_age_seconds": 86400,
-      "expected_failure_mode": "capture_failed"
+      "expected_failure_mode": "capture_failed",
+      "challenge_class": "capture_failure",
+      "support_status": "supported",
+      "expected_completion_status": "failed",
+      "evidence_mode": "synthetic",
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "javascript-heavy-hydration",
+      "challenge_class": "javascript_heavy",
+      "support_status": "supported",
+      "expected_completion_status": "completed",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://public.example.test/js-heavy"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "hydrated content",
+        "client rendered"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": null,
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "pagination-duplicate-page",
+      "challenge_class": "pagination_dedup",
+      "support_status": "supported",
+      "expected_completion_status": "completed",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://public.example.test/page-1",
+        "https://public.example.test/page-2"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "page one item",
+        "page two item"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": null,
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "conflicting-source-observations",
+      "challenge_class": "conflicting_sources",
+      "support_status": "supported",
+      "expected_completion_status": "completed",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://source-a.example.test/value",
+        "https://source-b.example.test/value"
+      ],
+      "expected_domains": [
+        "source-a.example.test",
+        "source-b.example.test"
+      ],
+      "expected_phrases": [
+        "reported value 10",
+        "reported value 12"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "conflicting_sources",
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "transient-failure-recovered",
+      "challenge_class": "transient_recovery",
+      "support_status": "supported",
+      "expected_completion_status": "completed",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://public.example.test/transient"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "recovered content"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": null,
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "anti-bot-challenge",
+      "challenge_class": "anti_bot_challenge",
+      "support_status": "unsupported",
+      "expected_completion_status": "unsupported",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://public.example.test/anti-bot"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "challenge page"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "anti_bot_challenge",
+      "max_duplicate_retrievals": 0
+    },
+    {
+      "case_id": "unsupported-content-type",
+      "challenge_class": "unsupported_content_type",
+      "support_status": "unsupported",
+      "expected_completion_status": "unsupported",
+      "evidence_mode": "synthetic",
+      "expected_urls": [
+        "https://public.example.test/unsupported-content"
+      ],
+      "expected_domains": [
+        "public.example.test"
+      ],
+      "expected_phrases": [
+        "application/octet-stream"
+      ],
+      "max_age_seconds": 86400,
+      "expected_failure_mode": "unsupported_content_type",
+      "max_duplicate_retrievals": 0
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0.0",
-  "dataset_id": "twi-core-v1",
+  "schema_version": "1.1.0",
+  "dataset_id": "twi-hardjobs-v1",
   "cases": [
     {
       "case_id": "grounded-json-and-datetime",
@@ -32,7 +32,13 @@
           ]
         }
       ],
-      "failure_mode": null
+      "failure_mode": null,
+      "completion_status": "completed",
+      "latency_ms": 850,
+      "resource_bytes": 18000,
+      "request_count": 2,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
     },
     {
       "case_id": "stale-url-parsing-evidence",
@@ -45,7 +51,13 @@
         }
       ],
       "claims": [],
-      "failure_mode": "stale_evidence"
+      "failure_mode": "stale_evidence",
+      "completion_status": "failed",
+      "latency_ms": 500,
+      "resource_bytes": 9500,
+      "request_count": 1,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
     },
     {
       "case_id": "missing-source-and-unsupported-claim",
@@ -65,10 +77,194 @@
           ]
         }
       ],
-      "failure_mode": "unsupported_claim"
+      "failure_mode": "unsupported_claim",
+      "completion_status": "failed",
+      "latency_ms": 1200,
+      "resource_bytes": 12000,
+      "request_count": 2,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
     },
-    {"case_id":"synthetic-monitor-private-redirect","retrieved":[],"claims":[],"failure_mode":"blocked_redirect"},
-    {"case_id":"synthetic-monitor-tenant-scope-denial","retrieved":[],"claims":[],"failure_mode":"authorization_denied"},
-    {"case_id":"synthetic-monitor-baseline-failure","retrieved":[],"claims":[],"failure_mode":"capture_failed"}
+    {
+      "case_id": "synthetic-monitor-private-redirect",
+      "retrieved": [],
+      "claims": [],
+      "failure_mode": "blocked_redirect",
+      "completion_status": "failed",
+      "latency_ms": 80,
+      "resource_bytes": 500,
+      "request_count": 1,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "synthetic-monitor-tenant-scope-denial",
+      "retrieved": [],
+      "claims": [],
+      "failure_mode": "authorization_denied",
+      "completion_status": "failed",
+      "latency_ms": 15,
+      "resource_bytes": 200,
+      "request_count": 1,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "synthetic-monitor-baseline-failure",
+      "retrieved": [],
+      "claims": [],
+      "failure_mode": "capture_failed",
+      "completion_status": "failed",
+      "latency_ms": 1100,
+      "resource_bytes": 7000,
+      "request_count": 1,
+      "retry_count": 1,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "javascript-heavy-hydration",
+      "retrieved": [
+        {
+          "url": "https://public.example.test/js-heavy",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Rendered application content",
+          "text": "The page exposes hydrated content and client rendered details after JavaScript execution."
+        }
+      ],
+      "claims": [
+        {
+          "text": "The page exposes hydrated content after JavaScript execution.",
+          "citations": [
+            "https://public.example.test/js-heavy"
+          ]
+        }
+      ],
+      "failure_mode": null,
+      "completion_status": "completed",
+      "latency_ms": 1300,
+      "resource_bytes": 150000,
+      "request_count": 4,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "pagination-duplicate-page",
+      "retrieved": [
+        {
+          "url": "https://public.example.test/page-1",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Page one",
+          "text": "Page one item is the first record in this listing."
+        },
+        {
+          "url": "https://public.example.test/page-2",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Page two",
+          "text": "Page two item is the second record in this listing."
+        },
+        {
+          "url": "https://public.example.test/page-1",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Page one",
+          "text": "Page one item is the first record in this listing."
+        }
+      ],
+      "claims": [
+        {
+          "text": "Page one item is the first record.",
+          "citations": [
+            "https://public.example.test/page-1"
+          ]
+        },
+        {
+          "text": "Page two item is the second record.",
+          "citations": [
+            "https://public.example.test/page-2"
+          ]
+        }
+      ],
+      "failure_mode": null,
+      "completion_status": "completed",
+      "latency_ms": 900,
+      "resource_bytes": 100000,
+      "request_count": 3,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "conflicting-source-observations",
+      "retrieved": [
+        {
+          "url": "https://source-a.example.test/value",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Source A value",
+          "text": "Source A reported value 10 in the current period."
+        },
+        {
+          "url": "https://source-b.example.test/value",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Source B value",
+          "text": "Source B reported value 12 in the current period."
+        }
+      ],
+      "claims": [],
+      "failure_mode": "conflicting_sources",
+      "completion_status": "completed",
+      "latency_ms": 1700,
+      "resource_bytes": 42000,
+      "request_count": 2,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "transient-failure-recovered",
+      "retrieved": [
+        {
+          "url": "https://public.example.test/transient",
+          "retrieved_at": "2026-10-19T11:00:00Z",
+          "title": "Recovered response",
+          "text": "The retry produced recovered content after a transient server error."
+        }
+      ],
+      "claims": [
+        {
+          "text": "The retry produced recovered content.",
+          "citations": [
+            "https://public.example.test/transient"
+          ]
+        }
+      ],
+      "failure_mode": null,
+      "completion_status": "completed",
+      "latency_ms": 4200,
+      "resource_bytes": 200000,
+      "request_count": 3,
+      "retry_count": 2,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "anti-bot-challenge",
+      "retrieved": [],
+      "claims": [],
+      "failure_mode": "anti_bot_challenge",
+      "completion_status": "unsupported",
+      "latency_ms": 600,
+      "resource_bytes": 1500,
+      "request_count": 1,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    },
+    {
+      "case_id": "unsupported-content-type",
+      "retrieved": [],
+      "claims": [],
+      "failure_mode": "unsupported_content_type",
+      "completion_status": "unsupported",
+      "latency_ms": 100,
+      "resource_bytes": 800,
+      "request_count": 1,
+      "retry_count": 0,
+      "evidence_mode": "synthetic"
+    }
   ]
 }
