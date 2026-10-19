@@ -15,5 +15,6 @@ def test_commercial_usage_migration_is_synchronized_and_versioned() -> None:
     sql = source.read_text(encoding="utf-8")
     assert "twi_usage_reservations" in sql
     assert "twi_usage_events" in sql
+    assert "twi_billing_event_receipts" in sql
     assert "append-only" in sql
     assert "VALUES (3)" in sql
