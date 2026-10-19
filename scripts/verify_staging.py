@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import ssl
-import sys
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -40,6 +39,19 @@ class _NoRedirectHandler(HTTPRedirectHandler):
 
 
 def _request(url: str, method: str, token: str | None, body: bytes | None) -> ResponsePair:
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        raise VerificationError("staging endpoint URL is malformed") from exc
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise VerificationError("staging endpoint requests must use a clean HTTPS URL")
     request = Request(
         url,
         data=body,
@@ -56,7 +68,7 @@ def _request(url: str, method: str, token: str | None, body: bytes | None) -> Re
         _NoRedirectHandler(),
     )
     try:
-        with opener.open(request, timeout=8) as response:
+        with opener.open(request, timeout=8) as response:  # nosec B310 - HTTPS is validated above
             return response.status, response.read(65_537)
     except HTTPError as exc:
         return exc.code, exc.read(65_537)
@@ -94,7 +106,7 @@ def verify_staging(
         or parsed.fragment
     ):
         raise VerificationError(
-            "TWI_STAGING_BASE_URL must be an HTTPS origin/path without credentials, query, or fragment"
+            "TWI_STAGING_BASE_URL must be HTTPS and omit credentials, query, and fragment"
         )
     if token is not None and (not token or token != token.strip()):
         raise VerificationError("staging probe token must be non-empty and normalized")
