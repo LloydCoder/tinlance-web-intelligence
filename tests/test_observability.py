@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import cast
+
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 from tinlance_web_intelligence.api.http.app import create_app
 from tinlance_web_intelligence.config import ConfigurationError, Settings
@@ -10,9 +16,12 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 )
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
 from tinlance_web_intelligence.observability.tracing import (
+    create_tracer_provider,
     extract_valid_traceparent,
     inject_traceparent,
+    safe_span_attributes,
     start_span,
+    tracing_export_mode,
 )
 
 
@@ -28,8 +37,60 @@ def test_traceparent_validation_and_injection_are_fail_closed() -> None:
 
 
 def test_span_attributes_are_allowlisted() -> None:
-    with start_span("test", {"operation": "capture", "url": "https://secret.test/?token=x"}):
+    attributes = safe_span_attributes(
+        {
+            "operation": "capture",
+            "component": "worker",
+            "url": "https://secret.test/?token=x",
+            "tenant_id": "tenant-secret",
+            "request_id": "request-secret",
+            "page_text": "secret page text",
+            "outcome": "success",
+            "error_class": "",
+            "query": "private search terms",
+        }
+    )
+    assert attributes == {
+        "operation": "capture",
+        "component": "worker",
+        "outcome": "success",
+    }
+    with start_span("test", attributes):
         pass
+
+
+def test_otlp_export_failure_does_not_break_span_recording() -> None:
+    class UnavailableExporter(SpanExporter):
+        def __init__(self) -> None:
+            self.exported: list[ReadableSpan] = []
+
+        def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+            self.exported.extend(spans)
+            return SpanExportResult.FAILURE
+
+        def shutdown(self) -> None:
+            return None
+
+    exporter = UnavailableExporter()
+    provider = create_tracer_provider(
+        "https://otel.example/v1/traces",
+        exporter_factory=lambda _endpoint: exporter,
+    )
+    try:
+        with provider.get_tracer("test").start_as_current_span("safe-span") as span:
+            for key, value in safe_span_attributes(
+                {"operation": "capture", "url": "https://secret.test/?token=x"}
+            ).items():
+                span.set_attribute(key, value)
+        assert provider.force_flush()
+        assert len(exporter.exported) == 1
+        assert exporter.exported[0].attributes == {"operation": "capture"}
+    finally:
+        provider.shutdown()
+
+
+def test_trace_export_mode_defaults_to_noop() -> None:
+    assert tracing_export_mode() == "noop"
 
 
 def _client(
@@ -63,9 +124,7 @@ def test_metrics_endpoint_requires_token_and_exports_safe_request_metrics() -> N
         with client:
             live = client.get("/health/live", headers={"X-Request-ID": "probe-123"})
             rejected = client.get("/internal/metrics")
-            metrics = client.get(
-                "/internal/metrics", headers={"Authorization": f"Bearer {token}"}
-            )
+            metrics = client.get("/internal/metrics", headers={"Authorization": f"Bearer {token}"})
         assert live.status_code == 200
         assert live.headers["X-Request-ID"] == "probe-123"
         assert rejected.status_code == 401
@@ -84,9 +143,7 @@ def test_metrics_endpoint_replaces_invalid_request_id() -> None:
     client, repository, outbox = _client("m" * 32)
     try:
         with client:
-            response = client.get(
-                "/health/live", headers={"X-Request-ID": "invalid request id"}
-            )
+            response = client.get("/health/live", headers={"X-Request-ID": "invalid request id"})
         request_id = response.headers["X-Request-ID"]
         assert response.status_code == 200
         assert request_id != "invalid request id"
@@ -101,10 +158,18 @@ def test_metrics_token_must_be_long_and_unpadded() -> None:
     with pytest.raises(ConfigurationError, match="TWI_METRICS_TOKEN"):
         Settings.from_env({"TWI_METRICS_TOKEN": "short"})
 
+
 def test_metrics_include_queue_depth_and_outbox_backlog() -> None:
     token = "metrics-test-token-" + ("y" * 32)
     client, repository, outbox = _client(token)
     try:
+        cast(FastAPI, client.app).state.monitor_repository.create(
+            tenant_id="tenant-metrics",
+            subject_id="subject-metrics",
+            target_url="https://example.com/monitor",
+            policy={},
+            idempotency_key="metrics-monitor-0001",
+        )
         repository.create(
             tenant_id="tenant-metrics",
             subject_id="subject-metrics",
@@ -121,15 +186,13 @@ def test_metrics_include_queue_depth_and_outbox_backlog() -> None:
             traceparent=None,
         )
         with client:
-            response = client.get(
-                "/internal/metrics", headers={"Authorization": f"Bearer {token}"}
-            )
+            response = client.get("/internal/metrics", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         assert 'twi_jobs_total{status="queued"} 1.0' in response.text
         assert 'twi_source_evidence_outbox_events_total{status="pending"} 1.0' in response.text
         assert "twi_jobs_oldest_queued_age_seconds" in response.text
         assert "twi_source_evidence_outbox_oldest_pending_age_seconds" in response.text
+        assert 'twi_monitors_total{status="active"} 1.0' in response.text
     finally:
         repository.close()
         outbox.close()
-

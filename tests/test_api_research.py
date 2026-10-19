@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -350,6 +351,30 @@ def test_world_intelligence_export_matches_pinned_consumer_schema() -> None:
         validator = Draft202012Validator(schema, format_checker=FormatChecker())
         assert list(validator.iter_errors(event.payload)) == []
         assert list(validator.iter_errors({**event.payload, "unexpected": True}))
+    finally:
+        repository.close()
+
+
+def test_health_reports_monitor_and_telemetry_readiness() -> None:
+    repository = SQLiteJobRepository(":memory:")
+    client = _client(repository)
+    monitor_repository = cast(FastAPI, client.app).state.monitor_repository
+    try:
+        with client:
+            monitors = client.get("/health/monitors")
+            telemetry = client.get("/health/telemetry")
+            ready = client.get("/health/ready")
+            with patch.object(monitor_repository, "ping", return_value=False):
+                monitor_down = client.get("/health/monitors")
+                ready_down = client.get("/health/ready")
+        assert monitors.json() == {"status": "ready"}
+        assert telemetry.json() == {
+            "status": "instrumented",
+            "export_mode": "noop",
+        }
+        assert ready.json() == {"status": "ready"}
+        assert monitor_down.status_code == 503
+        assert ready_down.status_code == 503
     finally:
         repository.close()
 

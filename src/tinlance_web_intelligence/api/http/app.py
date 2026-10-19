@@ -33,6 +33,7 @@ from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, P
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.monitors.service import MonitorService
 from tinlance_web_intelligence.observability.tracing import (
+    configure_tracing,
     extract_valid_traceparent,
     start_span,
 )
@@ -54,6 +55,7 @@ def create_app(
     monitor_repository: MonitorRepository | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_env()
+    tracer_provider = configure_tracing(config.otel_exporter_endpoint)
     if (
         verifier is None
         and config.identity_issuer
@@ -118,6 +120,12 @@ def create_app(
         ("status",),
         registry=registry,
     )
+    monitor_counts = Gauge(
+        "twi_monitors_total",
+        "Durable monitor count by lifecycle status.",
+        ("status",),
+        registry=registry,
+    )
     oldest_pending_outbox_age = Gauge(
         "twi_source_evidence_outbox_oldest_pending_age_seconds",
         "Age of the oldest pending source-evidence outbox event in seconds.",
@@ -138,6 +146,8 @@ def create_app(
         app.router.on_shutdown.append(repo.close)
     if monitor_repository is None:
         app.router.on_shutdown.append(monitors.close)
+    if tracer_provider is not None:
+        app.router.on_shutdown.append(tracer_provider.shutdown)
 
     @app.get("/internal/metrics", include_in_schema=False)
     def metrics() -> Response:
@@ -160,17 +170,24 @@ def create_app(
             oldest_pending_outbox_age.set(
                 outbox_snapshot.get("outbox_oldest_pending_age_seconds", 0.0)
             )
+        try:
+            monitor_snapshot = monitors.metrics_snapshot()
+        except Exception:
+            metrics_collection_errors.labels("monitors").inc()
+        else:
+            for status in ("active", "paused", "deleted"):
+                monitor_counts.labels(status).set(monitor_snapshot.get(f"monitors_{status}", 0.0))
         response = Response(content=generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
         response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.middleware("http")
-    async def authenticate(
-        request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        method = request.method if request.method in {
-            "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"
-        } else "OTHER"
+    async def authenticate(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        method = (
+            request.method
+            if request.method in {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+            else "OTHER"
+        )
         supplied_request_id = request.headers.get("x-request-id", "")
         request_id = (
             supplied_request_id
@@ -197,7 +214,12 @@ def create_app(
                 return await call_next(request)
 
         try:
-            if request.url.path in {"/health/live", "/health/ready"}:
+            if request.url.path in {
+                "/health/live",
+                "/health/ready",
+                "/health/monitors",
+                "/health/telemetry",
+            }:
                 response = await traced_call_next()
             elif request.url.path == "/internal/metrics":
                 if config.metrics_token is None:

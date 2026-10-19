@@ -9,6 +9,7 @@ services:
     command: ["python", "-m", "apps.migrate.main"]
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_MIGRATION_DATABASE_URL: ${TWI_MIGRATION_DATABASE_URL:?Set the separate DDL-role DSN with sslmode=verify-full}
     networks: [app_internal, outbound]
@@ -26,6 +27,7 @@ services:
       dockerfile: deployments/docker/api.Dockerfile
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:?Set the Platform issuer URL}
       TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:?Set the TWI audience}
@@ -58,6 +60,7 @@ services:
       dockerfile: deployments/docker/worker.Dockerfile
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
     depends_on:
@@ -82,6 +85,7 @@ services:
     command: ["python", "-m", "apps.browser_broker.main"]
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set a random broker token of at least 32 characters}
     depends_on:
@@ -107,6 +111,7 @@ services:
       dockerfile: deployments/docker/browser.Dockerfile
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_BROWSER_ENABLED: "true"
       TWI_BROWSER_BROKER_URL: http://browser-broker:8081
       TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set a random broker token of at least 32 characters}
@@ -171,6 +176,7 @@ services:
     command: ["python", "-m", "apps.world_intelligence_export_worker.main"]
     environment:
       TWI_ENV: staging
+      TWI_OTEL_EXPORTER_OTLP_ENDPOINT: ${TWI_OTEL_EXPORTER_OTLP_ENDPOINT:-}
       TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
       TWI_WORLD_INTELLIGENCE_URL: ${TWI_WORLD_INTELLIGENCE_URL:?Set the World Intelligence HTTPS origin}
       TWI_WORLD_INTELLIGENCE_TOKEN: ${TWI_WORLD_INTELLIGENCE_TOKEN:?Set the scoped World Intelligence service token}

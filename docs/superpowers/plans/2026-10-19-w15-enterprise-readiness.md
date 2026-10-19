@@ -137,14 +137,14 @@ Ruling: no external Platform SDK revision was available in this checkout; monito
 - Add `extract_valid_traceparent(headers: Mapping[str, str]) -> str | None`, `inject_traceparent(headers: MutableMapping[str, str], traceparent: str | None) -> None`, and `start_span(name: str, attributes: Mapping[str, str])` helpers.
 - Spans use only bounded operation/component/outcome/error-class attributes; the exporter is disabled unless an approved endpoint is explicitly configured.
 
-- [ ] **Step 1: Write propagation and privacy tests** for valid/invalid versioned `traceparent`, omitted baggage, API-to-job-to-worker continuation, browser broker and WI export propagation, exporter unavailable behavior, and absence of URLs, query values, tokens, tenant/subject IDs, request IDs, or page text in spans.
+- [x] **Step 1: Write propagation and privacy tests** for valid/invalid versioned `traceparent`, omitted baggage, API-to-job-to-worker continuation, browser broker and WI export propagation, exporter unavailable behavior, and absence of URLs, query values, tokens, tenant/subject IDs, request IDs, or page text in spans. Added explicit allowlist assertions and an OTLP exporter failure test.
 - [x] **Step 2: Run trace tests** with `pytest tests/test_observability.py tests/test_browser_broker.py tests/test_world_intelligence_client.py -q`; confirm trace propagation tests fail before implementation.
-- [ ] **Step 3: Add pinned OpenTelemetry API/SDK dependencies** and implement no-op-safe tracer helpers with W3C Trace Context validation and explicit exporter configuration. API dependency and spans are present; SDK/exporter endpoint setup is not.
-- [ ] **Step 4: Instrument request, worker, browser, and export boundaries** while preserving current Prometheus cardinality restrictions and adding bounded provider/browser/worker outcome and duration metrics. Span boundaries are present; separate worker/browser/provider metrics are not.
+- [x] **Step 3: Add pinned OpenTelemetry API/SDK dependencies** and implement no-op-safe tracer helpers with W3C Trace Context validation and explicit exporter configuration. OTLP export is disabled unless a validated HTTPS endpoint is supplied; loopback HTTP is limited to development/test.
+- [ ] **Step 4: Instrument request, worker, browser, and export boundaries** while preserving current Prometheus cardinality restrictions and adding bounded provider/browser/worker outcome and duration metrics. API request spans and monitor lifecycle gauges are present; independent worker/provider/browser metric scraping remains unimplemented.
 - [x] **Step 5: Run targeted observability/security checks** with the focused pytest command, `ruff check src tests`, and `mypy src`; confirm no sensitive attribute names/values enter telemetry.
 - [x] **Step 6: Commit** as `feat: propagate privacy-safe distributed traces` (`b90ee3a`).
 
-Ruling: tracing defaults to the OpenTelemetry no-op provider; no exporter endpoint, credentials, or approved collector were supplied. No independent worker metrics listener was added, so exporter configuration and worker/provider metric scraping remain open.
+Ruling: tracing defaults to the OpenTelemetry no-op provider; no approved production collector was supplied. The opt-in OTLP exporter is configurable and validated. No independent worker metrics listener was added, so worker/provider/browser metric scraping remains open.
 
 ### Task 5: Exact-revision consumer compatibility contracts
 
@@ -249,7 +249,7 @@ Ruling: tracing defaults to the OpenTelemetry no-op provider; no exporter endpoi
 
 - [x] **Step 1: Write CI/config/release tests** for migration, pinned contract, evidence checks, and fail-closed readiness behavior; retain the required Python 3.12/3.13 CI matrix.
 - [x] **Step 2: Extend CI and `make check`** to run the new checks without weakening existing security, reproducibility, provenance, container, or isolation gates.
-- [ ] **Step 3: Extend staging/release probes** for monitor health and telemetry readiness using read-only probes; the existing probes do not yet validate monitor/trace readiness.
+- [x] **Step 3: Extend staging/release probes** for monitor health and telemetry instrumentation using read-only checks. The probe validates monitor persistence and reports OTLP/no-op mode without claiming collector reachability.
 - [x] **Step 4: Run local focused verification** on Python 3.12; 199 tests passed, Ruff/mypy/Bandit/migration sync/evaluation and package build passed. Compose validation was unavailable because Docker is absent.
 - [ ] **Step 5: Run GitHub CI on the branch and exact final revision**; not run from this workspace, so remote jobs and attached provenance remain `not_evidenced`.
 - [x] **Step 6: Conduct final forensic review** against repository tests, local scans, migration copies, privacy boundaries, and evidence pack. PostgreSQL/branch-rule/deployment checks remain external.

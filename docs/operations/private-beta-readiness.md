@@ -51,4 +51,4 @@ If a box is unchecked or lacks evidence, private beta remains NOT CERTIFIED. Pas
 - [ ] Bind Platform, World Intelligence and TSIC contracts to exact reviewed consumer revisions.
 - [ ] Confirm collector, paging route, on-call owner and a witnessed alert/rollback exercise.
 
-The checked-in W15 pack currently has repository evidence plus `not_evidenced` external gates and reports `ready=false`.
+The current W15 pack records a confirmed Platform monitor-tool integration failure, a pinned passing World Intelligence schema check, TSIC conformance as `not_evidenced`, and additional external gates as `not_evidenced`. It reports `ready=false`.

@@ -126,6 +126,29 @@ def verify_staging(
         "status_code": status,
     }
 
+    status, body = send(f"{base}/health/monitors", "GET", None, None)
+    checks["monitor_persistence"] = {
+        "ok": _json_status(status, body, "ready"),
+        "status_code": status,
+    }
+
+    status, body = send(f"{base}/health/telemetry", "GET", None, None)
+    telemetry_ok = False
+    if status == 200 and len(body) <= 65_536:
+        try:
+            telemetry = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            telemetry = None
+        telemetry_ok = (
+            isinstance(telemetry, dict)
+            and telemetry.get("status") == "instrumented"
+            and telemetry.get("export_mode") in {"noop", "otlp"}
+        )
+    checks["telemetry_instrumentation"] = {
+        "ok": telemetry_ok,
+        "status_code": status,
+    }
+
     status, _ = send(f"{base}/v1/jobs", "POST", None, b"{}")
     checks["unauthenticated_write_denied"] = {
         "ok": status == 401,

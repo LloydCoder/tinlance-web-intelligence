@@ -3,15 +3,72 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping, MutableMapping
+from collections.abc import Callable, Iterator, Mapping, MutableMapping
 from contextlib import contextmanager
+from threading import Lock
 
 from opentelemetry import trace
 from opentelemetry.context import Context
-from opentelemetry.trace import Span
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry.trace import ProxyTracerProvider, Span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 _TRACEPARENT = re.compile(r"^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
+_provider_lock = Lock()
+_provider: TracerProvider | None = None
+_configured_endpoint: str | None = None
+
+
+def create_tracer_provider(
+    endpoint: str,
+    *,
+    exporter_factory: Callable[[str], SpanExporter] | None = None,
+) -> TracerProvider:
+    """Build a batch-exporting provider; the caller must supply a validated endpoint."""
+
+    exporter = (exporter_factory or OTLPSpanExporter)(endpoint)
+    provider = TracerProvider(
+        resource=Resource.create({"service.name": "tinlance-web-intelligence"})
+    )
+    provider.add_span_processor(BatchSpanProcessor(exporter))
+    return provider
+
+
+def configure_tracing(endpoint: str | None) -> TracerProvider | None:
+    """Install OTLP tracing only for an explicitly configured collector endpoint."""
+
+    global _configured_endpoint, _provider
+    if endpoint is None:
+        return None
+    with _provider_lock:
+        if _provider is not None:
+            if endpoint != _configured_endpoint:
+                raise RuntimeError("OpenTelemetry provider already configured for another endpoint")
+            return _provider
+        provider = create_tracer_provider(endpoint)
+        current_provider = trace.get_tracer_provider()
+        if not isinstance(current_provider, ProxyTracerProvider):
+            provider.shutdown()
+            raise RuntimeError("OpenTelemetry provider is already configured by another owner")
+        trace.set_tracer_provider(provider)
+        _provider = provider
+        _configured_endpoint = endpoint
+        return provider
+
+
+def tracing_export_configured() -> bool:
+    """Return whether this process configured an OTLP exporter; never exposes its URL."""
+
+    return _provider is not None
+
+
+def tracing_export_mode() -> str:
+    """Describe exporter configuration without disclosing endpoint details."""
+
+    return "otlp" if tracing_export_configured() else "noop"
 
 
 def validate_traceparent(value: str | None) -> str | None:
@@ -45,17 +102,26 @@ def inject_current_traceparent(headers: MutableMapping[str, str]) -> None:
         headers["traceparent"] = value
 
 
+def safe_span_attributes(attributes: Mapping[str, str]) -> dict[str, str]:
+    """Filter attributes to bounded, low-cardinality values before span recording."""
+
+    allowed = {"operation", "component", "outcome", "error_class"}
+    return {
+        key: value
+        for key, value in attributes.items()
+        if key in allowed and isinstance(value, str) and 0 < len(value) <= 64
+    }
+
+
 @contextmanager
 def start_span(
     name: str, attributes: Mapping[str, str], *, parent: Context | None = None
 ) -> Iterator[Span]:
     """Start a span with only an allowlisted, low-cardinality attribute set."""
-    allowed = {"operation", "component", "outcome", "error_class"}
-    safe = {key: value for key, value in attributes.items() if key in allowed}
+    safe = safe_span_attributes(attributes)
     with trace.get_tracer("tinlance_web_intelligence").start_as_current_span(
         name, context=parent
     ) as span:
         for key, value in safe.items():
-            if len(value) <= 64:
-                span.set_attribute(key, value)
+            span.set_attribute(key, value)
         yield span

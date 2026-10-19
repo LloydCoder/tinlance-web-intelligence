@@ -1,7 +1,11 @@
 # W7 remediation update — 2026-10-19
 
 **Reviewed main revision:** `272cedd76590a6b512b58fda42a6af0e25b46542`  
-**Decision:** W7 remains **OPEN**. The code-level vulnerability scanning gap is remediated and verified; governance, release-attestation exercise, durable evidence retention and operational release controls remain incomplete. Private beta remains **NOT CERTIFIED**.
+**Decision at that revision:** W7 remained **OPEN**. The code-level vulnerability scanning gap was remediated and verified; governance, release-attestation exercise, durable evidence retention and operational release controls remained incomplete. Private beta remained **NOT CERTIFIED**.
+
+## Follow-up after this snapshot
+
+The later provenance verification work is recorded in the [current-head follow-up](W7-current-head-findings.md). Non-production workflow run [#39227160547](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39227160547) passed artifact attestation, independent provenance verification, and tampered-wheel rejection on source `afd3807a09f5495669e6dd7ec10f6aa71be05b92`. Its evidence artifact expires 2026-11-18. This closes the provenance exercise itself; durable evidence retention, customer distribution, branch governance, and deployment gates remain open.
 
 ## Verified remediation
 
@@ -30,9 +34,9 @@
 |---|---|---|
 | G1 — branch governance | **OPEN / BLOCKED** | Read-only inspection of GitHub repository settings on 2026-10-19 found no active rulesets/branch protection for `main`. No settings were changed. Apply an active ruleset requiring PRs, one independent approval, the four required CI checks, conversation resolution, no force-pushes and no branch deletion; then re-read and record effective rule IDs, bypass actors and timestamp. An independent reviewer must be available before enforcing one approval. |
 | G2 — CI/security gates | **IMPLEMENTED; operational policy still open** | Strict Python dependency audit and four-image Trivy scans are running in CI. Full scan reports must be archived durably; any future unfixed HIGH/CRITICAL finding needs explicit VEX/risk disposition before staging or release, as defined in `docs/security/container-vulnerability-policy.md`. |
-| G3 — release provenance | **OPEN / NOT EXERCISED** | The release workflow is configured to generate a CycloneDX SBOM, checksums and GitHub build-provenance attestations. A non-production `workflow_dispatch`/test-tag run and independent attestation verification have not been observed. Verify each artifact against the expected repository, source SHA and workflow; demonstrate tampered artifacts fail verification. |
+| G3 — release provenance | **EXERCISED; RETENTION OPEN** | Run [#39227160547](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39227160547) passed independent artifact verification against the expected repository, source SHA and workflow, and rejected a tampered wheel. Archive the evidence before its 2026-11-18 expiry and implement durable release distribution. |
 | G4 — durable evidence/ownership | **OPEN** | Persist ruleset evidence, dependency audit reports, image scan reports, SBOM, checksum manifest, provenance verification output, owners, timestamps and residual-risk decisions beyond 30-day workflow artifact retention. |
-| G5 — W7 exit | **NOT MET** | G1, G3 and G4 must be evidenced; residual risks must be fixed or explicitly accepted by the authorized owner. |
+| G5 — W7 exit | **NOT MET** | G1 and G4 remain open; G2 requires durable report archival and mandatory-check enforcement evidence. G3 provenance verification passed, but its evidence and release distribution need durable retention. Residual risks must be fixed or explicitly accepted by the authorized owner. |
 
 ## Boundaries
 

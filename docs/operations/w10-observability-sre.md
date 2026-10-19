@@ -77,6 +77,8 @@ The API, durable jobs, worker, browser broker and World Intelligence exporter ac
 
 - Add browser, provider and worker outcome/latency metrics without high-cardinality labels; queue depth and outbox age are now exposed by the API scrape endpoint.
 - Verify trace continuity and exporter behavior in a target environment; request IDs alone are correlation, not distributed tracing.
+
+OTLP trace export is opt-in through `TWI_OTEL_EXPORTER_OTLP_ENDPOINT`, which must be a complete HTTPS collector URL ending in `/v1/traces` outside development/test. Loopback HTTP is permitted only for local development and tests. The endpoint cannot contain URL credentials, query strings, or fragments; exporter authentication must be supplied by an approved collector/network design rather than embedded in the URL. When unset, W3C trace propagation and spans remain active with the OpenTelemetry no-op exporter. `/health/telemetry` reports only `noop` or `otlp`; it does not claim that a configured collector is reachable. Validate delivery and loss behavior in the target environment before production acceptance.
 - Deploy a collector and alerting route in the approved staging environment, then verify delivery.
 - Define capacity budgets from measured load tests and tune concurrency/timeouts from evidence.
 - Exercise on-call, incident response and rollback against the actual target deployment.
