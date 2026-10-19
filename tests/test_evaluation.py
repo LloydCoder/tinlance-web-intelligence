@@ -14,6 +14,7 @@ from tinlance_web_intelligence.evaluation.benchmark import (
     evaluate,
     load_dataset,
     load_observations,
+    main,
     render_markdown,
 )
 
@@ -98,3 +99,28 @@ def test_results_reject_url_userinfo_and_naive_timestamps() -> None:
     payload["cases"][0]["retrieved"][0]["retrieved_at"] = "2026-10-19T11:00:00"
     with pytest.raises(BenchmarkError, match="timezone-aware"):
         load_observations(json.dumps(payload).encode(), dataset_id)
+
+
+
+def test_cli_writes_deterministic_json_and_markdown_reports(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    json_out = tmp_path / "report.json"
+    markdown_out = tmp_path / "report.md"
+    assert main(
+        [
+            "--dataset",
+            str(_DATASET),
+            "--results",
+            str(_RESULTS),
+            "--now",
+            "2026-10-19T12:00:00Z",
+            "--json-out",
+            str(json_out),
+            "--markdown-out",
+            str(markdown_out),
+        ]
+    ) == 0
+    report = json.loads(json_out.read_text(encoding="utf-8"))
+    assert report["dataset_id"] == "twi-core-v1"
+    assert report["summary"]["failure_calibration_accuracy"] == 1.0
+    assert "Macro-average metrics" in markdown_out.read_text(encoding="utf-8")
+    assert "dataset_sha256" in capsys.readouterr().out
