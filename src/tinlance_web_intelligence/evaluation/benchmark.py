@@ -406,7 +406,11 @@ def load_threshold_registry(raw: bytes, expected_dataset_id: str) -> dict[str, o
             raise BenchmarkError(f"thresholds.{name} must contain min and/or max")
         values: dict[str, float] = {}
         for bound, value in bounds.items():
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
                 raise BenchmarkError(f"thresholds.{name}.{bound} must be a finite number")
             values[bound] = float(value)
         if "min" in values and "max" in values and values["min"] > values["max"]:
@@ -459,7 +463,10 @@ def evaluate(
     threshold_registry: Mapping[str, object] | None = None,
     thresholds_sha256: str | None = None,
 ) -> dict[str, object]:
-    """Evaluate recorded observations deterministically; no network or truth judgment is performed."""
+    """Evaluate recorded observations deterministically.
+
+    No network access or truth judgment is performed.
+    """
     if now.tzinfo is None or now.utcoffset() is None:
         raise BenchmarkError("evaluation now must be timezone-aware")
     if not cases or not observations:
@@ -644,7 +651,9 @@ def evaluate(
                 if "max" in bounds and value > bounds["max"]:
                     failures.append(name)
             if unavailable:
-                qualification_reason = "threshold_metrics_unavailable:" + ",".join(sorted(unavailable))
+                qualification_reason = "threshold_metrics_unavailable:" + ",".join(
+                    sorted(unavailable)
+                )
             elif failures:
                 qualification_status = "fail"
                 qualification_reason = "thresholds_failed:" + ",".join(sorted(failures))
@@ -698,7 +707,9 @@ def evaluate(
                 "retrieval count does not exceed the case limit"
             ),
             "latency_p95": "nearest-rank 95th percentile across case latency_ms measurements",
-            "freshness": "explicit case max_age_seconds and five-minute future clock-skew allowance",
+            "freshness": (
+                "explicit case max_age_seconds and five-minute future clock-skew allowance"
+            ),
             "truth_boundary": (
                 "metrics measure observed retrieval/evidence properties, not factual truth"
             ),
@@ -747,7 +758,10 @@ def render_markdown(report: Mapping[str, object]) -> str:
             "",
             "## Per-case measurements",
             "",
-            "| Case | Class | Support | Mode | Completion | Failure | Latency ms | Bytes | Requests | Retries | Duplicates | Outcome | Evidence quality |",
+            (
+                "| Case | Class | Support | Mode | Completion | Failure | "
+                "Latency ms | Bytes | Requests | Retries | Duplicates | Outcome | Evidence quality |"
+            ),
             "|---|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
@@ -768,8 +782,10 @@ def render_markdown(report: Mapping[str, object]) -> str:
         [
             "",
             "Citation grounding is a lexical heuristic, not semantic proof. Outcome correctness is",
-            "contract agreement, not factual correctness. Synthetic cases are not live quality evidence.",
-            "These metrics do not establish factual truth, source authority, or production readiness.",
+            "contract agreement, not factual correctness. Synthetic cases are not live quality",
+            "evidence.",
+            "These metrics do not establish factual truth, source authority, or production",
+            "readiness.",
             "",
         ]
     )
