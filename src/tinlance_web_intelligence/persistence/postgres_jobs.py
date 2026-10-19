@@ -56,7 +56,7 @@ class PostgresJobRepository:
             "002_monitoring.sql",
         )
         migration_root = files("tinlance_web_intelligence.persistence.migrations")
-        migrations = []
+        migrations: list[str] = []
         for name in migration_names:
             migration = migration_root.joinpath(name)
             if not migration.is_file():
@@ -78,7 +78,14 @@ class PostgresJobRepository:
                 "to_regclass('twi_monitoring_events') AS monitoring_events"
             ).fetchone()
             if tables is None or any(
-                tables[name] is None for name in ("jobs", "outbox", "migrations", "monitoring_state", "monitoring_events")
+                tables[name] is None
+                for name in (
+                    "jobs",
+                    "outbox",
+                    "migrations",
+                    "monitoring_state",
+                    "monitoring_events",
+                )
             ):
                 raise RuntimeError("PostgreSQL schema is missing; run the migration job")
             version = conn.execute(
