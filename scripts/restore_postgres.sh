@@ -39,6 +39,7 @@ TWI_PG_SERVICE_DSN_ENV=TWI_RESTORE_DATABASE_URL \
   TWI_PG_SERVICE_NAME=twi_restore \
   TWI_PG_SERVICE_FILE="$service_file" \
   python3 "$script_dir/create_pg_service.py"
+unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL
 
 # The process argument contains only a libpq service name, never the credential-bearing DSN.
 pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error \
