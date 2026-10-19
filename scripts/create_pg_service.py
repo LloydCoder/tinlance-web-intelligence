@@ -7,9 +7,12 @@ import re
 import stat
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, unquote, urlsplit
 
-if __package__:
+if TYPE_CHECKING:
+    from scripts.check_database_tls import validate_database_url
+elif __package__:
     from scripts.check_database_tls import validate_database_url
 else:  # Executed directly by the operational shell scripts.
     from check_database_tls import validate_database_url
