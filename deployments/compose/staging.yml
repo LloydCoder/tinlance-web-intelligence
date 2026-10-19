@@ -1,0 +1,200 @@
+name: twi-staging
+
+services:
+  migrate:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    command: ["python", "-m", "apps.migrate.main"]
+    environment:
+      TWI_ENV: staging
+      TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
+      TWI_MIGRATION_DATABASE_URL: ${TWI_MIGRATION_DATABASE_URL:?Set the separate DDL-role DSN with sslmode=verify-full}
+    networks: [app_internal, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: "no"
+
+  api:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    environment:
+      TWI_ENV: staging
+      TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
+      TWI_IDENTITY_ISSUER: ${TWI_IDENTITY_ISSUER:?Set the Platform issuer URL}
+      TWI_IDENTITY_AUDIENCE: ${TWI_IDENTITY_AUDIENCE:?Set the TWI audience}
+      TWI_IDENTITY_JWKS_URL: ${TWI_IDENTITY_JWKS_URL:?Set the Platform JWKS URL}
+      TWI_BROWSER_ENABLED: "true"
+      TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [app_internal, outbound]
+    ports:
+      - "127.0.0.1:${TWI_API_LOOPBACK_PORT:-8000}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/health/ready',timeout=3); assert json.load(r).get('status') == 'ready'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  worker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    environment:
+      TWI_ENV: staging
+      TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
+      TWI_BRAVE_SEARCH_API_KEY: ${TWI_BRAVE_SEARCH_API_KEY:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [app_internal, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    restart: unless-stopped
+
+  browser-broker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/api.Dockerfile
+    command: ["python", "-m", "apps.browser_broker.main"]
+    environment:
+      TWI_ENV: staging
+      TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
+      TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set a random broker token of at least 32 characters}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [app_internal, browser_control, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+    restart: unless-stopped
+
+  browser-worker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/browser.Dockerfile
+    environment:
+      TWI_ENV: staging
+      TWI_BROWSER_ENABLED: "true"
+      TWI_BROWSER_BROKER_URL: http://browser-broker:8081
+      TWI_BROWSER_BROKER_TOKEN: ${TWI_BROWSER_BROKER_TOKEN:?Set a random broker token of at least 32 characters}
+      TWI_BROWSER_PROXY_URL: http://egress-proxy:3128
+      TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set a dedicated proxy username}
+      TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set a random proxy password of at least 24 printable ASCII characters}
+    depends_on:
+      browser-broker:
+        condition: service_healthy
+      egress-proxy:
+        condition: service_healthy
+    networks: [browser_control, browser_egress]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop: [ALL]
+    cap_add: [SYS_CHROOT]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=${PWD}/deployments/security/chromium-seccomp.json
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 256
+    shm_size: 256mb
+    restart: unless-stopped
+
+  egress-proxy:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/egress-proxy.Dockerfile
+    environment:
+      TWI_EGRESS_PROXY_HOST: 0.0.0.0
+      TWI_EGRESS_PROXY_PORT: 3128
+      TWI_EGRESS_PROXY_MAX_CONNECTIONS: 100
+      TWI_EGRESS_PROXY_MAX_BYTES: 25000000
+      TWI_EGRESS_PROXY_MAX_TUNNEL_SECONDS: 120
+      TWI_EGRESS_PROXY_IDLE_TIMEOUT_SECONDS: 15
+      TWI_BROWSER_PROXY_USERNAME: ${TWI_BROWSER_PROXY_USERNAME:?Set a dedicated proxy username}
+      TWI_BROWSER_PROXY_PASSWORD: ${TWI_BROWSER_PROXY_PASSWORD:?Set a random proxy password of at least 24 printable ASCII characters}
+    networks: [browser_egress, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1',3128),2); s.close()"]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+    restart: unless-stopped
+
+  world-intelligence-export-worker:
+    init: true
+    build:
+      context: ../..
+      dockerfile: deployments/docker/worker.Dockerfile
+    command: ["python", "-m", "apps.world_intelligence_export_worker.main"]
+    environment:
+      TWI_ENV: staging
+      TWI_DATABASE_URL: ${TWI_DATABASE_URL:?Set the runtime PostgreSQL DSN with sslmode=verify-full}
+      TWI_WORLD_INTELLIGENCE_URL: ${TWI_WORLD_INTELLIGENCE_URL:?Set the World Intelligence HTTPS origin}
+      TWI_WORLD_INTELLIGENCE_TOKEN: ${TWI_WORLD_INTELLIGENCE_TOKEN:?Set the scoped World Intelligence service token}
+      TWI_WORKER_ID: twi-staging-world-intelligence-exporter
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [app_internal, outbound]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1
+    pids_limit: 128
+    restart: unless-stopped
+
+networks:
+  app_internal:
+    internal: true
+  browser_control:
+    internal: true
+  browser_egress:
+    internal: true
+  outbound: {}
+
