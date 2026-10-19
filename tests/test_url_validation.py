@@ -60,3 +60,17 @@ def test_public_https_url_normalized() -> None:
 
 def test_public_literal_ip_allowed_by_syntax_layer() -> None:
     assert validate_url("https://1.1.1.1/").hostname == "1.1.1.1"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://127.1/",
+        "http://0177.0.0.1/",
+        "http://0x7f000001/",
+        "http://0x7f.1/",
+    ],
+)
+def test_legacy_ipv4_notation_cannot_bypass_private_address_policy(url: str) -> None:
+    with pytest.raises(UnsafeURLError):
+        validate_url(url)
