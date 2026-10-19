@@ -57,7 +57,13 @@ def _utc_now() -> str:
 
 
 def _validate_key(value: str, label: str, maximum: int = 200) -> None:
-    if not isinstance(value, str) or not value or value != value.strip() or len(value) > maximum:
+    if (
+        not isinstance(value, str)
+        or not value
+        or value != value.strip()
+        or "\\x00" in value
+        or len(value) > maximum
+    ):
         raise ValueError(f"{label} must be normalized and contain 1 to {maximum} characters")
 
 
@@ -69,7 +75,7 @@ class SQLiteUsageLedger:
     """
 
     def __init__(self, database_path: str) -> None:
-        if not database_path or "\\x00" in database_path:
+        if not database_path or "\x00" in database_path:
             raise ValueError("database path must be non-empty")
         if database_path != ":memory:":
             pathlib.Path(database_path).expanduser().resolve().parent.mkdir(
