@@ -17,6 +17,7 @@ from tinlance_web_intelligence.evaluation.benchmark import (
     load_observations,
     main,
     render_markdown,
+    validate_report,
 )
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +73,14 @@ def test_benchmark_is_deterministic_and_reports_each_required_metric() -> None:
     assert isinstance(counts, dict)
     assert isinstance(qualification, dict)
     assert counts["case_count"] == len(cases)
+    challenge_counts = counts["challenge_class_counts"]
+    assert isinstance(challenge_counts, dict)
+    assert set(challenge_counts) == {
+        "baseline_retrieval", "stale_evidence", "unsupported_claim", "redirect_ssrf",
+        "tenant_scope_denial", "capture_failure", "javascript_heavy", "pagination_dedup",
+        "conflicting_sources", "transient_recovery", "anti_bot_challenge",
+        "unsupported_content_type",
+    }
     assert qualification["status"] == "not_evidenced"
     assert report["evidence_mode"] == "synthetic"
     assert "docs.python.org" not in json.dumps(report)
@@ -144,6 +153,57 @@ def test_results_must_match_dataset_case_ids() -> None:
             dataset_sha256="a" * 64,
             results_sha256="b" * 64,
         )
+
+
+
+def test_dataset_rejects_unsupported_schema_and_unknown_fields() -> None:
+    payload = json.loads(_DATASET.read_bytes())
+    payload["schema_version"] = "9.0.0"
+    with pytest.raises(BenchmarkError, match="unsupported dataset schema_version"):
+        load_dataset(json.dumps(payload).encode())
+
+    payload = json.loads(_DATASET.read_bytes())
+    payload["unexpected"] = True
+    with pytest.raises(BenchmarkError, match="dataset fields do not match"):
+        load_dataset(json.dumps(payload).encode())
+
+    payload = json.loads(_DATASET.read_bytes())
+    payload["cases"][0]["unexpected"] = True
+    with pytest.raises(BenchmarkError, match="fields do not match schema"):
+        load_dataset(json.dumps(payload).encode())
+
+
+def test_results_reject_unknown_fields_and_excessive_resource_values() -> None:
+    dataset_id, _ = load_dataset(_DATASET.read_bytes())
+    payload = json.loads(_RESULTS.read_bytes())
+    payload["cases"][0]["unexpected"] = True
+    with pytest.raises(BenchmarkError, match="fields do not match schema"):
+        load_observations(json.dumps(payload).encode(), dataset_id)
+
+    payload = json.loads(_RESULTS.read_bytes())
+    payload["cases"][0]["resource_bytes"] = 100_000_001
+    with pytest.raises(BenchmarkError, match="resource_bytes must be an integer"):
+        load_observations(json.dumps(payload).encode(), dataset_id)
+
+
+def test_report_digest_detects_tampering_and_missing_source_revision() -> None:
+    dataset_id, cases, observations, dataset_raw, results_raw = _loaded()
+    report = evaluate(
+        dataset_id,
+        cases,
+        observations,
+        now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
+        dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
+        results_sha256=hashlib.sha256(results_raw).hexdigest(),
+    )
+    qualification = report["qualification"]
+    assert isinstance(qualification, dict)
+    assert qualification["reason"] == "source_revision_missing"
+    summary = report["summary"]
+    assert isinstance(summary, dict)
+    summary["retrieval_recall"] = 0.0
+    with pytest.raises(BenchmarkError, match="integrity check failed"):
+        validate_report(report)
 
 
 def test_dataset_rejects_duplicate_case_ids() -> None:
