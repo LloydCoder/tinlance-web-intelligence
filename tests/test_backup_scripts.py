@@ -17,6 +17,8 @@ def test_backup_database_url_requires_hostname_verifying_tls() -> None:
         "postgresql://backup:secret@db.example.com:5432/twi?sslmode=require",
         "postgresql://backup:secret@db.example.com:5432/twi?sslmode=verify-full&sslmode=require",
         "postgresql://backup:secret@db.example.com:5432/twi?sslmode=verify-ca",
+        "postgresql://backup:secret@db.example.com:0/twi?sslmode=verify-full",
+        "postgresql://backup:secret@db.example.com:99999/twi?sslmode=verify-full",
         "sqlite:///tmp/twi.db",
     ],
 )
