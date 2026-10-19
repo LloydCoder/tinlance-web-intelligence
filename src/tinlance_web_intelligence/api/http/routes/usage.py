@@ -60,11 +60,35 @@ def read_usage(
         tenant_id=principal.tenant_id, subject_id=principal.subject_id,
         dimension=dimension, period_start=canonical_period_start,
     )
+    quota_limit: int | None = None
+    plan_id: str | None = None
+    plan_version: int | None = None
+    resolver = request.app.state.entitlement_resolver
+    if resolver is not None:
+        try:
+            plan = resolver.resolve(
+                tenant_id=principal.tenant_id, subject_id=principal.subject_id
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503, detail="commercial entitlement state unavailable"
+            ) from exc
+        if plan is None:
+            raise HTTPException(status_code=503, detail="commercial entitlement state unavailable")
+        quota_limit = plan.limits.get(dimension)
+        if quota_limit is None:
+            raise HTTPException(status_code=503, detail="quota dimension is not configured")
+        plan_id = plan.plan_id
+        plan_version = plan.version
     return {
         "schema_version": 1,
         "dimension": dimension,
         "period_start": canonical_period_start,
         "used": total,
+        "quota_limit": quota_limit,
+        "remaining": max(0, quota_limit - total) if quota_limit is not None else None,
+        "plan_id": plan_id,
+        "plan_version": plan_version,
         "events": [_public_event(event) for event in scoped],
         "returned": len(scoped),
     }
