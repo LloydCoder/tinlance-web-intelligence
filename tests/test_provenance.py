@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 from hashlib import sha256
+from typing import Any
 
 import pytest
 
@@ -50,7 +51,7 @@ def test_manifest_records_hashes_and_collection_facts_without_raw_url() -> None:
     ],
 )
 def test_manifest_rejects_invalid_collection_facts(
-    changes: dict[str, object], message: str
+    changes: dict[str, Any], message: str
 ) -> None:
     manifest = replace(_manifest(), **changes)
     with pytest.raises(ProvenanceError, match=message):
