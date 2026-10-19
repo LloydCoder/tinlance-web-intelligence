@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+
+from fastapi.testclient import TestClient
+
+from tinlance_web_intelligence.api.http.app import create_app
+from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.commercial.usage_ledger import SQLiteUsageLedger
+from tinlance_web_intelligence.config import Settings
+from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+
+TEST_JTI = "usage-api-test"
+
+
+class FakeVerifier:
+    def __init__(self, value: Principal) -> None:
+        self.value = value
+
+    def verify(self, token: str) -> Principal:
+        if token != "valid-credential":
+            raise PermissionError("invalid credential")
+        return self.value
+
+
+def make_principal(
+    tenant: str = "tenant-a",
+    subject: str = "subject-a",
+    scopes: frozenset[str] = frozenset({"twi:usage:read"}),
+) -> Principal:
+    return Principal(
+        tenant_id=tenant, subject_id=subject, client_id="test-client",
+        principal_type="user", token_id=TEST_JTI, scopes=scopes, roles=frozenset(),
+        expires_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+
+
+def test_usage_endpoint_requires_scope_and_uses_verified_identity() -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    reservation = usage.reserve(
+        tenant_id="tenant-a", subject_id="subject-a", feature="fetch",
+        dimension="requests_month", period_start="2026-10-01T00:00:00Z",
+        quantity=2, limit=10, idempotency_key="usage-event-key-0001",
+    )
+    usage.commit(
+        tenant_id="tenant-a", subject_id="subject-a",
+        reservation_id=reservation.reservation_id,
+    )
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal()),
+    )
+    client = TestClient(app)
+    response = client.get(
+        "/v1/usage?dimension=requests_month&period_start=2026-10-01T00:00:00Z",
+        headers={"Authorization": "Bearer valid-credential"},
+    )
+    assert response.status_code == 200
+    assert response.json()["used"] == 2
+    assert len(response.json()["events"]) == 1
+    assert "tenant_id" not in response.json()["events"][0]
+    assert "subject_id" not in response.json()["events"][0]
+
+    other_app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal(tenant="tenant-b", subject="subject-b")),
+    )
+    other = TestClient(other_app).get(
+        "/v1/usage?dimension=requests_month&period_start=2026-10-01T00:00:00Z",
+        headers={"Authorization": "Bearer valid-credential"},
+    )
+    assert other.status_code == 200
+    assert other.json()["used"] == 0
+    usage.close()
+    jobs.close()
+
+
+def test_usage_endpoint_fails_closed_without_read_scope() -> None:
+    jobs = SQLiteJobRepository(":memory:")
+    usage = SQLiteUsageLedger(":memory:")
+    app = create_app(
+        settings=Settings.from_env({"TWI_ENV": "test", "TWI_DATABASE_PATH": ":memory:"}),
+        repository=jobs, usage_ledger=usage,
+        verifier=FakeVerifier(make_principal(scopes=frozenset({"twi:search"}))),
+    )
+    response = TestClient(app).get(
+        "/v1/usage?dimension=requests_month&period_start=2026-10-01T00:00:00Z",
+        headers={"Authorization": "Bearer valid-credential"},
+    )
+    assert response.status_code == 403
+    usage.close()
+    jobs.close()
