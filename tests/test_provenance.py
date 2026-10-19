@@ -118,4 +118,6 @@ def test_evidence_pack_requires_consistent_artifact_provenance() -> None:
 
 def test_evidence_pack_rejects_missing_provenance() -> None:
     with pytest.raises(ProvenanceError, match="manifest is missing"):
-        validate_evidence_pack({"artifact_id": "sha256:" + "a" * 64})
+        validate_evidence_pack(
+            {"artifact_id": "sha256:" + "a" * 64, "content_sha256": "a" * 64}
+        )
