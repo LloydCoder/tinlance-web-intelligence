@@ -772,7 +772,8 @@ def render_markdown(report: Mapping[str, object]) -> str:
             "",
             (
                 "| Case | Class | Support | Mode | Completion | Failure | "
-                "Latency ms | Bytes | Requests | Retries | Duplicates | Outcome | Evidence quality |"
+                "Latency ms | Bytes | Requests | Retries | Duplicates | Outcome | "
+                "Evidence quality |"
             ),
             "|---|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
