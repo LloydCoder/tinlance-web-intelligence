@@ -5,10 +5,10 @@ PostgresArtifactStore, whose reads are tenant-scoped and whose content hashes ar
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
-import re
 from typing import Protocol
 from urllib.parse import urlsplit
 
