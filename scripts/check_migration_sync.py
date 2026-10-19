@@ -7,12 +7,17 @@ from pathlib import Path
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    canonical = (root / "db" / "migrations" / "001_production_postgres.sql").read_bytes()
-    packaged = files(
-        "tinlance_web_intelligence.persistence.migrations"
-    ).joinpath("001_production_postgres.sql").read_bytes()
-    if canonical != packaged:
-        raise SystemExit("PostgreSQL migration copies differ; synchronize them before merge")
+    canonical_dir = root / "db" / "migrations"
+    packaged_dir = files("tinlance_web_intelligence.persistence.migrations")
+    canonical_names = sorted(path.name for path in canonical_dir.glob("*.sql"))
+    packaged_names = sorted(path.name for path in packaged_dir.iterdir() if path.name.endswith(".sql"))
+    if canonical_names != packaged_names:
+        raise SystemExit("PostgreSQL migration filenames differ between source and package")
+    for name in canonical_names:
+        canonical = (canonical_dir / name).read_bytes()
+        packaged = packaged_dir.joinpath(name).read_bytes()
+        if canonical != packaged:
+            raise SystemExit(f"PostgreSQL migration copies differ for {name}")
     print("PostgreSQL migration copies are synchronized")
     return 0
 
