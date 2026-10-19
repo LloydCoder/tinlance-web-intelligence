@@ -12,6 +12,11 @@ from hashlib import sha256
 import pytest
 from psycopg.errors import RaiseException
 
+from tinlance_web_intelligence.commercial.billing_events import VerifiedBillingEvent
+from tinlance_web_intelligence.commercial.billing_inbox import (
+    BillingEventReceiptConflict,
+    PostgresBillingEventInbox,
+)
 from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
     UsageConflictError,
@@ -361,3 +366,45 @@ def test_postgres_usage_quota_reservations_serialize_concurrent_requests() -> No
         assert sum(results) == 1
     finally:
         ledger.close()
+
+
+
+def test_postgres_billing_event_inbox_is_idempotent_and_recoverable() -> None:
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
+    inbox = PostgresBillingEventInbox(_DSN, min_size=1, max_size=8)
+    namespace = uuid.uuid4().hex
+    provider = f"provider-{namespace}"
+    event = VerifiedBillingEvent(
+        event_id=f"event-{namespace}", event_type="invoice.paid",
+        occurred_at="2026-10-19T10:00:00+00:00", received_timestamp=1_800_000_000,
+        payload_sha256="a" * 64,
+    )
+    try:
+        first, replayed = inbox.record(provider_key=provider, event=event)
+        assert not replayed and first.status == "received"
+        replay, was_replayed = inbox.record(provider_key=provider, event=event)
+        assert was_replayed and replay == first
+        with pytest.raises(BillingEventReceiptConflict):
+            inbox.record(
+                provider_key=provider,
+                event=VerifiedBillingEvent(
+                    event_id=event.event_id, event_type=event.event_type,
+                    occurred_at=event.occurred_at, received_timestamp=event.received_timestamp,
+                    payload_sha256="b" * 64,
+                ),
+            )
+        failed = inbox.mark_failed(
+            provider_key=provider, event_id=event.event_id, error_code="temporary_error"
+        )
+        assert failed.status == "failed" and failed.attempts == 1
+        processed = inbox.mark_processed(provider_key=provider, event_id=event.event_id)
+        assert processed.status == "processed" and processed.attempts == 2
+        assert inbox.get(provider_key=provider, event_id=event.event_id) == processed
+        with pytest.raises(ValueError, match="state transition"):
+            inbox.mark_failed(
+                provider_key=provider, event_id=event.event_id, error_code="late_failure"
+            )
+    finally:
+        inbox.close()
