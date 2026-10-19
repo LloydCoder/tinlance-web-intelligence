@@ -78,7 +78,7 @@ def test_artifact_store_rejects_malformed_digest_and_source_metadata() -> None:
     with pytest.raises(ValueError, match="content_type"):
         store.put(
             body=b"body",
-            content_type="text/html\\nX-Injected: true",
+            content_type="text/html" + chr(10) + "X-Injected: true",
             source_url="https://example.com/",
             captured_at=now,
         )
