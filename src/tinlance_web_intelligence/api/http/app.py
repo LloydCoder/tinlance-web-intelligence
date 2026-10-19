@@ -156,6 +156,8 @@ def create_app(
                         )
                     else:
                         response = await call_next(request)
+            if response is None:
+                raise RuntimeError("request middleware completed without a response")
             response.headers["X-Request-ID"] = request_id
             return response
         finally:
