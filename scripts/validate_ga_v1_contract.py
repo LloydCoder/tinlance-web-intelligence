@@ -59,6 +59,10 @@ def validate(
             "GA contract source revision does not match the requested candidate revision"
         )
 
+    if contract["decision"] == "approved" and nonpassing:
+        names = ", ".join(nonpassing)
+        raise ValueError(f"cannot approve GA while required gates are non-passing: {names}")
+
     pack = None
     if evidence_pack_path is not None:
         pack_bytes = evidence_pack_path.read_bytes()
@@ -80,9 +84,6 @@ def validate(
             contract.get("evidence_pack_sha256") or ""
         ):
             raise ValueError("approved release requires source revision and evidence-pack digest")
-        if nonpassing:
-            names = ", ".join(nonpassing)
-            raise ValueError(f"cannot approve GA while required gates are non-passing: {names}")
         support = contract["support_contract"]
         if not support["published"] or not support["version"] or not support["constraints_reference"]:
             raise ValueError("approved release requires a published versioned customer support contract")
