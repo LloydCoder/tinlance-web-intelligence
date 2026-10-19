@@ -138,7 +138,9 @@ def validate_evidence_package(
     except (ValueError, binascii.Error) as exc:
         raise EvidencePackageError("content_base64 is invalid") from exc
     if len(body) != payload["byte_size"] or sha256(body).hexdigest() != payload["content_sha256"]:
-        raise EvidencePackageError("exported artifact failed size or SHA-256 integrity verification")
+        raise EvidencePackageError(
+            "exported artifact failed size or SHA-256 integrity verification"
+        )
     try:
         manifest = AcquisitionProvenance.from_dict(payload["provenance"])
     except (ProvenanceError, TypeError) as exc:
