@@ -1,6 +1,4 @@
 """PostgreSQL job repository with transactional idempotency and SKIP LOCKED leases."""
-from __future__ import annotations
-
 import datetime
 import hashlib
 import json
