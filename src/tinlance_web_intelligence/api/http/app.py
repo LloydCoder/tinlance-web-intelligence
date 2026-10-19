@@ -25,10 +25,10 @@ from tinlance_web_intelligence.api.http.routes.health import router as health_ro
 from tinlance_web_intelligence.api.http.routes.jobs import router as jobs_router
 from tinlance_web_intelligence.api.http.routes.monitors import router as monitors_router
 from tinlance_web_intelligence.api.http.routes.research import router as research_router
+from tinlance_web_intelligence.api.http.routes.usage import router as usage_router
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
 )
-from tinlance_web_intelligence.api.http.routes.usage import router as usage_router
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
