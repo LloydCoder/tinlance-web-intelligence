@@ -19,3 +19,5 @@
 - `scripts/create_pg_service.py` rejects unsafe URL parameters and control characters, protects service-file permissions, and does not print credential values.
 - Tests cover URI decoding, service-file mode, unsupported/duplicate parameters, unsafe credentials, restore target identity, checksum tampering, symlink refusal, and secret-safe script invocation.
 - The real encrypted-backup mount, cloud identity/network policy, witnessed restore drill, measured RPO/RTO, HA/failover, and production alerts cannot be proven by repository CI and must remain external/not-evidenced.
+- Database client processes now inherit neither the operational DSNs nor `TWI_DATABASE_URL`; tests execute both shell scripts against controlled `pg_dump`/`pg_restore` stubs to verify service-file permissions, argument safety, partial-backup cleanup, checksum enforcement, and primary-target rejection.
+- Cross-phase audit aligned `make evaluation-check` with the checked-in threshold registry, so CI evaluates the same registry documented by the benchmark guide.
