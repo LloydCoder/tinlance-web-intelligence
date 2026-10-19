@@ -79,7 +79,11 @@ def verify_signed_billing_event(
         raise BillingEventError("billing event body must contain 1 to 1048576 bytes")
     if not isinstance(secret, bytes) or len(secret) < 32:
         raise BillingEventError("billing webhook secret must contain at least 32 bytes")
-    if not timestamp_header.isascii() or not timestamp_header.isdecimal():
+    if (
+        not timestamp_header.isascii()
+        or not timestamp_header.isdecimal()
+        or len(timestamp_header) > 12
+    ):
         raise BillingEventError("billing event timestamp is invalid")
     if not 30 <= tolerance_seconds <= 900:
         raise BillingEventError("signature tolerance must be between 30 and 900 seconds")
@@ -136,13 +140,19 @@ def reconcile_usage(
     usage_by_id: dict[str, list[UsageFact]] = {}
     billing_by_id: dict[str, list[BillingFact]] = {}
     for fact in usage_facts:
-        if not fact.event_id or isinstance(fact.quantity, bool) or fact.quantity < 1:
+        if (
+            not fact.event_id
+            or isinstance(fact.quantity, bool)
+            or not isinstance(fact.quantity, int)
+            or fact.quantity < 1
+        ):
             raise ValueError("usage facts require an event ID and positive integer quantity")
         usage_by_id.setdefault(fact.event_id, []).append(fact)
     for fact in billing_facts:
         if (
             not fact.event_id
             or isinstance(fact.quantity, bool)
+            or not isinstance(fact.quantity, int)
             or fact.quantity < 1
             or not fact.status
             or len(fact.status) > 40
