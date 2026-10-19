@@ -102,7 +102,9 @@ def test_results_reject_url_userinfo_and_naive_timestamps() -> None:
 
 
 
-def test_cli_writes_deterministic_json_and_markdown_reports(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_cli_writes_deterministic_json_and_markdown_reports(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     json_out = tmp_path / "report.json"
     markdown_out = tmp_path / "report.md"
     assert main(
