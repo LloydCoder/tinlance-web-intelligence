@@ -29,8 +29,8 @@ from tinlance_web_intelligence.api.http.routes.usage import router as usage_rout
 from tinlance_web_intelligence.api.http.routes.world_intelligence import (
     router as world_intelligence_router,
 )
-from tinlance_web_intelligence.commercial.entitlements import EntitlementResolver
 from tinlance_web_intelligence.auth.jwks import PlatformTokenVerifier
+from tinlance_web_intelligence.commercial.entitlements import EntitlementResolver
 from tinlance_web_intelligence.auth.principal import DenyAllPrincipalVerifier, PrincipalVerifier
 from tinlance_web_intelligence.config import ConfigurationError, Settings
 from tinlance_web_intelligence.monitors.service import MonitorService
