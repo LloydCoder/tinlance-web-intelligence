@@ -141,9 +141,9 @@ class SQLiteUsageLedger:
             raise ValueError("quantity must be a positive integer")
         if isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
             raise ValueError("limit must be a non-negative integer")
+        # Idempotency describes the operation, not the policy snapshot or billing period.
         fingerprint = hashlib.sha256(json.dumps(
-            [feature, dimension, period_start, quantity, limit],
-            separators=(",", ":"), ensure_ascii=True,
+            [feature, dimension, quantity], separators=(",", ":"), ensure_ascii=True,
         ).encode()).hexdigest()
         now = _utc_now()
         with self._lock:
