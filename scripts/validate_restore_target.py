@@ -22,7 +22,7 @@ def database_identity(dsn: str) -> tuple[str, int, str]:
     try:
         parsed = urlsplit(dsn)
         host = parsed.hostname
-        port = parsed.port or 5432
+        port = parsed.port if parsed.port is not None else 5432
     except ValueError as exc:
         raise ValueError("PostgreSQL database URL is malformed") from exc
     database = unquote(parsed.path.lstrip("/"))
