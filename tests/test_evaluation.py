@@ -109,6 +109,25 @@ def test_approved_thresholds_without_registry_digest_cannot_qualify() -> None:
     assert qualification["reason"] == "threshold_registry_hash_missing"
 
 
+
+def test_threshold_registry_digest_must_match_exact_raw_bytes() -> None:
+    dataset_id, cases, observations, dataset_raw, results_raw = _loaded()
+    thresholds_raw = (_ROOT / "benchmarks/twi/v1/thresholds.json").read_bytes()
+    thresholds = json.loads(thresholds_raw)
+    with pytest.raises(BenchmarkError, match="does not match raw threshold registry bytes"):
+        evaluate(
+            dataset_id,
+            cases,
+            observations,
+            now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
+            dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
+            results_sha256=hashlib.sha256(results_raw).hexdigest(),
+            threshold_registry=thresholds,
+            thresholds_sha256="0" * 64,
+            threshold_registry_raw=thresholds_raw,
+        )
+
+
 def test_results_must_match_dataset_case_ids() -> None:
     dataset_id, cases, observations, dataset_raw, results_raw = _loaded()
     changed = json.loads(results_raw)
