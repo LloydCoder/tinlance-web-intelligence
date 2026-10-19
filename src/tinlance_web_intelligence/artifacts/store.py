@@ -3,8 +3,6 @@
 The memory implementation is for tests and development only. Production workers use
 PostgresArtifactStore, whose reads are tenant-scoped and whose content hashes are verified.
 """
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
