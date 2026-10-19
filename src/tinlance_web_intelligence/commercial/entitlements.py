@@ -91,7 +91,8 @@ def evaluate_quota(
     feature_decision = evaluate_feature(plan, feature=feature)
     if not feature_decision.allowed:
         return feature_decision
-    assert plan is not None
+    if plan is None:  # Defensive fail-closed guard for future decision refactors.
+        return EntitlementDecision(False, "unknown_plan", None, None, feature)
     limit = plan.limits.get(dimension)
     if limit is None:
         return EntitlementDecision(
