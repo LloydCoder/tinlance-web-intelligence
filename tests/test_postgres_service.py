@@ -280,7 +280,7 @@ printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
     backup.write_bytes(b"verified backup fixture")
     digest = hashlib.sha256(backup.read_bytes()).hexdigest()
     (tmp_path / "known-good.dump.sha256").write_text(
-        f"{digest}  {backup.name}\\n", encoding="ascii"
+        f"{digest}  {backup.name}\n", encoding="ascii"
     )
     env = os.environ.copy()
     env.update(
