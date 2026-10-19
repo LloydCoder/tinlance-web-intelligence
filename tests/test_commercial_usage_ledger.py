@@ -77,6 +77,21 @@ def test_tenant_and_subject_scope_isolation() -> None:
     assert store.list_events(tenant_id="tenant-b", subject_id="subject-a") == []
 
 
+def test_released_reservation_is_reactivated_on_same_idempotent_retry() -> None:
+    store = ledger()
+    first = reserve(store, key="retry")
+    assert store.release(
+        tenant_id="tenant-a", subject_id="subject-a", reservation_id=first.reservation_id
+    )
+    retried = reserve(store, key="retry")
+    assert retried.reservation_id == first.reservation_id
+    assert retried.status == "reserved"
+    event = store.commit(
+        tenant_id="tenant-a", subject_id="subject-a", reservation_id=retried.reservation_id
+    )
+    assert event.quantity == 1
+
+
 def test_released_reservation_cannot_be_committed() -> None:
     store = ledger()
     reservation = reserve(store, key="released")
