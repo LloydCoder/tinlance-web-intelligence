@@ -719,14 +719,21 @@ def _format_metric(value: object) -> str:
 
 
 def render_markdown(report: Mapping[str, object]) -> str:
-    """Render a compact, URL-free human-readable evaluation report."""
+    """Render a deterministic, URL-free human-readable evaluation report."""
     summary = cast(Mapping[str, object], report["summary"])
+    qualification = cast(Mapping[str, object], report["qualification"])
     lines = [
         f"# TWI benchmark report: {report['dataset_id']}",
         "",
         f"- Evaluation time: {report['evaluation_time']}",
+        f"- Source revision: {report['source_revision'] or 'not_evidenced'}",
         f"- Dataset SHA-256: {report['dataset_sha256']}",
         f"- Results SHA-256: {report['results_sha256']}",
+        f"- Thresholds SHA-256: {report['thresholds_sha256'] or 'not_evidenced'}",
+        f"- Report SHA-256: {report['report_sha256']}",
+        f"- Evidence mode: {report['evidence_mode']}",
+        f"- Qualification: {qualification['status']} ({qualification['reason']})",
+        f"- Quality claim: {report['quality_claim']}",
         "",
         "## Macro-average metrics",
         "",
@@ -734,45 +741,40 @@ def render_markdown(report: Mapping[str, object]) -> str:
         "|---|---:|",
     ]
     for name, value in summary.items():
-        rendered = _format_metric(value)
-        lines.append(f"| {name} | {rendered} |")
+        lines.append(f"| {name} | {_format_metric(value)} |")
     lines.extend(
         [
             "",
-            "## Per-case metrics",
+            "## Per-case measurements",
             "",
-            "| Case | Items | Domains | Recall | Diversity | "
-            "Extract | Grounding | Fresh | Failure match |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "| Case | Class | Support | Mode | Completion | Failure | Latency ms | Bytes | Requests | Retries | Duplicates | Outcome | Evidence quality |",
+            "|---|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for raw_case in cast(list[object], report["cases"]):
         case = cast(Mapping[str, object], raw_case)
         metrics = cast(Mapping[str, object], case["metrics"])
-        values = [
-            _format_metric(metrics[name])
-            for name in (
-                "retrieval_recall",
-                "source_diversity_coverage",
-                "extraction_coverage",
-                "citation_grounding_rate",
-                "freshness_rate",
-                "failure_calibration_accuracy",
-            )
-        ]
+        measurements = cast(Mapping[str, object], case["measurements"])
         lines.append(
-            f"| {case['case_id']} | {case['retrieved_item_count']} | "
-            f"{case['distinct_domain_count']} | " + " | ".join(values) + " |"
+            f"| {case['case_id']} | {case['challenge_class']} | {case['support_status']} | "
+            f"{case['evidence_mode']} | {case['completion_status']} | "
+            f"{case['failure_mode'] or 'none'} | {measurements['latency_ms']} | "
+            f"{measurements['resource_bytes']} | {measurements['request_count']} | "
+            f"{measurements['retry_count']} | {case['duplicate_retrieval_count']} | "
+            f"{_format_metric(metrics['outcome_correctness_rate'])} | "
+            f"{_format_metric(metrics['evidence_quality_score'])} |"
         )
     lines.extend(
         [
             "",
-            "Citation grounding is a lexical heuristic, not semantic proof. These metrics do not",
-            "establish factual truth, source authority, or production readiness.",
+            "Citation grounding is a lexical heuristic, not semantic proof. Outcome correctness is",
+            "contract agreement, not factual correctness. Synthetic cases are not live quality evidence.",
+            "These metrics do not establish factual truth, source authority, or production readiness.",
             "",
         ]
     )
     return "\n".join(lines)
+
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -784,13 +786,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--json-out", type=Path)
     parser.add_argument("--markdown-out", type=Path)
+    parser.add_argument(
+        "--thresholds", type=Path, default=Path("benchmarks/twi/v1/thresholds.json")
+    )
+    parser.add_argument(
+        "--source-revision",
+        default=os.environ.get("TWI_BENCHMARK_SOURCE_REVISION") or os.environ.get("GITHUB_SHA"),
+        help="full immutable Git SHA; defaults to TWI_BENCHMARK_SOURCE_REVISION or GITHUB_SHA",
+    )
     args = parser.parse_args(argv)
     try:
         dataset_raw = args.dataset.read_bytes()
         results_raw = args.results.read_bytes()
+        thresholds_raw = args.thresholds.read_bytes()
         now = _timestamp(args.now, "--now")
         dataset_id, cases = load_dataset(dataset_raw)
         observations = load_observations(results_raw, dataset_id)
+        threshold_registry = load_threshold_registry(thresholds_raw, dataset_id)
         report = evaluate(
             dataset_id,
             cases,
@@ -798,8 +810,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             now=now,
             dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
             results_sha256=hashlib.sha256(results_raw).hexdigest(),
+            source_revision=args.source_revision,
+            threshold_registry=threshold_registry,
+            thresholds_sha256=hashlib.sha256(thresholds_raw).hexdigest(),
         )
-        rendered_json = json.dumps(report, indent=2, sort_keys=True) + "\n"
+        rendered_json = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
         rendered_markdown = render_markdown(report)
         if args.json_out:
             args.json_out.write_text(rendered_json, encoding="utf-8")
