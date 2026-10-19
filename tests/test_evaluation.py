@@ -117,6 +117,28 @@ def test_approved_thresholds_without_registry_digest_cannot_qualify() -> None:
     assert qualification["status"] == "not_evidenced"
     assert qualification["reason"] == "threshold_registry_hash_missing"
 
+    unbound_report = evaluate(
+        dataset_id,
+        live_cases,
+        live_observations,
+        now=datetime(2026, 10, 19, 12, 0, tzinfo=UTC),
+        dataset_sha256=hashlib.sha256(dataset_raw).hexdigest(),
+        results_sha256=hashlib.sha256(results_raw).hexdigest(),
+        source_revision="a" * 40,
+        threshold_registry={
+            "schema_version": "1.0.0",
+            "dataset_id": dataset_id,
+            "approval_status": "approved",
+            "owner": "quality-owner",
+            "approval_reference": "approval-123",
+            "thresholds": {"retrieval_recall": {"min": 0.0}},
+        },
+        thresholds_sha256="0" * 64,
+    )
+    unbound_qualification = unbound_report["qualification"]
+    assert isinstance(unbound_qualification, dict)
+    assert unbound_qualification["status"] == "not_evidenced"
+    assert unbound_qualification["reason"] == "threshold_registry_bytes_missing"
 
 
 def test_threshold_registry_digest_must_match_exact_raw_bytes() -> None:
