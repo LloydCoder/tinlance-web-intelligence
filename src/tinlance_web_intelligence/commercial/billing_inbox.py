@@ -41,7 +41,11 @@ def _receipt(row: Any) -> BillingEventReceipt:
         provider_key=row["provider_key"],
         event_id=row["event_id"],
         event_type=row["event_type"],
-        occurred_at=occurred_at.isoformat() if hasattr(occurred_at, "isoformat") else str(occurred_at),
+        occurred_at=(
+            occurred_at.isoformat()
+            if hasattr(occurred_at, "isoformat")
+            else str(occurred_at)
+        ),
         payload_sha256=row["payload_sha256"].strip(),
         status=row["status"],
         attempts=int(row["attempts"]),
@@ -226,7 +230,10 @@ class PostgresBillingEventInbox:
                    (provider_key,event_id,event_type,occurred_at,payload_sha256,status)
                    VALUES (%s,%s,%s,%s,%s,'received')
                    ON CONFLICT (provider_key,event_id) DO NOTHING RETURNING *""",
-                (provider_key,event.event_id,event.event_type,event.occurred_at,event.payload_sha256),
+                (
+                    provider_key, event.event_id, event.event_type,
+                    event.occurred_at, event.payload_sha256,
+                ),
             ).fetchone()
             if row is not None:
                 return _receipt(row), False
