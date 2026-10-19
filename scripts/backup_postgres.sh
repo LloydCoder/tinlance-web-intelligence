@@ -47,7 +47,7 @@ TWI_PG_SERVICE_DSN_ENV=TWI_BACKUP_DATABASE_URL \
   TWI_PG_SERVICE_NAME=twi_backup \
   TWI_PG_SERVICE_FILE="$service_file" \
   python3 "$script_dir/create_pg_service.py"
-unset TWI_BACKUP_DATABASE_URL
+unset TWI_BACKUP_DATABASE_URL TWI_DATABASE_URL
 
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 backup_file="$TWI_BACKUP_DIR/twi-$timestamp.dump"
