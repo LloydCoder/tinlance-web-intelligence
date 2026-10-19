@@ -11,14 +11,14 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.auth.principal import Principal
+from tinlance_web_intelligence.browser.policies import (
+    BrowserPolicyError,
+    normalize_browser_payload,
+)
 from tinlance_web_intelligence.commercial.entitlements import evaluate_feature
 from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
     UsageConflictError,
-)
-from tinlance_web_intelligence.browser.policies import (
-    BrowserPolicyError,
-    normalize_browser_payload,
 )
 from tinlance_web_intelligence.jobs.model import IdempotencyConflictError, Job, JobStatus
 from tinlance_web_intelligence.observability.tracing import extract_valid_traceparent
