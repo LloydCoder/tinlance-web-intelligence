@@ -10,7 +10,15 @@ command -v pg_dump >/dev/null 2>&1 || { echo "pg_dump is required" >&2; exit 127
 command -v sha256sum >/dev/null 2>&1 || { echo "sha256sum is required" >&2; exit 127; }
 command -v awk >/dev/null 2>&1 || { echo "awk is required" >&2; exit 127; }
 
+[[ "$TWI_BACKUP_DIR" == /* && ! -L "$TWI_BACKUP_DIR" ]] || {
+  echo "TWI_BACKUP_DIR must be an absolute, non-symlink path to the approved backup mount" >&2
+  exit 2
+}
 mkdir -p -- "$TWI_BACKUP_DIR"
+[[ -d "$TWI_BACKUP_DIR" && ! -L "$TWI_BACKUP_DIR" ]] || {
+  echo "backup path must be a real directory, not a symlink" >&2
+  exit 2
+}
 chmod 700 -- "$TWI_BACKUP_DIR"
 service_file=""
 tmp_backup=""
