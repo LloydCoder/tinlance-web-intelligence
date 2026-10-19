@@ -3,8 +3,8 @@ from __future__ import annotations
 import base64
 import json
 from datetime import UTC, datetime
-from pathlib import Path
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
