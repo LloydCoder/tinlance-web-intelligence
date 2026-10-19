@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import os
 import secrets
+import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tinlance_web_intelligence.browser.broker_api import create_app
 from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 
 BROKER_TOKEN = secrets.token_urlsafe(32)
+_POSTGRES_DSN = os.environ.get("TWI_TEST_POSTGRES_DSN")
 
 
 def _repository_with_jobs() -> SQLiteJobRepository:
@@ -78,11 +83,44 @@ def test_browser_broker_claims_only_browser_jobs_and_binds_result_to_lease() -> 
 def test_browser_broker_rejects_short_service_tokens() -> None:
     repository = SQLiteJobRepository(":memory:")
     try:
-        try:
+        with pytest.raises(ValueError, match="at least 32"):
             create_app(repository, "short")
-        except ValueError as exc:
-            assert "at least 32" in str(exc)
-        else:
-            raise AssertionError("short broker token must be rejected")
+    finally:
+        repository.close()
+
+
+@pytest.mark.skipif(_POSTGRES_DSN is None, reason="TWI_TEST_POSTGRES_DSN is not configured")
+def test_browser_broker_uses_shared_postgres_job_queue() -> None:
+    assert _POSTGRES_DSN is not None
+    repository = PostgresJobRepository(_POSTGRES_DSN, min_size=1, max_size=10, auto_migrate=True)
+    namespace = uuid.uuid4().hex
+    try:
+        created = repository.create(
+            tenant_id=f"tenant-{namespace}",
+            subject_id=f"subject-{namespace}",
+            kind="browser",
+            payload={"url": "https://example.com"},
+            idempotency_key=f"browser-broker-{namespace}",
+        )
+        client = TestClient(create_app(repository, BROKER_TOKEN))
+        headers = {"Authorization": f"Bearer {BROKER_TOKEN}"}
+        claim_response = client.post("/internal/browser-jobs/claim", headers=headers, json={})
+        assert claim_response.status_code == 200
+        claim = claim_response.json()
+        assert claim["job_id"] == created.job_id
+        assert claim["payload"] == {"url": "https://example.com"}
+
+        completed = client.post(
+            f"/internal/browser-jobs/{created.job_id}/complete",
+            headers=headers,
+            json={"lease_token": claim["lease_token"], "result": {"title": "captured"}},
+        )
+        assert completed.status_code == 200
+        assert completed.json()["status"] == "succeeded"
+        persisted = repository.get(
+            created.job_id, tenant_id=f"tenant-{namespace}", subject_id=f"subject-{namespace}"
+        )
+        assert persisted is not None
+        assert persisted.status.value == "succeeded"
     finally:
         repository.close()

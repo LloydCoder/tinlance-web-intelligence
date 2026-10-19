@@ -16,6 +16,7 @@ def main() -> None:
     service_token = os.environ.get("TWI_BROWSER_BROKER_TOKEN", "")
     repository = create_job_repository(settings)
     app = create_app(repository, service_token)
+    app.router.on_shutdown.append(repository.close)
     # This service is reachable only on the private broker networks in Compose.
     uvicorn.run(
         app,

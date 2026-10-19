@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from tinlance_web_intelligence.jobs.model import LeaseLostError
-from tinlance_web_intelligence.jobs.repository import SQLiteJobRepository
+from tinlance_web_intelligence.persistence.protocols import JobRepository
 
 
 class CompleteRequest(BaseModel):
@@ -27,7 +27,7 @@ class FailRequest(BaseModel):
     retryable: bool = False
 
 
-def create_app(repository: SQLiteJobRepository, service_token: str) -> FastAPI:
+def create_app(repository: JobRepository, service_token: str) -> FastAPI:
     if len(service_token) < 32 or service_token != service_token.strip():
         raise ValueError("browser broker token must be at least 32 non-padded characters")
 
