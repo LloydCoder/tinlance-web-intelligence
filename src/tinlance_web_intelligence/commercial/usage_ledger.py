@@ -165,6 +165,26 @@ class SQLiteUsageLedger:
                         raise UsageConflictError(
                             "idempotency key reused with different quota request"
                         )
+                    if existing["status"] == "released":
+                        used = self._connection.execute(
+                            """SELECT COALESCE(SUM(quantity), 0) AS quantity
+                               FROM twi_usage_reservations
+                               WHERE tenant_id=? AND dimension=? AND period_start=?
+                                 AND status IN ('reserved','committed')""",
+                            (tenant_id, dimension, period_start),
+                        ).fetchone()["quantity"]
+                        if used + quantity > limit:
+                            raise QuotaExceededError("hard quota would be exceeded")
+                        self._connection.execute(
+                            """UPDATE twi_usage_reservations
+                               SET period_start=?, status='reserved', updated_at=?
+                               WHERE reservation_id=? AND status='released'""",
+                            (period_start, now, existing["reservation_id"]),
+                        )
+                        existing = self._connection.execute(
+                            "SELECT * FROM twi_usage_reservations WHERE reservation_id=?",
+                            (existing["reservation_id"],),
+                        ).fetchone()
                     self._connection.commit()
                     return self._to_reservation(existing)
                 used = self._connection.execute(
