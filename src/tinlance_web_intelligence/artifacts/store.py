@@ -13,7 +13,7 @@ from typing import Protocol
 from urllib.parse import urlsplit
 
 
-_DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}\\Z")
+_DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
 def validate_artifact_digest(digest: str) -> None:
