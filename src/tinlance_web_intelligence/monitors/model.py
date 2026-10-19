@@ -28,6 +28,10 @@ class BaselineConflictError(RuntimeError):
     """A monitor baseline changed since a worker started its capture."""
 
 
+class MonitorDeletedError(RuntimeError):
+    """A queued monitor run cannot execute because its monitor was deleted."""
+
+
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
