@@ -83,6 +83,14 @@ jobs:
           python scripts/build_w15_evidence_pack.py --gates docs/readiness/w15-gates.json --output dist/w15-evidence-pack.json
           python scripts/validate_w15_evidence_pack.py --pack dist/w15-evidence-pack.json --revision "$(git rev-parse HEAD)"
           bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
+      - name: Upload source-bound W15 readiness evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: w15-evidence-${{ github.sha }}-py${{ matrix.python-version }}
+          path: dist/w15-evidence-pack.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Configure runner user-namespace sandbox prerequisites
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
