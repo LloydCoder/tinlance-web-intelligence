@@ -157,5 +157,56 @@ def test_evidence_export_rejects_wrong_job_type_or_missing_artifact() -> None:
         f"/v1/jobs/{search.job_id}/evidence", headers={"Authorization": "Bearer valid-credential"}
     )
     assert wrong_type.status_code == 409
+
+    missing_body = b"not persisted"
+    missing_manifest = AcquisitionProvenance.from_capture(
+        requested_url="https://missing.example/",
+        final_url="https://missing.example/",
+        status_code=200,
+        content_type="text/html",
+        body=missing_body,
+        retrieved_at=datetime(2026, 10, 19, 10, 0, tzinfo=UTC),
+        redirect_count=0,
+        extractor_version="twi-html-extractor-v1",
+    )
+    missing_job = repo.create(
+        tenant_id="tenant-a", subject_id="subject-a", kind="fetch",
+        payload={"url": "https://missing.example/"}, idempotency_key="evidence-api-missing-0001",
+    )
+    claimed_missing = repo.claim_next("test-worker", allowed_kinds=("fetch",))
+    assert claimed_missing is not None and claimed_missing.job_id == missing_job.job_id
+    missing_digest = sha256(missing_body).hexdigest()
+    repo.complete(
+        missing_job.job_id,
+        "test-worker",
+        {
+            "artifact_id": f"sha256:{missing_digest}",
+            "content_sha256": missing_digest,
+            "content_type": "text/html",
+            "provenance": missing_manifest.to_dict(),
+        },
+    )
+    missing = client.get(
+        f"/v1/jobs/{missing_job.job_id}/evidence",
+        headers={"Authorization": f"Bearer {TEST_CREDENTIAL}"},
+    )
+    assert missing.status_code == 404
+
+    owner_job = repo.get(job_id, tenant_id="tenant-a", subject_id="subject-a")
+    assert owner_job is not None and owner_job.result is not None
+    malformed_job = repo.create(
+        tenant_id="tenant-a", subject_id="subject-a", kind="fetch",
+        payload={"url": "https://malformed.example/"}, idempotency_key="evidence-api-malformed-0001",
+    )
+    claimed_malformed = repo.claim_next("test-worker", allowed_kinds=("fetch",))
+    assert claimed_malformed is not None and claimed_malformed.job_id == malformed_job.job_id
+    malformed_result = dict(owner_job.result)
+    malformed_result["provenance"] = {}
+    repo.complete(malformed_job.job_id, "test-worker", malformed_result)
+    malformed = client.get(
+        f"/v1/jobs/{malformed_job.job_id}/evidence",
+        headers={"Authorization": f"Bearer {TEST_CREDENTIAL}"},
+    )
+    assert malformed.status_code == 502
     artifacts.close()
     repo.close()
