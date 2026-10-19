@@ -101,7 +101,9 @@ class Settings:
             raise ConfigurationError("only http and https schemes may be configured")
         if not self.user_agent or any(ord(ch) < 32 for ch in self.user_agent):
             raise ConfigurationError("user agent must be non-empty and contain no control chars")
-        if self.source_revision is not None and not re.fullmatch(r"[0-9a-f]{40}", self.source_revision):
+        if self.source_revision is not None and not re.fullmatch(
+            r"[0-9a-f]{40}", self.source_revision
+        ):
             raise ConfigurationError("TWI_SOURCE_REVISION must be a full lowercase Git commit SHA")
         if not self.database_path or "\x00" in self.database_path:
             raise ConfigurationError("database path must be non-empty")
