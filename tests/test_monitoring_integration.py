@@ -12,6 +12,7 @@ import pytest
 from tinlance_web_intelligence.persistence.postgres_jobs import PostgresJobRepository
 from tinlance_web_intelligence.persistence.postgres_monitoring import (
     MonitoringLeaseLostError,
+    MonitoringObservation,
     PostgresMonitoringRepository,
 )
 
@@ -20,7 +21,9 @@ from tinlance_web_intelligence.persistence.postgres_monitoring import (
 def monitoring_repository() -> Iterator[PostgresMonitoringRepository]:
     dsn = os.environ.get("TWI_TEST_POSTGRES_DSN")
     if not dsn:
-        pytest.skip("TWI_TEST_POSTGRES_DSN is required for PostgreSQL monitoring integration tests")
+        pytest.skip(
+            "TWI_TEST_POSTGRES_DSN is required for PostgreSQL monitoring integration tests"
+        )
     migrator = PostgresJobRepository(dsn, auto_migrate=True)
     migrator.close()
     repository = PostgresMonitoringRepository(dsn)
@@ -43,7 +46,7 @@ def _observe(
     observed_at: datetime,
     status_code: int = 200,
     content_type: str = "text/html",
-):
+) -> MonitoringObservation:
     return repository.observe(
         tenant_id=tenant_id,
         source_fingerprint=fingerprint,
