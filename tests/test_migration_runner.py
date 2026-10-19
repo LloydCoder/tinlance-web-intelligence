@@ -13,7 +13,7 @@ def test_production_migration_dsn_requires_verified_tls() -> None:
     with pytest.raises(SystemExit, match="sslmode=verify-full"):
         _validate_dsn(
             "postgresql://migrator:secret@db.example/twi?sslmode=require",
-            production=True,
+            require_verified_tls=True,
         )
 
 
@@ -42,7 +42,6 @@ def test_production_migration_requires_dedicated_migration_url(
     monkeypatch.delenv("TWI_MIGRATION_DATABASE_URL", raising=False)
     with pytest.raises(SystemExit, match="TWI_MIGRATION_DATABASE_URL"):
         main()
-
 
 
 def test_staging_migration_requires_verified_tls_and_distinct_roles(
