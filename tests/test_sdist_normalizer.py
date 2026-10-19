@@ -44,7 +44,9 @@ def test_normalizer_makes_equivalent_sdists_byte_reproducible(tmp_path: pathlib.
         member = archive.getmember("sample-0.1.0/PKG-INFO")
         assert member.mtime == 1_750_000_000
         assert member.uid == 0
-        assert archive.extractfile(member).read() == b"package metadata\n"
+        stream = archive.extractfile(member)
+        assert stream is not None
+        assert stream.read() == b"package metadata\n"
 
 
 @pytest.mark.parametrize("name", ["package.whl", "missing.tar.gz"])
