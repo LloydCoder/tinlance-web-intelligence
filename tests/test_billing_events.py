@@ -10,6 +10,7 @@ from tinlance_web_intelligence.commercial.billing_events import (
     BillingEventError,
     BillingFact,
     UsageFact,
+    decide_event_order,
     reconcile_usage,
     verify_signed_billing_event,
 )
@@ -183,3 +184,13 @@ def test_billing_inbox_scopes_same_event_id_by_provider() -> None:
     assert not replayed
     assert first.provider_key != second.provider_key
     inbox.close()
+
+
+
+def test_event_ordering_requires_monotonic_provider_revision() -> None:
+    assert decide_event_order(current_revision=4, incoming_revision=5) == "apply"
+    assert decide_event_order(current_revision=5, incoming_revision=4) == "stale"
+    assert decide_event_order(current_revision=5, incoming_revision=5) == "manual_review"
+    assert decide_event_order(current_revision=None, incoming_revision=5) == "manual_review"
+    with pytest.raises(ValueError):
+        decide_event_order(current_revision=True, incoming_revision=5)  # type: ignore[arg-type]
