@@ -114,7 +114,10 @@ def validate_evidence_package(
         payload["source_revision"]
     ):
         raise EvidencePackageError("source_revision must be a full lowercase Git commit SHA")
-    if expected_source_revision is not None and payload["source_revision"] != expected_source_revision:
+    if (
+        expected_source_revision is not None
+        and payload["source_revision"] != expected_source_revision
+    ):
         raise EvidencePackageError("evidence package source revision mismatch")
     if not isinstance(payload["content_sha256"], str) or not _DIGEST.fullmatch(
         payload["content_sha256"]
