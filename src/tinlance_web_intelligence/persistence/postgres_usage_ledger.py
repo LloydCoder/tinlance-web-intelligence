@@ -76,7 +76,7 @@ class PostgresUsageLedger:
         ).encode()).hexdigest()
         with self._pool.connection() as conn:
             # Serialize all reservations for the same tenant quota bucket across replicas.
-            bucket = f"{tenant_id}\0{dimension}\0{period_start}"
+            bucket = json.dumps([tenant_id, dimension, period_start], separators=(",", ":"))
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (bucket,))
             existing = conn.execute(
                 """SELECT * FROM twi_usage_reservations
