@@ -12,6 +12,7 @@ import pytest
 from scripts.create_pg_service import parse_service_values, write_service_file
 from scripts.validate_restore_target import validate_restore_target, verify_backup_checksum
 
+
 def test_service_file_decodes_uri_credentials_and_is_owner_only(tmp_path: Path) -> None:
     dsn = (
         "postgresql://backup:p%3Ass%25word@db.example.com:5432/twi_backup"
@@ -31,6 +32,7 @@ def test_service_file_decodes_uri_credentials_and_is_owner_only(tmp_path: Path) 
     assert parser["twi_backup"]["sslrootcert"] == "/etc/ssl/root.pem"
     assert parser["twi_backup"]["connect_timeout"] == "5"
     assert parser["twi_backup"]["target_session_attrs"] == "primary"
+
 
 @pytest.mark.parametrize(
     "dsn",
@@ -52,6 +54,7 @@ def test_service_parser_rejects_unsafe_dsn_values(dsn: str) -> None:
     with pytest.raises(ValueError):
         parse_service_values(dsn)
 
+
 def test_service_file_rejects_invalid_name_and_symlink(tmp_path: Path) -> None:
     dsn = "postgresql://backup:secret@db.example.com/twi_backup?sslmode=verify-full"
     with pytest.raises(ValueError, match="service name is invalid"):
@@ -64,6 +67,7 @@ def test_service_file_rejects_invalid_name_and_symlink(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="must not be a symlink"):
         write_service_file(dsn, link, "twi_backup")
     assert target.read_text(encoding="utf-8") == "do not overwrite"
+
 
 def test_restore_target_rejects_primary_identity_and_wrong_target_name() -> None:
     primary = "postgresql://primary:secret@db.example.com:5432/twi_restore?sslmode=verify-full"
@@ -94,6 +98,7 @@ def test_restore_target_rejects_primary_identity_and_wrong_target_name() -> None
             expected_database="twi",
         )
 
+
 def test_restore_target_accepts_distinct_recovery_database() -> None:
     target = (
         "postgresql://restore:secret@recovery.example.com:5432/twi_recovery"
@@ -105,6 +110,7 @@ def test_restore_target_accepts_distinct_recovery_database() -> None:
         primary_dsn=primary,
         expected_database="twi_recovery",
     ) == ("recovery.example.com", 5432, "twi_recovery")
+
 
 def test_backup_checksum_is_bound_to_selected_file_and_filename(tmp_path: Path) -> None:
     backup = tmp_path / "twi-20261019T120000Z.dump"
@@ -128,6 +134,7 @@ def test_backup_checksum_is_bound_to_selected_file_and_filename(tmp_path: Path) 
     with pytest.raises(ValueError, match="exactly one"):
         verify_backup_checksum(backup_file=backup, checksum_file=sidecar)
 
+
 def test_restore_checksum_rejects_symlink_sidecar(tmp_path: Path) -> None:
     backup = tmp_path / "backup.dump"
     backup.write_bytes(b"data")
@@ -137,6 +144,7 @@ def test_restore_checksum_rejects_symlink_sidecar(tmp_path: Path) -> None:
     sidecar.symlink_to(actual)
     with pytest.raises(ValueError, match="must not be a symlink"):
         verify_backup_checksum(backup_file=backup, checksum_file=sidecar)
+
 
 def test_backup_and_restore_scripts_use_service_names_not_dsn_arguments() -> None:
     root = Path(__file__).resolve().parents[1]
@@ -153,9 +161,11 @@ def test_backup_and_restore_scripts_use_service_names_not_dsn_arguments() -> Non
     assert '--dbname="$TWI_DATABASE_URL"' not in restore
     assert "unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL TWI_DATABASE_URL" in restore
 
+
 def _write_executable(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
     path.chmod(0o700)
+
 
 def _run_shell_script(script_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     bash_path = shutil.which("bash")
@@ -167,6 +177,7 @@ def _run_shell_script(script_path: Path, env: dict[str, str]) -> subprocess.Comp
         text=True,
         check=False,
     )
+
 
 def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
     tmp_path: Path,
@@ -239,6 +250,7 @@ exit 0
     assert failed.returncode == 17
     assert list(backup_dir.iterdir()) == []
     assert "super-secret" not in failed.stdout + failed.stderr
+
 
 def test_restore_script_preflights_target_checksum_and_secret_safe_service(
     tmp_path: Path,
