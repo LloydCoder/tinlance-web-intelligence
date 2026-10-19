@@ -53,7 +53,7 @@ def normalize_sdist(path: pathlib.Path, source_date_epoch: int) -> None:
                                     raise ValueError("sdist regular file has no content")
                                 with stream:
                                     destination.addfile(member, stream)
-                            elif member.isdir() or member.issym() or member.islnk():
+                            elif member.isdir():
                                 destination.addfile(member)
                             else:
                                 raise ValueError("sdist contains an unsupported member type")
