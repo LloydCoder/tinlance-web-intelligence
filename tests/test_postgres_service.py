@@ -244,13 +244,7 @@ exit 0
     for path in backup_dir.iterdir():
         path.unlink()
     env["PG_DUMP_FAIL"] = "1"
-    failed = subprocess.run(
-        ["bash", str(root / "scripts/backup_postgres.sh")],
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    failed = _run_shell_script(root / "scripts/backup_postgres.sh", env)
     assert failed.returncode == 17
     assert list(backup_dir.iterdir()) == []
     assert "super-secret" not in failed.stdout + failed.stderr
@@ -320,13 +314,7 @@ printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
         "postgresql://primary:primary-secret@recovery.example.com:5432/twi_restore"
         "?sslmode=verify-full"
     )
-    blocked = subprocess.run(
-        ["bash", str(root / "scripts/restore_postgres.sh")],
-        env=env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    blocked = _run_shell_script(root / "scripts/restore_postgres.sh", env)
     assert blocked.returncode == 2
     assert "matches the primary" in blocked.stderr
     assert not args_file.exists()
