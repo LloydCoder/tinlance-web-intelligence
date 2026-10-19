@@ -79,3 +79,36 @@ def test_metrics_endpoint_replaces_invalid_request_id() -> None:
 def test_metrics_token_must_be_long_and_unpadded() -> None:
     with pytest.raises(ConfigurationError, match="TWI_METRICS_TOKEN"):
         Settings.from_env({"TWI_METRICS_TOKEN": "short"})
+
+def test_metrics_include_queue_depth_and_outbox_backlog() -> None:
+    token = "metrics-test-token-" + ("y" * 32)
+    client, repository, outbox = _client(token)
+    try:
+        repository.create(
+            tenant_id="tenant-metrics",
+            subject_id="subject-metrics",
+            kind="search",
+            payload={"query": "metrics test", "limit": 1},
+            idempotency_key="metrics-job-0001",
+        )
+        outbox.enqueue(
+            tenant_ref="a" * 64,
+            subject_ref="b" * 64,
+            idempotency_key="metrics-event-0001",
+            payload={"source_url": "https://example.com"},
+            request_id="metrics-request-1",
+            traceparent=None,
+        )
+        with client:
+            response = client.get(
+                "/internal/metrics", headers={"Authorization": f"Bearer {token}"}
+            )
+        assert response.status_code == 200
+        assert 'twi_jobs_total{status="queued"} 1.0' in response.text
+        assert 'twi_source_evidence_outbox_events_total{status="pending"} 1.0' in response.text
+        assert "twi_jobs_oldest_queued_age_seconds" in response.text
+        assert "twi_source_evidence_outbox_oldest_pending_age_seconds" in response.text
+    finally:
+        repository.close()
+        outbox.close()
+
