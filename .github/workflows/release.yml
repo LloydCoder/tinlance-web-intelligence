@@ -49,9 +49,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
           python -m pip install --no-deps -e .
-          python -m pip check
+          python -m pip install pip-audit==2.10.1
           python -m pip install cyclonedx-bom==7.5.0
           python -m pip check
+          mkdir -p dist
+      - name: Audit release dependency environment
+        run: pip-audit --strict --progress-spinner off --format json --output dist/pip-audit.json -r requirements-dev.txt
       - name: Run quality, type, security, dependency, and database tests
         run: |
           ruff check .
@@ -113,16 +116,17 @@ jobs:
       - name: Generate release checksums
         run: |
           cd dist
-          sha256sum *.whl *.tar.gz *.cdx.json > SHA256SUMS
+          sha256sum *.whl *.tar.gz *.cdx.json pip-audit.json > SHA256SUMS
           sha256sum --check SHA256SUMS
       - name: Attest release artifacts
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         with:
           subject-path: "dist/*"
       - name: Upload release artifacts and evidence
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: twi-release-${{ github.sha }}
           path: dist/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
