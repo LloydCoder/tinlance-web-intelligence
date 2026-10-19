@@ -25,6 +25,7 @@ class Settings:
     identity_issuer: str | None = None
     identity_audience: str | None = None
     identity_jwks_url: str | None = None
+    metrics_token: str | None = None
     brave_api_key: str | None = None
     browser_enabled: bool = False
     browser_proxy_url: str | None = None
@@ -62,6 +63,7 @@ class Settings:
                 identity_issuer=values.get("TWI_IDENTITY_ISSUER") or None,
                 identity_audience=values.get("TWI_IDENTITY_AUDIENCE") or None,
                 identity_jwks_url=values.get("TWI_IDENTITY_JWKS_URL") or None,
+                metrics_token=values.get("TWI_METRICS_TOKEN") or None,
                 brave_api_key=values.get("TWI_BRAVE_SEARCH_API_KEY") or None,
                 browser_enabled=browser_enabled_raw == "true",
                 browser_proxy_url=values.get("TWI_BROWSER_PROXY_URL") or None,
@@ -164,6 +166,10 @@ class Settings:
                 raise ConfigurationError(
                     "identity issuer and JWKS URL must be absolute HTTPS URLs"
                 )
+        if self.metrics_token is not None and (
+            len(self.metrics_token) < 32 or self.metrics_token != self.metrics_token.strip()
+        ):
+            raise ConfigurationError("TWI_METRICS_TOKEN must contain at least 32 non-padded characters")
         if self.brave_api_key is not None and not self.brave_api_key.strip():
             raise ConfigurationError("Brave Search API key must be non-empty when configured")
         proxy_values = (
