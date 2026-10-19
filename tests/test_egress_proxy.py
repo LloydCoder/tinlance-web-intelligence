@@ -146,7 +146,7 @@ def test_proxy_rejects_mixed_public_and_non_public_dns_answers(
         async def fake_getaddrinfo(
             host: str, port: int, *, type: int
         ) -> list[tuple[object, ...]]:
-            results = []
+            results: list[tuple[object, ...]] = []
             for address in addresses:
                 family = socket.AF_INET6 if ":" in address else socket.AF_INET
                 results.append((family, 1, 6, "", (address, port)))
