@@ -603,8 +603,8 @@ def evaluate(
             "outcome_correctness_rate": outcome_correctness,
             "evidence_quality_score": round(evidence_quality or 0.0, 6),
         }
-        for name, value in metrics.items():
-            metric_values[name].append(value)
+        for metric_name, metric_value in metrics.items():
+            metric_values[metric_name].append(metric_value)
         case_reports.append(
             {
                 "case_id": case.case_id,
@@ -656,13 +656,13 @@ def evaluate(
             unavailable: list[str] = []
             for name, raw_bounds in threshold_values.items():
                 bounds = _mapping(raw_bounds, f"thresholds.{name}")
-                value = summary.get(name)
-                if not isinstance(value, (int, float)):
+                metric_value = summary.get(name)
+                if not isinstance(metric_value, (int, float)):
                     unavailable.append(name)
                     continue
-                if "min" in bounds and value < bounds["min"]:
+                if "min" in bounds and metric_value < bounds["min"]:
                     failures.append(name)
-                if "max" in bounds and value > bounds["max"]:
+                if "max" in bounds and metric_value > bounds["max"]:
                     failures.append(name)
             if unavailable:
                 qualification_reason = "threshold_metrics_unavailable:" + ",".join(
