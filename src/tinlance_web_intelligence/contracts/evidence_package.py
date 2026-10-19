@@ -125,8 +125,11 @@ def validate_evidence_package(
         raise EvidencePackageError("content_sha256 must be a lowercase SHA-256 digest")
     if not isinstance(payload["content_type"], str):
         raise EvidencePackageError("content_type must be a string")
-    if type(payload["byte_size"]) is not int or payload["byte_size"] < 0:
-        raise EvidencePackageError("byte_size must be a non-negative integer")
+    if (
+        type(payload["byte_size"]) is not int
+        or not 0 <= payload["byte_size"] <= 20_000_000
+    ):
+        raise EvidencePackageError("byte_size must be an integer from 0 to 20000000")
     if not isinstance(payload["artifact_id"], str) or payload["artifact_id"] != (
         "sha256:" + payload["content_sha256"]
     ):
@@ -137,10 +140,14 @@ def validate_evidence_package(
         body = base64.b64decode(payload["content_base64"], validate=True)
     except (ValueError, binascii.Error) as exc:
         raise EvidencePackageError("content_base64 is invalid") from exc
+    if base64.b64encode(body).decode("ascii") != payload["content_base64"]:
+        raise EvidencePackageError("content_base64 is not canonical")
     if len(body) != payload["byte_size"] or sha256(body).hexdigest() != payload["content_sha256"]:
         raise EvidencePackageError(
             "exported artifact failed size or SHA-256 integrity verification"
         )
+    if not isinstance(payload["provenance"], dict):
+        raise EvidencePackageError("acquisition provenance is invalid")
     try:
         manifest = AcquisitionProvenance.from_dict(payload["provenance"])
     except (ProvenanceError, TypeError) as exc:
