@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 
 from fastapi.testclient import TestClient
 
@@ -196,7 +197,8 @@ def test_evidence_export_rejects_wrong_job_type_or_missing_artifact() -> None:
     assert owner_job is not None and owner_job.result is not None
     malformed_job = repo.create(
         tenant_id="tenant-a", subject_id="subject-a", kind="fetch",
-        payload={"url": "https://malformed.example/"}, idempotency_key="evidence-api-malformed-0001",
+        payload={"url": "https://malformed.example/"},
+        idempotency_key="evidence-api-malformed-0001",
     )
     claimed_malformed = repo.claim_next("test-worker", allowed_kinds=("fetch",))
     assert claimed_malformed is not None and claimed_malformed.job_id == malformed_job.job_id
