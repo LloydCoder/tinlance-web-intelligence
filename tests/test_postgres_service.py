@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import configparser
 import hashlib
+import os
 import stat
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -158,3 +160,160 @@ def test_backup_and_restore_scripts_use_service_names_not_dsn_arguments() -> Non
     assert 'python3 "$script_dir/validate_restore_target.py"' in restore
     assert '--dbname="$TWI_DATABASE_URL"' not in restore
     assert "unset TWI_RESTORE_DATABASE_URL TWI_PRIMARY_DATABASE_URL" in restore
+
+
+
+def _write_executable(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8")
+    path.chmod(0o700)
+
+
+def test_backup_script_uses_service_file_and_cleans_failed_partial_dump(
+    tmp_path: Path,
+) -> None:
+    root = Path(__file__).resolve().parents[1]
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    args_file = tmp_path / "pg-dump-args.txt"
+    service_path_file = tmp_path / "service-path.txt"
+    _write_executable(
+        fake_bin / "pg_dump",
+        """#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ -z "${TWI_BACKUP_DATABASE_URL:-}" ]] || exit 90
+[[ -f "${PGSERVICEFILE:-}" ]] || exit 91
+[[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 92
+grep -q '^\\[twi_backup\\]$' "$PGSERVICEFILE" || exit 93
+printf '%s\\n' "$@" > "$PG_DUMP_ARGS_FILE"
+printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
+target=""
+for argument in "$@"; do
+  case "$argument" in --file=*) target="${argument#--file=}" ;; esac
+done
+[[ -n "$target" ]] || exit 94
+printf 'sample pg dump bytes' > "$target"
+[[ "${PG_DUMP_FAIL:-0}" == 1 ]] && exit 17
+""",
+    )
+    backup_dir = tmp_path / "encrypted-backup"
+    env = os.environ.copy()
+    env.update(
+        {
+            "TWI_BACKUP_DATABASE_URL": (
+                "postgresql://backup:super-secret@db.example.com:5432/twi"
+                "?sslmode=verify-full"
+            ),
+            "TWI_BACKUP_DIR": str(backup_dir),
+            "PG_DUMP_ARGS_FILE": str(args_file),
+            "PGSERVICE_PATH_RECORD": str(service_path_file),
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+        }
+    )
+
+    successful = subprocess.run(
+        ["bash", str(root / "scripts/backup_postgres.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert successful.returncode == 0, successful.stderr
+    args = args_file.read_text(encoding="utf-8")
+    assert "service=twi_backup" in args
+    assert "super-secret" not in args
+    assert len(list(backup_dir.glob("*.dump"))) == 1
+    assert len(list(backup_dir.glob("*.dump.sha256"))) == 1
+    assert stat.S_IMODE(backup_dir.stat().st_mode) == 0o700
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in backup_dir.iterdir())
+    assert not Path(service_path_file.read_text(encoding="utf-8")).exists()
+
+    for path in backup_dir.iterdir():
+        path.unlink()
+    env["PG_DUMP_FAIL"] = "1"
+    failed = subprocess.run(
+        ["bash", str(root / "scripts/backup_postgres.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert failed.returncode == 17
+    assert list(backup_dir.iterdir()) == []
+    assert "super-secret" not in failed.stdout + failed.stderr
+
+
+def test_restore_script_preflights_target_checksum_and_secret_safe_service(
+    tmp_path: Path,
+) -> None:
+    root = Path(__file__).resolve().parents[1]
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    args_file = tmp_path / "pg-restore-args.txt"
+    service_path_file = tmp_path / "service-path.txt"
+    _write_executable(
+        fake_bin / "pg_restore",
+        """#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ -z "${TWI_RESTORE_DATABASE_URL:-}" ]] || exit 90
+[[ -z "${TWI_PRIMARY_DATABASE_URL:-}" ]] || exit 91
+[[ -f "${PGSERVICEFILE:-}" ]] || exit 92
+[[ "$(stat -c '%a' "$PGSERVICEFILE")" == "600" ]] || exit 93
+grep -q '^\\[twi_restore\\]$' "$PGSERVICEFILE" || exit 94
+printf '%s\\n' "$@" > "$PG_RESTORE_ARGS_FILE"
+printf '%s' "$PGSERVICEFILE" > "$PGSERVICE_PATH_RECORD"
+""",
+    )
+    backup = tmp_path / "known-good.dump"
+    backup.write_bytes(b"verified backup fixture")
+    digest = hashlib.sha256(backup.read_bytes()).hexdigest()
+    (tmp_path / "known-good.dump.sha256").write_text(
+        f"{digest}  {backup.name}\\n", encoding="ascii"
+    )
+    env = os.environ.copy()
+    env.update(
+        {
+            "TWI_CONFIRM_RESTORE": "YES",
+            "TWI_RESTORE_DATABASE_URL": (
+                "postgresql://restore:restore-secret@recovery.example.com:5432/twi_restore"
+                "?sslmode=verify-full"
+            ),
+            "TWI_PRIMARY_DATABASE_URL": (
+                "postgresql://primary:primary-secret@primary.example.com:5432/twi"
+                "?sslmode=verify-full"
+            ),
+            "TWI_BACKUP_FILE": str(backup),
+            "TWI_RESTORE_TARGET_DATABASE": "twi_restore",
+            "PG_RESTORE_ARGS_FILE": str(args_file),
+            "PGSERVICE_PATH_RECORD": str(service_path_file),
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+        }
+    )
+    restored = subprocess.run(
+        ["bash", str(root / "scripts/restore_postgres.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert restored.returncode == 0, restored.stderr
+    args = args_file.read_text(encoding="utf-8")
+    assert "service=twi_restore" in args
+    assert "restore-secret" not in args
+    assert "primary-secret" not in args
+    assert not Path(service_path_file.read_text(encoding="utf-8")).exists()
+
+    args_file.unlink()
+    env["TWI_PRIMARY_DATABASE_URL"] = (
+        "postgresql://primary:primary-secret@recovery.example.com:5432/twi_restore"
+        "?sslmode=verify-full"
+    )
+    blocked = subprocess.run(
+        ["bash", str(root / "scripts/restore_postgres.sh")],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert blocked.returncode == 2
+    assert "matches the primary" in blocked.stderr
+    assert not args_file.exists()
