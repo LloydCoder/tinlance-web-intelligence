@@ -1,14 +1,9 @@
 """Adversarial tests for the GA v1 release decision contract."""
 from __future__ import annotations
-
-import copy
 import json
 from pathlib import Path
-
 import pytest
-
 from scripts.validate_ga_v1_contract import validate
-
 _ROOT = Path(__file__).resolve().parents[1]
 _CONTRACT = _ROOT / "docs/releases/ga-v1-contract.json"
 _SCHEMA = _ROOT / "schemas/ga-v1-release-decision.schema.json"
