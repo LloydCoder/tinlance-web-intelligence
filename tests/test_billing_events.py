@@ -6,6 +6,10 @@ import json
 
 import pytest
 
+from tinlance_web_intelligence.commercial.billing_inbox import (
+    BillingEventReceiptConflict,
+    SQLiteBillingEventInbox,
+)
 from tinlance_web_intelligence.commercial.billing_events import (
     BillingEventError,
     BillingFact,
@@ -111,3 +115,59 @@ def test_reconciliation_rejects_invalid_quantities() -> None:
         reconcile_usage([UsageFact("bad", 0)], [])
     with pytest.raises(ValueError):
         reconcile_usage([], [BillingFact("bad", 1, "")])
+
+
+
+def test_billing_inbox_is_durable_idempotent_and_payload_free() -> None:
+    body = json.dumps({
+        "event_id": "evt_inbox_1",
+        "event_type": "invoice.paid",
+        "occurred_at": "2026-10-19T10:00:00Z",
+        "data": {"private": "must-not-be-stored"},
+    }, separators=(",", ":")).encode()
+    event = verify_signed_billing_event(
+        body, timestamp_header=_TIMESTAMP, signature_header=signed_body(body),
+        secret=_SECRET, now_epoch=int(_TIMESTAMP),
+    )
+    inbox = SQLiteBillingEventInbox(":memory:")
+    receipt, replayed = inbox.record(provider_key="provider-a", event=event)
+    assert not replayed and receipt.status == "received"
+    replay, was_replayed = inbox.record(provider_key="provider-a", event=event)
+    assert was_replayed and replay == receipt
+    assert "must-not-be-stored" not in repr(inbox.get(
+        provider_key="provider-a", event_id="evt_inbox_1"
+    ))
+    failed = inbox.mark_failed(
+        provider_key="provider-a", event_id="evt_inbox_1", error_code="temporary_error"
+    )
+    assert failed.status == "failed" and failed.attempts == 1
+    processed = inbox.mark_processed(provider_key="provider-a", event_id="evt_inbox_1")
+    assert processed.status == "processed" and processed.attempts == 2
+    assert inbox.mark_processed(
+        provider_key="provider-a", event_id="evt_inbox_1"
+    ) == processed
+    with pytest.raises(ValueError, match="state transition"):
+        inbox.mark_failed(
+            provider_key="provider-a", event_id="evt_inbox_1", error_code="late_failure"
+        )
+    changed = type(event)(
+        event_id=event.event_id, event_type=event.event_type, occurred_at=event.occurred_at,
+        received_timestamp=event.received_timestamp, payload_sha256="f" * 64,
+    )
+    with pytest.raises(BillingEventReceiptConflict):
+        inbox.record(provider_key="provider-a", event=changed)
+    inbox.close()
+
+
+def test_billing_inbox_scopes_same_event_id_by_provider() -> None:
+    body = b'{"event_id":"evt_shared","event_type":"invoice.paid","occurred_at":"2026-10-19T10:00:00Z","data":{}}'
+    event = verify_signed_billing_event(
+        body, timestamp_header=_TIMESTAMP, signature_header=signed_body(body),
+        secret=_SECRET, now_epoch=int(_TIMESTAMP),
+    )
+    inbox = SQLiteBillingEventInbox(":memory:")
+    first, _ = inbox.record(provider_key="provider-a", event=event)
+    second, replayed = inbox.record(provider_key="provider-b", event=event)
+    assert not replayed
+    assert first.provider_key != second.provider_key
+    inbox.close()
