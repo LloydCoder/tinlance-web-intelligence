@@ -737,6 +737,18 @@ async function refreshMonitorRun(requestSessionEpoch = authSessionEpoch, monitor
     const run = await runtime.apiClient.getMonitorRun(monitorId, runId);
     if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeMonitor?.monitor_id !== monitorId || activeMonitorRunId !== runId) return null;
     renderMonitorRun(run);
+    if (run.status === 'succeeded' && isAuthorized && authSessionEpoch === requestSessionEpoch && activeMonitor?.monitor_id === monitorId) {
+      try {
+        const refreshedMonitor = await runtime.apiClient.getMonitor(monitorId);
+        if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeMonitor?.monitor_id === monitorId) {
+          renderMonitor(refreshedMonitor, 'Monitor state refreshed after the run. The baseline shown is the latest server-reported state.');
+        }
+      } catch {
+        if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeMonitor?.monitor_id === monitorId && monitorStatus) {
+          monitorStatus.textContent = 'The run state is available, but the latest monitor baseline could not be refreshed.';
+        }
+      }
+    }
     return run;
   } catch (error) {
     if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeMonitor?.monitor_id === monitorId && activeMonitorRunId === runId && monitorRunStatus) {
