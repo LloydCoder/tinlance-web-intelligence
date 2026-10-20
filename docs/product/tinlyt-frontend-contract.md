@@ -60,7 +60,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | F0 | Repository, frontend, API, CI and risk inventory | Audit report reviewed; CI green on exact commit. |
 | F1 | Design system, frontend workspace, app shell and frontend CI | Reproducible locked install, lint, JavaScript syntax validation, static security checks, tests/build, accessible responsive primitives. TypeScript typechecking is required once a TypeScript application is adopted; the current JavaScript syntax check must not be described as a typecheck. |
 | F2 | Auth integration and typed API client | Approved identity integration; no browser-held privileged secrets; typed errors, idempotency and cancellation behavior tested. |
-| F3 | Investigation submission and result experience | Supported search/fetch/browser requests; real job lifecycle; partial, blocked, empty and failure states. |
+| F3 | Investigation submission and result experience | Authenticated search/fetch/browser submission; bounded live job polling; validated job-state display; safe result rendering; partial, blocked, empty and failure states; exact-commit CI and post-merge forensic review. |
 | F4 | Run detail and lifecycle | Accurate server states, safe polling/cancel behavior, accessible logs where provided. |
 | F5 | Evidence inspection and export | Provenance visible; authorized export only; invalid, unavailable and out-of-scope cases tested. |
 | F6 | Claim verification | Uses captured citations and real verification response; no fabricated confidence or truth guarantee. |
@@ -71,3 +71,13 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | F11 | End-to-end release qualification | Exact-commit frontend/backend contract tests and deployment-specific smoke evidence; no unsupported beta/GA claims. |
 
 Each phase is accepted only after its own criteria and forensic review pass. A scaffold, documentation-only merge, or successful compile is insufficient. Frontend CI does not close external TWI release gates.
+
+
+## Implementation evidence ledger (updated 2026-10-20)
+
+- **F0 — accepted:** repository inventory and API/authority/CI gap audit documented in `docs/product/tinlyt-frontend-f0-audit.md`. Main CI passed on `195bcf970e86537b2d9cdb7d1b96576bd7fb1476` (workflow run #39374414981).
+- **F1 — merged:** PR #68 (`feat(frontend): establish Tinlyt F1 web foundation`), merge commit `020223f79b262ec10419a8683d0cde405891b292`.
+- **F2 — merged with audit remediation:** PR #69, merge commit `7ac2e61118fcf55a37082532d64ccf5e97c7e09b`; PR #70 post-merge remediation, merge commit `6675f66107e7ec90688ef208505c65aee4858cd9`. The main-branch Frontend and repository CI checks on that commit passed (workflow runs #39379087145 and #39379087133). Production identity configuration and a live end-to-end identity/API test remain deployment gates.
+- **F3 — implementation in progress:** authenticated submission and job status polling are being added on `feat/tinlyt-f3-investigations`. Do not mark F3 accepted until exact PR-head frontend and repository CI pass, changes are audited, and post-merge main checks pass.
+
+This ledger records repository implementation evidence only. It does not claim a live deployment, production identity readiness, private-beta readiness, or GA readiness.
