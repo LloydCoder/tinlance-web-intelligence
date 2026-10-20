@@ -67,6 +67,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  return Object.keys(value).every((key) => allowed.includes(key));
+}
+
 function parseJob(value: unknown): Job {
   if (!isRecord(value)) {
     throw new TwiApiError("invalid_response", "The API returned an invalid job response.");
@@ -106,12 +110,15 @@ function parseJob(value: unknown): Job {
 async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
   if (
     !isRecord(value)
+    || !hasOnlyKeys(value, ["format", "schema_version", "export_id", "artifact_id", "content_sha256", "content_type", "byte_size", "source_revision", "provenance", "content_base64", "interpretation"])
     || value.format !== "application/vnd.tinlance.twi-evidence+json"
     || value.schema_version !== "1.0.0"
     || typeof value.content_base64 !== "string"
+    || value.content_base64.length > 26_666_668
     || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.content_base64)
     || typeof value.content_type !== "string"
     || !value.content_type
+    || value.content_type.length > 255
     || typeof value.content_sha256 !== "string"
     || !/^[0-9a-f]{64}$/.test(value.content_sha256)
     || typeof value.export_id !== "string"
@@ -123,6 +130,7 @@ async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
     || value.byte_size < 0
     || value.byte_size > 20_000_000
     || !isRecord(value.provenance)
+    || !hasOnlyKeys(value.provenance, ["schema_version", "requested_url_sha256", "final_url_sha256", "status_code", "content_type", "content_sha256", "byte_size", "retrieved_at", "redirect_count", "extractor_version"])
     || value.provenance.schema_version !== "1.0.0"
     || typeof value.provenance.requested_url_sha256 !== "string"
     || !/^[0-9a-f]{64}$/.test(value.provenance.requested_url_sha256)
@@ -133,6 +141,8 @@ async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
     || value.provenance.status_code < 200
     || value.provenance.status_code > 599
     || value.provenance.content_type !== value.content_type
+    || typeof value.provenance.content_type !== "string"
+    || value.provenance.content_type.length > 255
     || value.provenance.content_sha256 !== value.content_sha256
     || value.provenance.byte_size !== value.byte_size
     || typeof value.provenance.retrieved_at !== "string"
@@ -147,6 +157,7 @@ async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
     || typeof value.source_revision !== "string"
     || !/^[0-9a-f]{40}$/.test(value.source_revision)
     || !isRecord(value.interpretation)
+    || !hasOnlyKeys(value.interpretation, ["provenance_kind", "truth_assessment", "source_authority_assessment"])
     || value.interpretation.provenance_kind !== "acquisition_observation"
     || value.interpretation.truth_assessment !== "not_provided"
     || value.interpretation.source_authority_assessment !== "not_provided"
