@@ -1,7 +1,7 @@
 # Tinlyt Frontend F9 — Usage and Tenant Administration Forensic Audit
 
 **Phase:** F9 — Usage and tenant administration  
-**Status:** Accepted for repository implementation after exact-head and post-merge Frontend/repository CI passed.
+**Status:** Accepted for repository implementation after the F9 implementation and follow-up remediation passed exact-head and post-merge Frontend/repository CI.
 
 ## Contract basis
 
@@ -36,7 +36,7 @@ The only verified customer-facing administrative/usage capability in this phase 
 - The first Frontend workflow exposed an overbroad negative assertion: it treated truthful explanatory copy about invoice balances as an unsupported invoice UI. The test now checks for actual unsupported control IDs instead of rejecting accurate boundary language.
 - Review identified a stale-request cleanup race: a request from a prior auth-session epoch could reset the shared loading state after sign-out/re-authentication. The finally block now mutates loading/control state only when its captured session epoch still matches.
 - The response parser rejects mismatched event dimension/period, inconsistent quota arithmetic, invalid event fields, and invalid has_more/cursor combinations.
-- **Post-merge follow-up (PR #86):** forensic comparison found that a self-consistent response could still report a different dimension or period from the request. The follow-up now binds response dimension and timestamp to the original query and rejects event counts above the requested page limit. Regression tests cover mismatched response dimension and period; final acceptance remains pending exact-head and post-merge CI.
+- **Post-merge follow-up (PR #86):** forensic comparison found that a self-consistent response could still report a different dimension or period from the request. The follow-up now binds response dimension and timestamp to the original query and rejects event counts above the requested page limit. Regression tests cover mismatched response dimension and period; the follow-up was accepted after exact-head and post-merge CI passed.
 - Session epoch checks prevent old responses from rendering after identity changes; usage results and cursors are not persisted in browser storage.
 
 ## Exact-commit workflow evidence
@@ -57,6 +57,21 @@ The only verified customer-facing administrative/usage capability in this phase 
 - Corrected the first failing frontend regression assertion to target unsupported controls rather than truthful billing-boundary copy; rerun exact-head Frontend CI passed.
 - Fixed stale-session cleanup so a prior request cannot reset the current session's usage loading state.
 - Both Python matrix jobs, browser container isolation, reproducible artifact validation, and Frontend quality gates passed on the exact implementation head; post-merge main CI also passed.
+
+
+## Follow-up acceptance evidence (PR #86)
+
+- Follow-up PR: [#86](https://github.com/LloydCoder/tinlance-web-intelligence/pull/86)
+- Exact PR head: `bc9ac287450a6add90f39e6ab6abb601230efae5`
+- Exact-head Frontend workflow: [#39401359521](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39401359521) — success.
+- Exact-head full repository CI: [#39401359455](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39401359455) — success.
+- Follow-up merge commit: `1d719567598bdadadc4eb60175343d345ed64e28`.
+- Post-merge Frontend workflow on main: [#39401917950](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39401917950) — success.
+- Post-merge full repository CI on main: [#39401918000](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39401918000) — success.
+
+## Final F9 exit decision
+
+**Accepted after follow-up.** Response dimension and period are bound to the request; event count is bounded by the requested page limit; quota and plan metadata must be mutually consistent. Exact-head and post-merge workflows passed for both the original F9 implementation and the follow-up remediation. Proceed to F10.
 
 ## F9 exit decision
 
