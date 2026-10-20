@@ -14,7 +14,7 @@ const runtimeConfig = await readFile(path.join(root, 'runtime-config.js'), 'utf8
 test('document declares language, viewport, title and skip navigation', () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /name="viewport"/);
-  assert.match(html, /<title>Tinlyt — Web Intelligence<\\/title>/);
+  assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/);
   assert.match(html, /class="skip-link" href="#main"/);
 });
 
@@ -30,14 +30,14 @@ test('live investigation controls are disabled until authentication completes', 
   assert.match(html, /id="job-kind"[^>]*disabled/);
   assert.match(html, /id="sign-in"/);
   assert.match(js, /setLiveControlsEnabled\(true\)/);
-  assert.match(js, /runtime\\.apiClient\\.createJob\(request\)/);
+  assert.match(js, /runtime\.apiClient\.createJob\(request\)/);
 });
 
 test('job response uses text rendering and announces status accessibly', () => {
   assert.match(html, /aria-live="polite"/);
   assert.match(html, /id="job-result" class="result-json"/);
-  assert.match(js, /resultPre\\.textContent/);
-  assert.doesNotMatch(js, /innerHTML\\s*=\\s*serialized/);
+  assert.match(js, /resultPre\.textContent/);
+  assert.doesNotMatch(js, /innerHTML\s*=\s*serialized/);
 });
 
 test('UI states retrieval is not a truth guarantee and does not show fixture metrics', () => {
@@ -48,16 +48,16 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
 
 test('styles retain visible focus, responsive behavior and reduced motion', () => {
   assert.match(css, /:focus-visible/);
-  assert.match(css, /@media \\(max-width: 760px\\)/);
-  assert.match(css, /@media \\(prefers-reduced-motion: reduce\\)/);
-  assert.match(investigationCss, /@media \\(max-width: 600px\\)/);
+  assert.match(css, /@media \(max-width: 760px\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(investigationCss, /@media \(max-width: 600px\)/);
   assert.match(investigationCss, /:focus-visible/);
 });
 
 test('runtime configuration is loaded before application and contains no credentials', () => {
   assert.ok(html.indexOf('/runtime-config.js') < html.indexOf('/src/main.js'));
-  assert.match(runtimeConfig, /authorizationEndpoint:\\s*""/);
-  assert.match(runtimeConfig, /tokenEndpoint:\\s*""/);
+  assert.match(runtimeConfig, /authorizationEndpoint:\s*""/);
+  assert.match(runtimeConfig, /tokenEndpoint:\s*""/);
   assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token/i);
   assert.match(js, /getRuntime/);
 });
