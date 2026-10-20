@@ -107,6 +107,8 @@ test('evidence inspector exposes validated provenance and exact-byte export with
   assert.match(html, /id="download-evidence"[^>]*disabled/);
   assert.match(html, /does not establish source truth or source authority/);
   assert.match(js, /runtime\.apiClient\.exportEvidencePackage\(requestedJobId\)/);
+  assert.match(js, /job\.result !== null/);
+  assert.match(js, /latestJob\.result === null/);
   assert.match(js, /new Blob\(\[currentEvidenceBytes\]/);
   assert.match(js, /link\.download = `twi-evidence-/);
   assert.match(js, /Requested URL SHA-256/);
