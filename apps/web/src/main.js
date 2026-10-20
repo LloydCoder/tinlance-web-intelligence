@@ -40,11 +40,21 @@ try {
   callbackPath = null;
 }
 
+let isAuthorized = false;
+
 if (signInButton && runtime.state === 'ready') {
   signInButton.disabled = false;
   signInButton.textContent = 'Sign in';
   signInButton.setAttribute('aria-label', 'Sign in to Tinlyt');
   signInButton.addEventListener('click', async () => {
+    if (isAuthorized) {
+      runtime.clearSession();
+      isAuthorized = false;
+      signInButton.textContent = 'Sign in';
+      signInButton.setAttribute('aria-label', 'Sign in to Tinlyt');
+      showMode('Local session cleared', 'The in-memory TWI access token was cleared. The external identity-provider session may remain active.');
+      return;
+    }
     signInButton.disabled = true;
     try {
       await runtime.beginLogin();
@@ -66,9 +76,10 @@ const isExpectedCallback = Boolean(callbackPath && currentUrl.pathname === callb
 if (hasOAuthResponse && runtime.state === 'ready' && isExpectedCallback) {
   runtime.handleCallback().then(() => {
     if (signInButton) {
+      isAuthorized = true;
       signInButton.disabled = false;
-      signInButton.textContent = 'Reauthenticate';
-      signInButton.setAttribute('aria-label', 'Reauthenticate with Platform');
+      signInButton.textContent = 'Clear session';
+      signInButton.setAttribute('aria-label', 'Clear the local Tinlyt session');
     }
     showMode(
       'Identity authorization completed',
