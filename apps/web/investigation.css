@@ -93,12 +93,12 @@
 
 
 .monitor-panel > p { max-width: 76ch; }
-#monitor-create-form, #monitor-lookup-form { display: grid; gap: .65rem; margin-top: 1rem; }
-#monitor-create-form label, #monitor-lookup-form label { margin-top: .2rem; color: var(--color-muted); font-size: .78rem; font-weight: 650; }
-#monitor-create-form input, #monitor-lookup-form input { width: 100%; min-width: 0; padding: .8rem .9rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-canvas); color: var(--color-text); }
-#monitor-create-form input:focus-visible, #monitor-lookup-form input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-#monitor-create-form button, #monitor-lookup-form button { justify-self: start; }
-#monitor-create-form button:disabled, #monitor-lookup-form button:disabled, .monitor-actions button:disabled { cursor: not-allowed; opacity: .6; }
+#monitor-create-form, #monitor-lookup-form, #monitor-run-lookup-form { display: grid; gap: .65rem; margin-top: 1rem; }
+#monitor-create-form label, #monitor-lookup-form label, #monitor-run-lookup-form label { margin-top: .2rem; color: var(--color-muted); font-size: .78rem; font-weight: 650; }
+#monitor-create-form input, #monitor-lookup-form input, #monitor-run-lookup-form input { width: 100%; min-width: 0; padding: .8rem .9rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-canvas); color: var(--color-text); }
+#monitor-create-form input:focus-visible, #monitor-lookup-form input:focus-visible, #monitor-run-lookup-form input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#monitor-create-form button, #monitor-lookup-form button, #monitor-run-lookup-form button { justify-self: start; }
+#monitor-create-form button:disabled, #monitor-lookup-form button:disabled, #monitor-run-lookup-form button:disabled, .monitor-actions button:disabled { cursor: not-allowed; opacity: .6; }
 .monitor-lookup-divider { margin-top: 1.25rem; border-top: 1px solid var(--color-border); }
 .monitor-panel .field-help { margin: 0; }
 #monitor-status, #monitor-run-status { overflow-wrap: anywhere; }
