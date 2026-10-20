@@ -14,6 +14,7 @@ import type {
   TwiApiClientOptions,
   VerifyResearchRequest,
   VerifyResearchResponse,
+  UsageResponse,
 } from "./types.js";
 
 const JOB_KINDS = new Set<JobKind>(["search", "fetch", "browser"]);
@@ -559,6 +560,76 @@ export class TwiApiClient {
     ));
     if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
     return monitor;
+  }
+
+  async getUsage(dimension: string, periodStart: string, limit = 100, cursor?: string | null): Promise<UsageResponse> {
+    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(dimension)) {
+      throw new TwiApiError("validation_error", "The usage dimension is invalid.");
+    }
+    if (typeof periodStart !== "string" || periodStart.length > 40 || !Number.isFinite(Date.parse(periodStart)) || !/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(periodStart)) {
+      throw new TwiApiError("validation_error", "The usage period must be a timezone-aware ISO-8601 timestamp.");
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+      throw new TwiApiError("validation_error", "The usage page size must be between 1 and 500.");
+    }
+    if (cursor !== undefined && cursor !== null && (!cursor || cursor.length > 1024)) {
+      throw new TwiApiError("validation_error", "The usage cursor is invalid.");
+    }
+    const query = new URLSearchParams({ dimension, period_start: periodStart, limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    const response = await this.request(`/v1/usage?${query.toString()}`, { method: "GET" });
+    return this.parseUsageResponse(response, dimension, limit);
+  }
+
+  private parseUsageResponse(value: unknown, requestedDimension: string, limit: number): UsageResponse {
+    if (
+      !isRecord(value)
+      || !hasOnlyKeys(value, ["schema_version", "dimension", "period_start", "used", "quota_limit", "remaining", "plan_id", "plan_version", "events", "returned", "has_more", "next_cursor"])
+      || value.schema_version !== 1
+      || value.dimension !== requestedDimension
+      || typeof value.period_start !== "string"
+      || !Number.isFinite(Date.parse(value.period_start))
+      || typeof value.used !== "number" || !Number.isSafeInteger(value.used) || value.used < 0
+      || !(value.quota_limit === null || (typeof value.quota_limit === "number" && Number.isSafeInteger(value.quota_limit) && value.quota_limit >= 0))
+      || !(value.remaining === null || (typeof value.remaining === "number" && Number.isSafeInteger(value.remaining) && value.remaining >= 0))
+      || !(value.plan_id === null || (typeof value.plan_id === "string" && value.plan_id.length > 0 && value.plan_id.length <= 128))
+      || !(value.plan_version === null || (typeof value.plan_version === "number" && Number.isSafeInteger(value.plan_version) && value.plan_version >= 1))
+      || !Array.isArray(value.events) || value.events.length > limit
+      || typeof value.returned !== "number" || value.returned !== value.events.length
+      || typeof value.has_more !== "boolean"
+      || !(value.next_cursor === null || (typeof value.next_cursor === "string" && value.next_cursor.length > 0 && value.next_cursor.length <= 1024))
+      || value.has_more !== (value.next_cursor !== null)
+    ) {
+      throw new TwiApiError("invalid_response", "The API returned a usage response that does not match the supported contract.");
+    }
+    const hasEntitlement = value.quota_limit !== null;
+    if (
+      (value.remaining !== null) !== hasEntitlement
+      || (value.plan_id !== null) !== hasEntitlement
+      || (value.plan_version !== null) !== hasEntitlement
+      || (hasEntitlement && (value.remaining !== Math.max(0, (value.quota_limit as number) - value.used)))
+    ) {
+      throw new TwiApiError("invalid_response", "The usage quota fields are internally inconsistent.");
+    }
+    const eventIds = new Set<string>();
+    for (const event of value.events) {
+      if (
+        !isRecord(event)
+        || !hasOnlyKeys(event, ["event_id", "feature", "dimension", "period_start", "quantity", "occurred_at", "schema_version"])
+        || typeof event.event_id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/.test(event.event_id)
+        || eventIds.has(event.event_id)
+        || typeof event.feature !== "string" || !event.feature || event.feature.length > 80
+        || event.dimension !== requestedDimension
+        || event.period_start !== value.period_start
+        || typeof event.quantity !== "number" || !Number.isSafeInteger(event.quantity) || event.quantity <= 0
+        || typeof event.occurred_at !== "string" || !Number.isFinite(Date.parse(event.occurred_at))
+        || event.schema_version !== 1
+      ) {
+        throw new TwiApiError("invalid_response", "The API returned a malformed usage event.");
+      }
+      eventIds.add(event.event_id);
+    }
+    return value as unknown as UsageResponse;
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
