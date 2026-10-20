@@ -128,12 +128,13 @@ test('times out bounded requests and does not retry writes implicitly', async ()
 
 
 test('exports canonical evidence packages using the vendor JSON media type', async () => {
+  const contentSha = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
   const packageBody = {
     format: 'application/vnd.tinlance.twi-evidence+json',
     schema_version: '1.0.0',
-    export_id: `sha256:${hash}`,
-    artifact_id: `sha256:${'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}`,
-    content_sha256: 'a'.repeat(64),
+    export_id: `sha256:${contentSha}`,
+    artifact_id: `sha256:${contentSha}`,
+    content_sha256: contentSha,
     content_type: 'text/html',
     byte_size: 5,
     source_revision: 'b'.repeat(40),
@@ -143,7 +144,7 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
       final_url_sha256: 'f'.repeat(64),
       status_code: 200,
       content_type: 'text/html',
-      content_sha256: 'a'.repeat(64),
+      content_sha256: contentSha,
       byte_size: 5,
       retrieved_at: '2026-10-20T00:00:00Z',
       redirect_count: 0,
