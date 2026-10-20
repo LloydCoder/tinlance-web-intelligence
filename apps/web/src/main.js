@@ -81,7 +81,7 @@ function setLiveControlsEnabled(enabled) {
     signInButton.textContent = enabled ? 'Clear session' : 'Sign in';
     signInButton.setAttribute('aria-label', enabled ? 'Clear the local Tinlyt session' : 'Sign in to Tinlyt');
   }
-  if (refreshButton) refreshButton.disabled = !enabled;
+  if (refreshButton) refreshButton.disabled = !enabled || polling || cancelling;
   if (!enabled && cancelJobButton) {
     cancelJobButton.hidden = true;
     cancelJobButton.disabled = true;
@@ -273,6 +273,8 @@ function wait(milliseconds) {
 
 async function refreshJob(showProgress = true) {
   if (!activeJobId || runtime.state !== 'ready' || !isAuthorized) return;
+  // Do not let a GET already in the polling loop overwrite the state returned by a cancellation POST.
+  if (cancelling) return latestJob;
   try {
     const job = await runtime.apiClient.getJob(activeJobId);
     showJob(job, 'Current job state returned by TWI.');
@@ -287,6 +289,7 @@ async function refreshJob(showProgress = true) {
 async function pollJob(initialJob) {
   if (polling) return;
   polling = true;
+  if (refreshButton) refreshButton.disabled = true;
   let job = initialJob;
   try {
     for (let attempt = 0; attempt < 20 && !isTerminalJobStatus(job.status); attempt += 1) {
@@ -301,6 +304,7 @@ async function pollJob(initialJob) {
     }
   } finally {
     polling = false;
+    if (refreshButton) refreshButton.disabled = !isAuthorized || cancelling;
   }
 }
 
@@ -398,6 +402,7 @@ cancelJobButton?.addEventListener('click', async () => {
   if (!window.confirm('Request cancellation for this TWI job? A running acquisition may finish its bounded operation before TWI confirms cancellation.')) return;
   cancelling = true;
   cancelJobButton.disabled = true;
+  if (refreshButton) refreshButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
   if (statusMessage) statusMessage.textContent = 'Sending cancellation request to TWI. Cancellation is not complete until the service reports a terminal cancelled state.';
@@ -414,6 +419,7 @@ cancelJobButton?.addEventListener('click', async () => {
     if (cancelJobButton) cancelJobButton.disabled = false;
   } finally {
     cancelling = false;
+    if (refreshButton) refreshButton.disabled = !isAuthorized || polling;
     if (!submitting) {
       if (submitButton) submitButton.disabled = !isAuthorized;
       if (lookupButton) lookupButton.disabled = !isAuthorized;
