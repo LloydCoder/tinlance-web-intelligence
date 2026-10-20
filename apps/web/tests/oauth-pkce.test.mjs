@@ -90,7 +90,7 @@ test('exchanges a one-time code using the stored verifier and keeps access token
   });
   await provider.beginLogin();
   const transaction = JSON.parse(storage.getItem('tinlyt.oauth.pkce.transaction.v1'));
-  await provider.handleCallback(\`https://tinlyt.example.com/auth/callback?code=one-time-code&state=\${transaction.state}&keep=1\`);
+  await provider.handleCallback(`https://tinlyt.example.com/auth/callback?code=one-time-code&state=${transaction.state}&keep=1`);
   assert.equal(await provider.getAccessToken(), 'short-lived-twi-token');
   assert.equal(captured.url, config.tokenEndpoint);
   assert.equal(captured.init.method, 'POST');
@@ -119,7 +119,7 @@ test('rejects unsupported token response and never retains it', async () => {
   await provider.beginLogin();
   const transaction = JSON.parse(storage.getItem('tinlyt.oauth.pkce.transaction.v1'));
   await assert.rejects(
-    provider.handleCallback(\`https://tinlyt.example.com/auth/callback?code=one-time-code&state=\${transaction.state}\`),
+    provider.handleCallback(`https://tinlyt.example.com/auth/callback?code=one-time-code&state=${transaction.state}`),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
   await assert.rejects(provider.getAccessToken(), (error) => error.code === 'authentication_required');
