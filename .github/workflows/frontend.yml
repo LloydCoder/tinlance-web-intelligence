@@ -46,6 +46,9 @@ jobs:
       - name: TypeScript typecheck
         working-directory: apps/web
         run: npm run typecheck
+      - name: Dependency audit
+        working-directory: apps/web
+        run: npm audit --audit-level=high
       - name: Static security checks
         working-directory: apps/web
         run: npm run security
