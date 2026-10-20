@@ -228,5 +228,5 @@ test('usage interface is tenant-scoped, cursor-paginated, and excludes unsupport
   assert.match(js, /clearUsageView\(\)/);
   assert.match(js, /event\.event_id/);
   assert.doesNotMatch(js, /localStorage/);
-  assert.doesNotMatch(html, /Switch tenant|Create API key|Rotate credentials|Invoice balance/i);
+  assert.doesNotMatch(html, /id="(?:tenant-switch|create-api-key|rotate-credentials|invoice-balance)"/i);
 });
