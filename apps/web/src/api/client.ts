@@ -77,14 +77,23 @@ function parseJob(value: unknown): Job {
   }
   if (
     typeof value.job_id !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.job_id)
     || typeof value.kind !== "string"
     || !JOB_KINDS.has(value.kind as JobKind)
     || typeof value.status !== "string"
     || !JOB_STATUSES.has(value.status as JobStatus)
     || typeof value.created_at !== "string"
+    || !Number.isFinite(Date.parse(value.created_at))
     || typeof value.updated_at !== "string"
+    || !Number.isFinite(Date.parse(value.updated_at))
+    || Date.parse(value.updated_at) < Date.parse(value.created_at)
     || typeof value.attempts !== "number"
+    || !Number.isInteger(value.attempts)
+    || value.attempts < 0
     || typeof value.max_attempts !== "number"
+    || !Number.isInteger(value.max_attempts)
+    || value.max_attempts < 1
+    || value.attempts > value.max_attempts
     || typeof value.cancel_requested !== "boolean"
     || !(value.result === null || isRecord(value.result))
     || !(value.error_code === null || typeof value.error_code === "string")
@@ -328,6 +337,7 @@ export class TwiApiClient {
   private parseVerificationResponse(value: unknown): VerifyResearchResponse {
     if (
       !isRecord(value)
+      || !hasOnlyKeys(value, ["verification_id", "verifier_version", "verified_at", "report_sha256", "status", "factual_truth_assessed", "claims", "source_count", "claim_count", "citation_count"])
       || typeof value.verification_id !== "string"
       || !value.verification_id
       || typeof value.verifier_version !== "string"
@@ -355,6 +365,7 @@ export class TwiApiClient {
     const claimsValid = value.claims.every((claim) => {
       if (
         !isRecord(claim)
+        || !hasOnlyKeys(claim, ["claim_id", "statement", "citation_status", "citations"])
         || typeof claim.claim_id !== "string"
         || !/^[A-Za-z0-9._:-]{1,64}$/.test(claim.claim_id)
         || typeof claim.statement !== "string"
@@ -368,6 +379,7 @@ export class TwiApiClient {
       const citationsValid = claim.citations.every((citation) => {
         if (
           !isRecord(citation)
+          || !hasOnlyKeys(citation, ["job_id", "quote", "quote_match", "match_status", "source"])
           || typeof citation.job_id !== "string"
           || !this.isValidJobId(citation.job_id)
           || typeof citation.quote !== "string"
@@ -376,6 +388,7 @@ export class TwiApiClient {
           || typeof citation.quote_match !== "boolean"
           || citation.match_status !== (citation.quote_match ? "matched" : "quote_not_found")
           || !isRecord(citation.source)
+          || !hasOnlyKeys(citation.source, ["url", "retrieved_at", "media_type", "content_sha256"])
           || typeof citation.source.url !== "string"
           || typeof citation.source.retrieved_at !== "string"
           || !Number.isFinite(Date.parse(citation.source.retrieved_at))

@@ -17,6 +17,7 @@ const runtime = getRuntime(runtimeConfig);
 const signInButton = document.querySelector('#sign-in');
 const modeTitle = document.querySelector('#mode-title');
 const modeDescription = document.querySelector('#mode-description');
+const sidebarStatus = document.querySelector('.sidebar-footer p');
 
 function showMode(title, description) {
   if (modeTitle) modeTitle.textContent = title;
@@ -41,6 +42,16 @@ try {
 }
 
 let isAuthorized = false;
+
+if (runtime.state === 'ready') {
+  if (sidebarStatus) sidebarStatus.textContent = 'Runtime settings are present; live operation flows remain in foundation mode.';
+  showMode(
+    'Identity configuration ready',
+    'Deployment settings are present. No investigation has been submitted, and no live jobs, evidence, metrics, or account data are being shown. Investigation submission remains disabled until its workflow is implemented and verified.',
+  );
+} else if (runtime.state === 'invalid_configuration') {
+  if (sidebarStatus) sidebarStatus.textContent = 'Identity/API runtime configuration is invalid; live operation flows are disabled.';
+}
 
 if (signInButton && runtime.state === 'ready') {
   signInButton.disabled = false;
