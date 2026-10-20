@@ -399,7 +399,7 @@ function addCitationRow() {
   jobId.placeholder = 'TWI job ID';
   const jobLabel = document.createElement('label');
   jobLabel.htmlFor = jobId.id;
-  jobLabel.textContent = 'Captured fetch job ID';
+  jobLabel.textContent = 'Captured source job ID';
 
   const quote = document.createElement('textarea');
   quote.id = `citation-quote-${suffix}`;
