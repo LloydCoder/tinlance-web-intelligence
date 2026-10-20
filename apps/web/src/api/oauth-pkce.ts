@@ -170,6 +170,9 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       try {
         tokenResponse = await response.json() as unknown;
       } catch {
+        if (controller.signal.aborted) {
+          throw new TwiApiError("request_timeout", "The identity token endpoint timed out.");
+        }
         throw new TwiApiError("invalid_response", "The identity provider returned malformed token data.", response.status);
       }
     } catch (error) {
