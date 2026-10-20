@@ -500,7 +500,7 @@ function renderVerificationResponse(response) {
         const quote = document.createElement('blockquote');
         quote.textContent = citation.quote;
         const job = document.createElement('p');
-        job.textContent = `Captured fetch job: ${citation.job_id}`;
+        job.textContent = `Captured source job: ${citation.job_id}`;
         const source = document.createElement('p');
         source.append(document.createTextNode('Source: '));
         let sourceUrl;
