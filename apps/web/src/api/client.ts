@@ -582,18 +582,22 @@ export class TwiApiClient {
       limit: String(query.limit ?? 100),
     });
     if (query.cursor !== undefined) params.set("cursor", query.cursor);
-    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }));
+    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }), query);
   }
 
-  private parseUsageResponse(value: unknown): UsageResponse {
+  private parseUsageResponse(value: unknown, query: UsageQuery): UsageResponse {
+    const expectedPeriod = Date.parse(query.period_start);
+    const maximumEvents = query.limit ?? 100;
     if (
       !isRecord(value)
       || !hasOnlyKeys(value, ["schema_version", "dimension", "period_start", "used", "quota_limit", "remaining", "plan_id", "plan_version", "events", "returned", "has_more", "next_cursor"])
       || value.schema_version !== 1
       || typeof value.dimension !== "string"
+      || value.dimension !== query.dimension
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(value.dimension)
       || typeof value.period_start !== "string"
       || !Number.isFinite(Date.parse(value.period_start))
+      || Date.parse(value.period_start) !== expectedPeriod
       || !/(?:Z|[+-][0-9]{2}:[0-9]{2})$/i.test(value.period_start)
       || typeof value.used !== "number"
       || !Number.isInteger(value.used)
@@ -603,10 +607,11 @@ export class TwiApiClient {
       || !(value.plan_id === null || (typeof value.plan_id === "string" && /^[A-Za-z0-9._:-]{1,80}$/.test(value.plan_id)))
       || !(value.plan_version === null || (typeof value.plan_version === "number" && Number.isInteger(value.plan_version) && value.plan_version >= 1))
       || (value.plan_id === null) !== (value.plan_version === null)
+      || (value.quota_limit === null) !== (value.plan_id === null)
       || (value.quota_limit === null) !== (value.remaining === null)
       || (value.quota_limit !== null && value.remaining !== Math.max(0, value.quota_limit - value.used))
       || !Array.isArray(value.events)
-      || value.events.length > 500
+      || value.events.length > Math.min(500, maximumEvents)
       || typeof value.returned !== "number"
       || !Number.isInteger(value.returned)
       || value.returned !== value.events.length

@@ -607,6 +607,43 @@ test('usage client rejects malformed pagination, inconsistent quotas and invalid
     malformed.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
+  const partialEntitlement = makeClient(async () => new Response(JSON.stringify({
+    ...base,
+    plan_id: null,
+    plan_version: null
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    partialEntitlement.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+  const wrongResponseDimension = makeClient(async () => new Response(JSON.stringify({
+    ...base,
+    dimension: 'fetch_requests_month'
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    wrongResponseDimension.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+  const wrongResponsePeriod = makeClient(async () => new Response(JSON.stringify({
+    ...base,
+    period_start: '2026-09-01T00:00:00Z'
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    wrongResponsePeriod.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+  const oversizedPage = makeClient(async () => new Response(JSON.stringify({
+    ...base,
+    events: [
+      { event_id: 'event-1', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:00:00Z', schema_version: 1 },
+      { event_id: 'event-2', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:01:00Z', schema_version: 1 }
+    ],
+    returned: 2
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    oversizedPage.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 1 }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
   const wrongDimension = makeClient(async () => new Response(JSON.stringify({
     ...base,
     events: [{
