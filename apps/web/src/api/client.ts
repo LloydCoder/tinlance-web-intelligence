@@ -77,6 +77,7 @@ function parseJob(value: unknown): Job {
   }
   if (
     typeof value.job_id !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.job_id)
     || typeof value.kind !== "string"
     || !JOB_KINDS.has(value.kind as JobKind)
     || typeof value.status !== "string"
