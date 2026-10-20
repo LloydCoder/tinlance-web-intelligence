@@ -182,6 +182,22 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
     wrongMediaTypeClient.exportEvidencePackage('job_01'),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
+  const deniedEvidenceClient = makeClient(async () => new Response(JSON.stringify({ detail: 'must not be surfaced' }), {
+    status: 403,
+    headers: { 'content-type': 'application/json' }
+  }));
+  await assert.rejects(
+    deniedEvidenceClient.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'permission_denied' && !error.message.includes('must not be surfaced')
+  );
+  const malformedEvidenceClient = makeClient(async () => new Response('{broken', {
+    status: 200,
+    headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json' }
+  }));
+  await assert.rejects(
+    malformedEvidenceClient.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
   const tamperedClient = makeClient(async () => new Response(JSON.stringify({
     ...packageBody,
     content_base64: 'd29ybGQ='
