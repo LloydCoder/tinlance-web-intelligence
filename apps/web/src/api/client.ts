@@ -269,15 +269,62 @@ export class TwiApiClient {
     if (
       !isRecord(value)
       || typeof value.verification_id !== "string"
+      || !value.verification_id
       || typeof value.verifier_version !== "string"
+      || !value.verifier_version
       || typeof value.verified_at !== "string"
+      || !Number.isFinite(Date.parse(value.verified_at))
       || typeof value.report_sha256 !== "string"
       || !/^[0-9a-f]{64}$/.test(value.report_sha256)
       || !["all_citations_match_captured_text", "citation_mismatch"].includes(String(value.status))
       || value.factual_truth_assessed !== false
       || !Array.isArray(value.claims)
+      || value.claims.length < 1
+      || value.claims.length > 20
     ) {
       throw new TwiApiError("invalid_response", "The API returned an invalid verification response.");
+    }
+    const claimsValid = value.claims.every((claim) => {
+      if (
+        !isRecord(claim)
+        || typeof claim.claim_id !== "string"
+        || !/^[A-Za-z0-9._:-]{1,64}$/.test(claim.claim_id)
+        || typeof claim.statement !== "string"
+        || !["all_citations_match_captured_text", "citation_mismatch", "partially_matched_citations"].includes(String(claim.citation_status))
+        || !Array.isArray(claim.citations)
+        || claim.citations.length < 1
+        || claim.citations.length > 4
+      ) return false;
+      return claim.citations.every((citation) => {
+        if (
+          !isRecord(citation)
+          || typeof citation.job_id !== "string"
+          || !this.isValidJobId(citation.job_id)
+          || typeof citation.quote !== "string"
+          || typeof citation.quote_match !== "boolean"
+          || citation.match_status !== (citation.quote_match ? "matched" : "quote_not_found")
+          || !isRecord(citation.source)
+          || typeof citation.source.url !== "string"
+          || typeof citation.source.retrieved_at !== "string"
+          || !Number.isFinite(Date.parse(citation.source.retrieved_at))
+          || typeof citation.source.media_type !== "string"
+          || typeof citation.source.content_sha256 !== "string"
+          || !/^[0-9a-f]{64}$/.test(citation.source.content_sha256)
+        ) return false;
+        try {
+          const sourceUrl = new URL(citation.source.url);
+          return ["http:", "https:"].includes(sourceUrl.protocol) && !sourceUrl.username && !sourceUrl.password;
+        } catch {
+          return false;
+        }
+      });
+    });
+    if (!claimsValid) {
+      throw new TwiApiError("invalid_response", "The API returned malformed claim or citation evidence.");
+    }
+    const allMatched = value.claims.every((claim) => isRecord(claim) && claim.citation_status === "all_citations_match_captured_text");
+    if ((value.status === "all_citations_match_captured_text") !== allMatched) {
+      throw new TwiApiError("invalid_response", "The verification status conflicts with its citation results.");
     }
     return value as unknown as VerifyResearchResponse;
   }
