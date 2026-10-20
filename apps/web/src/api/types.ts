@@ -43,6 +43,19 @@ export interface Job {
   cancel_requested: boolean;
 }
 
+export interface EvidenceProvenance {
+  schema_version: "1.0.0";
+  requested_url_sha256: string;
+  final_url_sha256: string;
+  status_code: number;
+  content_type: string;
+  content_sha256: string;
+  byte_size: number;
+  retrieved_at: string;
+  redirect_count: number;
+  extractor_version: string;
+}
+
 export interface EvidencePackage {
   format: "application/vnd.tinlance.twi-evidence+json";
   schema_version: "1.0.0";
@@ -52,7 +65,7 @@ export interface EvidencePackage {
   content_type: string;
   byte_size: number;
   source_revision: string;
-  provenance: Record<string, unknown>;
+  provenance: EvidenceProvenance;
   content_base64: string;
   interpretation: {
     provenance_kind: "acquisition_observation";
