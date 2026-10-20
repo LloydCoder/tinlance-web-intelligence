@@ -18,6 +18,7 @@ function makeProvider(overrides = {}) {
   const navigations = [];
   const replaced = [];
   const config = {
+    issuer: 'https://identity.example.com',
     authorizationEndpoint: 'https://identity.example.com/authorize',
     tokenEndpoint: 'https://identity.example.com/token',
     clientId: 'tinlyt-public-client',
