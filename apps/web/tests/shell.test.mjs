@@ -53,8 +53,8 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
   assert.match(js, /TWI reports that this job failed/);
   assert.match(js, /TWI reports that this job was cancelled/);
   assert.match(js, /activeJobId = null/);
-  assert.match(js, /runtime\\.apiClient\\.getJob\(requestedId\)/);
-  assert.match(js, /runtime\\.apiClient\\.cancelJob\(activeJobId\)/);
+  assert.match(js, /runtime\.apiClient\.getJob\(requestedId\)/);
+  assert.match(js, /runtime\.apiClient\.cancelJob\(activeJobId\)/);
   assert.match(js, /window\.confirm/);
   assert.match(js, /job\.cancel_requested/);
 });
