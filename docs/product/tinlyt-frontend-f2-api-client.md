@@ -11,6 +11,7 @@
 - Idempotency key validation/generation for job creation, finite request timeout, redirect rejection, no credential cookies, no implicit retries, and no-store request behavior.
 - Sanitized typed errors for authentication, permission, not-found, conflict, validation, rate limit, timeout, network, server and invalid-response conditions.
 - Canonical evidence package validation against the schema in schemas/twi-evidence-package-v1.schema.json, including the vendor media type and interpretation.truth_assessment = not_provided.
+- A secret-free runtime configuration template and sign-in control wired to the OAuth adapter. The sign-in control remains disabled when required deployment settings are absent; successful authorization does not enable investigation/evidence workflows.
 - OAuth 2.0 Authorization Code + PKCE (S256) adapter for a public browser client. It requires explicitly trusted HTTPS issuer endpoints, exact redirect URI configuration, state validation, a short-lived PKCE transaction in sessionStorage, and an audience/resource value for TWI.
 - Access tokens remain in memory only; refresh tokens are ignored. The adapter does not embed a client secret or trust a JWT decoded in the browser. TWI remains responsible for cryptographic issuer/audience/signature/expiry/tenant/subject/scope validation.
 - CI runs locked npm ci, JavaScript syntax checks, TypeScript typecheck, static security checks, npm audit, tests and a production build.
@@ -19,7 +20,7 @@
 
 No production identity-provider endpoints, public client ID, approved redirect URI, CORS policy, or TWI audience were present in the inspected TWI or Platform repository configuration. Do not invent or commit these values. The deployment must configure an approved Platform identity issuer that supports Authorization Code + PKCE for a public client, allows the exact Tinlyt redirect URI, returns short-lived TWI-audience tokens with least-privilege scopes, and permits the configured browser token exchange under its CORS policy.
 
-The adapter fails closed when trusted origins or token provider configuration are absent. The current application shell remains in foundation mode; this phase does not claim a live login, live API deployment, or production user session. Live product controls must remain disabled until the deployment supplies and verifies the approved identity configuration.
+The adapter fails closed when trusted origins or token provider configuration are absent. Deployments must serve the runtime configuration without secrets and rewrite the exact configured callback path to the frontend entry point. The current application shell remains in foundation mode; this phase does not claim a live login, live API deployment, or production user session. Live product controls must remain disabled until the deployment supplies and verifies the approved identity configuration.
 
 ## Security constraints
 
