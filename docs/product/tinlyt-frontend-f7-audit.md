@@ -12,6 +12,9 @@ F7 adds a customer-facing interface for the existing TWI monitor API. It does no
 - Exact PR head: `f6903cb6429d271e1807ffb6a26d681014d4d6a8`
 - Exact-head Frontend workflow: [#39396189878](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39396189878) — success.
 - Exact-head repository CI: [#39396189912](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39396189912) — success.
+- Squash merge commit: `9cbd40d5b708c8b7624e7b8ce4f5556ef5f32965`.
+- Post-merge main Frontend workflow: [#39397034430](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39397034430) — success.
+- Post-merge main repository CI: [#39397034291](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39397034291) — success.
 
 ## Contract reconciliation
 
@@ -63,4 +66,4 @@ The exact-head repository CI passed Python 3.12 and 3.13 quality/test jobs, isol
 
 ## F7 exit decision
 
-**Accepted for repository implementation.** The exact implementation commit passed both required workflows and the audit found no remaining F7 repository blocker. Proceed to F8 only after this audit/contract documentation is committed, its required CI is green, the PR is merged, and post-merge main CI is green.
+**Accepted for repository implementation.** The exact implementation commit and squash-merge commit both passed their required Frontend/repository CI workflows. The audit found no remaining F7 repository blocker. Proceed to F8; live deployment and GA gates remain distinct.
