@@ -326,6 +326,186 @@ function downloadExactEvidencePackage() {
   globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
+function getCitationRows() {
+  return verificationCitations
+    ? Array.from(verificationCitations.querySelectorAll('[data-citation-row]'))
+    : [];
+}
+
+function updateVerificationControls() {
+  const rows = getCitationRows();
+  if (verifyClaimButton) verifyClaimButton.disabled = !isAuthorized || submitting || polling || verifying;
+  if (addCitationButton) addCitationButton.disabled = verifying || rows.length >= 4;
+  if (citationCount) citationCount.textContent = `${rows.length} / 4`;
+  rows.forEach((row, index) => {
+    const legend = row.querySelector('legend');
+    if (legend) legend.textContent = `Citation ${index + 1}`;
+    const removeButton = row.querySelector('.remove-citation');
+    if (removeButton) {
+      removeButton.hidden = rows.length <= 1;
+      removeButton.disabled = rows.length <= 1 || verifying;
+    }
+  });
+}
+
+function clearVerificationResult(message) {
+  if (verificationResult) verificationResult.hidden = true;
+  if (verificationMetadata) verificationMetadata.replaceChildren();
+  if (verifiedClaims) verifiedClaims.replaceChildren();
+  if (verificationStatus && message) verificationStatus.textContent = message;
+}
+
+function clearVerificationView() {
+  clearVerificationResult(!isAuthorized
+    ? runtime.state === 'ready'
+      ? 'Sign in with the approved Platform identity provider to verify claims against accessible captured evidence.'
+      : 'Claim verification is disabled because the approved identity configuration is not ready.'
+    : 'Enter a claim and exact citations from captured text, then submit to compare the quotes with TWI evidence.');
+  if (verificationForm) verificationForm.reset();
+  const rows = getCitationRows();
+  for (const row of rows.slice(1)) row.remove();
+  const first = getCitationRows()[0];
+  if (first) {
+    const jobField = first.querySelector('input[name="citation_job_id"]');
+    const quoteField = first.querySelector('textarea[name="citation_quote"]');
+    if (jobField) jobField.value = '';
+    if (quoteField) quoteField.value = '';
+  }
+  if (claimIdField) claimIdField.value = 'claim-1';
+  if (claimStatementField) claimStatementField.value = '';
+  citationRowSequence = 1;
+  updateVerificationControls();
+}
+
+function addCitationRow() {
+  const rows = getCitationRows();
+  if (rows.length >= 4 || verifying || !verificationCitations) return;
+  citationRowSequence += 1;
+  const suffix = citationRowSequence;
+  const row = document.createElement('fieldset');
+  row.className = 'citation-row';
+  row.dataset.citationRow = '';
+
+  const legend = document.createElement('legend');
+  legend.textContent = `Citation ${rows.length + 1}`;
+  const jobId = document.createElement('input');
+  jobId.id = `citation-job-${suffix}`;
+  jobId.name = 'citation_job_id';
+  jobId.type = 'text';
+  jobId.maxLength = 64;
+  jobId.pattern = '[A-Za-z0-9._:-]{1,64}';
+  jobId.required = true;
+  jobId.autocomplete = 'off';
+  jobId.placeholder = 'TWI job ID';
+  const jobLabel = document.createElement('label');
+  jobLabel.htmlFor = jobId.id;
+  jobLabel.textContent = 'Captured fetch job ID';
+
+  const quote = document.createElement('textarea');
+  quote.id = `citation-quote-${suffix}`;
+  quote.name = 'citation_quote';
+  quote.rows = 3;
+  quote.minLength = 8;
+  quote.maxLength = 350;
+  quote.required = true;
+  quote.placeholder = 'Paste the exact source passage to check.';
+  const quoteLabel = document.createElement('label');
+  quoteLabel.htmlFor = quote.id;
+  quoteLabel.textContent = 'Exact quote from captured text';
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'button button-secondary remove-citation';
+  remove.textContent = 'Remove citation';
+  remove.addEventListener('click', () => {
+    row.remove();
+    updateVerificationControls();
+  });
+
+  row.append(legend, jobLabel, jobId, quoteLabel, quote, remove);
+  verificationCitations.append(row);
+  updateVerificationControls();
+}
+
+function renderVerificationResponse(response) {
+  if (verificationResult) verificationResult.hidden = false;
+  if (verificationStatus) {
+    verificationStatus.textContent = response.status === 'all_citations_match_captured_text'
+      ? `All ${response.citation_count} submitted citation quote(s) matched captured text across ${response.source_count} source job(s). This does not assess factual truth.`
+      : 'One or more submitted citation quotes did not match captured text. This does not assess factual truth.';
+  }
+  if (verificationMetadata) {
+    verificationMetadata.replaceChildren();
+    const entries = [
+      ['Verification ID', response.verification_id],
+      ['Verifier version', response.verifier_version],
+      ['Verified at', response.verified_at],
+      ['Report SHA-256', response.report_sha256],
+      ['Overall citation status', response.status],
+      ['Source jobs', String(response.source_count)],
+      ['Claims', String(response.claim_count)],
+      ['Citations', String(response.citation_count)],
+      ['Factual truth assessed', 'No'],
+    ];
+    for (const [label, value] of entries) {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const description = document.createElement('dd');
+      description.textContent = value;
+      verificationMetadata.append(term, description);
+    }
+  }
+  if (verifiedClaims) {
+    verifiedClaims.replaceChildren();
+    for (const claim of response.claims) {
+      const article = document.createElement('article');
+      article.className = 'verified-claim';
+      const heading = document.createElement('h4');
+      heading.textContent = claim.statement;
+      const id = document.createElement('p');
+      id.textContent = `Claim ID: ${claim.claim_id}`;
+      const status = document.createElement('p');
+      status.className = claim.citation_status === 'all_citations_match_captured_text' ? 'citation-match' : 'citation-mismatch';
+      status.textContent = claim.citation_status === 'all_citations_match_captured_text'
+        ? 'All citations matched captured text'
+        : claim.citation_status === 'partially_matched_citations'
+          ? 'Some citations matched; at least one quote was not found'
+          : 'Citation mismatch: submitted quote(s) were not found';
+      article.append(heading, id, status);
+
+      for (const citation of claim.citations) {
+        const detail = document.createElement('div');
+        detail.className = 'citation-result';
+        const quoteStatus = document.createElement('p');
+        quoteStatus.className = citation.quote_match ? 'citation-match' : 'citation-mismatch';
+        quoteStatus.textContent = citation.quote_match ? 'Quote matched captured text' : 'Quote not found in captured text';
+        const quote = document.createElement('blockquote');
+        quote.textContent = citation.quote;
+        const job = document.createElement('p');
+        job.textContent = `Captured fetch job: ${citation.job_id}`;
+        const source = document.createElement('p');
+        source.append(document.createTextNode('Source: '));
+        const sourceUrl = new URL(citation.source.url);
+        if (['http:', 'https:'].includes(sourceUrl.protocol) && !sourceUrl.username && !sourceUrl.password) {
+          const link = document.createElement('a');
+          link.href = sourceUrl.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = sourceUrl.href;
+          source.append(link);
+        } else {
+          source.append(document.createTextNode('Unavailable: source URL did not pass safe-link validation.'));
+        }
+        const sourceDetails = document.createElement('p');
+        sourceDetails.textContent = `Retrieved at: ${citation.source.retrieved_at} · Media type: ${citation.source.media_type} · Content SHA-256: ${citation.source.content_sha256}`;
+        detail.append(quoteStatus, quote, job, source, sourceDetails);
+        article.append(detail);
+      }
+      verifiedClaims.append(article);
+    }
+  }
+}
+
 function showJob(job, message) {
   if (currentEvidenceJobId && currentEvidenceJobId !== job.job_id) clearEvidenceView();
   latestJob = job;
