@@ -71,6 +71,7 @@ try {
 }
 
 let isAuthorized = false;
+let authSessionEpoch = 0;
 let activeJobId = null;
 let submitting = false;
 let polling = false;
@@ -81,6 +82,7 @@ let currentEvidenceBytes = null;
 let currentEvidenceJobId = null;
 
 function setLiveControlsEnabled(enabled) {
+  authSessionEpoch += 1;
   for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton]) {
     if (control) control.disabled = !enabled;
   }
@@ -91,6 +93,13 @@ function setLiveControlsEnabled(enabled) {
   }
   if (refreshButton) refreshButton.disabled = !enabled || polling || cancelling;
   if (!enabled) {
+    activeJobId = null;
+    latestJob = null;
+    if (statusPanel) statusPanel.hidden = true;
+    if (metadataList) metadataList.replaceChildren();
+    if (resultContainer) resultContainer.replaceChildren();
+    if (resultWrap) resultWrap.hidden = true;
+    if (refreshButton) refreshButton.hidden = true;
     if (cancelJobButton) {
       cancelJobButton.hidden = true;
       cancelJobButton.disabled = true;
@@ -361,16 +370,22 @@ function wait(milliseconds) {
 }
 
 async function refreshJob(showProgress = true) {
-  if (!activeJobId || runtime.state !== 'ready' || !isAuthorized) return;
+  const requestedJobId = activeJobId;
+  const requestSessionEpoch = authSessionEpoch;
+  if (!requestedJobId || runtime.state !== 'ready' || !isAuthorized) return;
   // Do not let a GET already in the polling loop overwrite the state returned by a cancellation POST.
   if (cancelling) return latestJob;
   try {
-    const job = await runtime.apiClient.getJob(activeJobId);
+    const job = await runtime.apiClient.getJob(requestedJobId);
+    // Discard results from an earlier session or an old job selection.
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId) return null;
     // A request that started before cancellation must not overwrite the newer cancellation response.
     if (cancelling) return latestJob;
     showJob(job, 'Current job state returned by TWI.');
     return job;
   } catch {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId) return null;
+    if (cancelling) return latestJob;
     if (statusMessage) statusMessage.textContent = 'The latest job state could not be retrieved. Check the connection and retry; the existing job may still be running.';
     if (refreshButton) refreshButton.hidden = false;
     return null;
@@ -417,6 +432,7 @@ form?.addEventListener('submit', async (event) => {
   submitting = true;
   activeJobId = null;
   clearEvidenceView();
+  const requestSessionEpoch = authSessionEpoch;
   submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
   submitButton.textContent = 'Submitting…';
@@ -428,6 +444,7 @@ form?.addEventListener('submit', async (event) => {
   if (refreshButton) refreshButton.hidden = true;
   try {
     const job = await runtime.apiClient.createJob(request);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = job.job_id;
     showJob(job, 'TWI accepted the request. Waiting for the service-reported job state.');
     await pollJob(job);
@@ -460,6 +477,7 @@ runLookupForm?.addEventListener('submit', async (event) => {
   }
   submitting = true;
   clearEvidenceView();
+  const requestSessionEpoch = authSessionEpoch;
   if (lookupButton) lookupButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
   if (statusPanel) statusPanel.hidden = false;
@@ -472,10 +490,12 @@ runLookupForm?.addEventListener('submit', async (event) => {
   activeJobId = null;
   try {
     const job = await runtime.apiClient.getJob(requestedId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = job.job_id;
     showJob(job, 'Current job state returned by TWI.');
     await pollJob(job);
   } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = null;
     if (statusBadge) statusBadge.textContent = 'Run lookup failed';
     if (statusMessage) statusMessage.textContent = error instanceof Error
@@ -492,6 +512,7 @@ runLookupForm?.addEventListener('submit', async (event) => {
 
 exportEvidenceButton?.addEventListener('click', async () => {
   const requestedJobId = activeJobId;
+  const requestSessionEpoch = authSessionEpoch;
   if (
     !requestedJobId
     || !isAuthorized
@@ -510,10 +531,10 @@ exportEvidenceButton?.addEventListener('click', async () => {
   if (evidenceStatus) evidenceStatus.textContent = 'Requesting the tenant-scoped evidence package from TWI and validating its content digest.';
   try {
     const exported = await runtime.apiClient.exportEvidencePackage(requestedJobId);
-    if (!isAuthorized || activeJobId !== requestedJobId || !latestJob || latestJob.job_id !== requestedJobId) return;
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId || !latestJob || latestJob.job_id !== requestedJobId) return;
     renderEvidencePackage(requestedJobId, exported.evidence, exported.bytes);
   } catch (error) {
-    if (isAuthorized && activeJobId === requestedJobId && evidenceStatus) {
+    if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeJobId === requestedJobId && evidenceStatus) {
       evidenceStatus.textContent = error instanceof Error
         ? error.message
         : 'The evidence package could not be retrieved or validated. No download is available.';
@@ -534,6 +555,7 @@ downloadEvidenceButton?.addEventListener('click', downloadExactEvidencePackage);
 cancelJobButton?.addEventListener('click', async () => {
   if (!activeJobId || !isAuthorized || cancelling || runtime.state !== 'ready') return;
   if (!window.confirm('Request cancellation for this TWI job? A running acquisition may finish its bounded operation before TWI confirms cancellation.')) return;
+  const requestSessionEpoch = authSessionEpoch;
   cancelling = true;
   cancelJobButton.disabled = true;
   if (refreshButton) refreshButton.disabled = true;
@@ -542,11 +564,13 @@ cancelJobButton?.addEventListener('click', async () => {
   if (statusMessage) statusMessage.textContent = 'Sending cancellation request to TWI. Cancellation is not complete until the service reports a terminal cancelled state.';
   try {
     const job = await runtime.apiClient.cancelJob(activeJobId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     showJob(job, job.cancel_requested
       ? 'TWI accepted the cancellation request; waiting for a terminal state.'
       : 'TWI returned the current state after the cancellation request.');
     if (!isTerminalJobStatus(job.status)) await pollJob(job);
   } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     if (statusMessage) statusMessage.textContent = error instanceof Error
       ? error.message
       : 'Cancellation could not be requested. The service-reported job state has not been changed in the interface.';
