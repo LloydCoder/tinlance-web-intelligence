@@ -32,11 +32,27 @@ test('runtime rejects an untrusted or insecure identity configuration', () => {
 });
 
 test('runtime composes the API client and Platform token adapter only with explicit configuration', () => {
-  const runtime = createRuntime(validConfig);
-  assert.equal(runtime.state, 'ready');
-  if (runtime.state !== 'ready') return;
-  assert.equal(typeof runtime.apiClient.createJob, 'function');
-  assert.equal(typeof runtime.tokenProvider.beginLogin, 'function');
-  assert.equal(typeof runtime.beginLogin, 'function');
-  assert.equal(typeof runtime.handleCallback, 'function');
+  const originalWindow = globalThis.window;
+  const storage = new Map();
+  globalThis.window = {
+    location: { origin: 'https://tinlyt.example.com', assign() {} },
+    history: { replaceState() {} },
+    sessionStorage: {
+      getItem(key) { return storage.get(key) ?? null; },
+      setItem(key, value) { storage.set(key, value); },
+      removeItem(key) { storage.delete(key); }
+    }
+  };
+  try {
+    const runtime = createRuntime(validConfig);
+    assert.equal(runtime.state, 'ready');
+    if (runtime.state !== 'ready') return;
+    assert.equal(typeof runtime.apiClient.createJob, 'function');
+    assert.equal(typeof runtime.tokenProvider.beginLogin, 'function');
+    assert.equal(typeof runtime.beginLogin, 'function');
+    assert.equal(typeof runtime.handleCallback, 'function');
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window;
+    else globalThis.window = originalWindow;
+  }
 });
