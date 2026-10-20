@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildJobRequest, isTerminalJobStatus } from '../.test-build/src/app/investigation.js';
+import { buildJobRequest, isTerminalJobStatus } from '../.test-build/app/investigation.js';
 
 test('builds normalized search requests with supported limits', () => {
   assert.deepEqual(buildJobRequest('search', '  source evidence  ', '', '10'), {
