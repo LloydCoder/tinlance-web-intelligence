@@ -212,7 +212,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       || typeof tokenResponse.expires_in !== "number"
       || !Number.isInteger(tokenResponse.expires_in)
       || tokenResponse.expires_in <= TOKEN_REFRESH_SKEW_MS / 1000
-      || tokenResponse.expires_in > 86_400
+      || tokenResponse.expires_in > 3_600
     ) {
       throw new TwiApiError("invalid_response", "The identity provider returned an unsupported token response.");
     }
