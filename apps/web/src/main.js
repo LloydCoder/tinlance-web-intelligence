@@ -41,6 +41,11 @@ const resultWrap = document.querySelector('#job-result-wrap');
 const resultContainer = document.querySelector('#job-result');
 const refreshButton = document.querySelector('#refresh-job');
 const cancelJobButton = document.querySelector('#cancel-job');
+const exportEvidenceButton = document.querySelector('#export-evidence');
+const evidencePanel = document.querySelector('#evidence');
+const evidenceStatus = document.querySelector('#evidence-status');
+const evidenceMetadata = document.querySelector('#evidence-metadata');
+const downloadEvidenceButton = document.querySelector('#download-evidence');
 const runLookupForm = document.querySelector('#run-lookup-form');
 const runIdField = document.querySelector('#run-id');
 const lookupButton = document.querySelector('#lookup-run');
@@ -71,6 +76,9 @@ let submitting = false;
 let polling = false;
 let cancelling = false;
 let latestJob = null;
+let exportingEvidence = false;
+let currentEvidenceBytes = null;
+let currentEvidenceJobId = null;
 
 function setLiveControlsEnabled(enabled) {
   for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton]) {
@@ -82,9 +90,16 @@ function setLiveControlsEnabled(enabled) {
     signInButton.setAttribute('aria-label', enabled ? 'Clear the local Tinlyt session' : 'Sign in to Tinlyt');
   }
   if (refreshButton) refreshButton.disabled = !enabled || polling || cancelling;
-  if (!enabled && cancelJobButton) {
-    cancelJobButton.hidden = true;
-    cancelJobButton.disabled = true;
+  if (!enabled) {
+    if (cancelJobButton) {
+      cancelJobButton.hidden = true;
+      cancelJobButton.disabled = true;
+    }
+    if (exportEvidenceButton) {
+      exportEvidenceButton.hidden = true;
+      exportEvidenceButton.disabled = true;
+    }
+    clearEvidenceView();
   }
   if (connectionBadge) connectionBadge.textContent = enabled ? 'Authenticated' : 'Not connected';
   if (systemState) systemState.textContent = enabled ? 'Identity ready' : 'API disconnected';
@@ -213,8 +228,75 @@ function renderJobResult(job) {
     : serialized);
 }
 
+function clearEvidenceView() {
+  currentEvidenceBytes = null;
+  currentEvidenceJobId = null;
+  if (evidencePanel) evidencePanel.hidden = true;
+  if (evidenceStatus) evidenceStatus.textContent = 'No evidence package loaded.';
+  if (evidenceMetadata) evidenceMetadata.replaceChildren();
+  if (downloadEvidenceButton) downloadEvidenceButton.disabled = true;
+}
+
+function renderEvidencePackage(jobId, evidence, bytes) {
+  currentEvidenceBytes = bytes;
+  currentEvidenceJobId = jobId;
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceStatus) {
+    evidenceStatus.textContent = 'Package schema, captured byte size, and content SHA-256 validated. This detects content modification; it is not a digital signature or a truth verdict.';
+  }
+  if (evidenceMetadata) {
+    evidenceMetadata.replaceChildren();
+    const entries = [
+      ['Format', evidence.format],
+      ['Schema version', evidence.schema_version],
+      ['Export ID', evidence.export_id],
+      ['Artifact ID', evidence.artifact_id],
+      ['Captured content SHA-256', evidence.content_sha256],
+      ['Content type', evidence.content_type],
+      ['Captured bytes', String(evidence.byte_size)],
+      ['Source revision', evidence.source_revision],
+      ['Observed HTTP status', String(evidence.provenance.status_code)],
+      ['Retrieved at', evidence.provenance.retrieved_at],
+      ['Requested URL SHA-256', evidence.provenance.requested_url_sha256],
+      ['Final URL SHA-256', evidence.provenance.final_url_sha256],
+      ['Redirect count', String(evidence.provenance.redirect_count)],
+      ['Extractor version', evidence.provenance.extractor_version],
+      ['Interpretation', 'Acquisition observation; source truth and source authority not assessed'],
+    ];
+    for (const [label, value] of entries) {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const description = document.createElement('dd');
+      description.textContent = value;
+      evidenceMetadata.append(term, description);
+    }
+  }
+  if (downloadEvidenceButton) downloadEvidenceButton.disabled = !isAuthorized || !(bytes instanceof Uint8Array);
+}
+
+function downloadExactEvidencePackage() {
+  if (!isAuthorized || !currentEvidenceBytes || !currentEvidenceJobId) return;
+  const blob = new Blob([currentEvidenceBytes], { type: 'application/vnd.tinlance.twi-evidence+json' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = `twi-evidence-${currentEvidenceJobId}.json`;
+  link.rel = 'noopener';
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 function showJob(job, message) {
+  if (currentEvidenceJobId && currentEvidenceJobId !== job.job_id) clearEvidenceView();
   latestJob = job;
+  if (exportEvidenceButton) {
+    const exportable = isAuthorized && job.kind === 'fetch' && job.status === 'succeeded';
+    exportEvidenceButton.hidden = !exportable;
+    exportEvidenceButton.disabled = !exportable || exportingEvidence;
+  }
   if (!statusPanel) return;
   statusPanel.hidden = false;
   if (statusBadge) statusBadge.textContent = job.status;
@@ -327,6 +409,7 @@ form?.addEventListener('submit', async (event) => {
   }
   submitting = true;
   activeJobId = null;
+  clearEvidenceView();
   submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
   submitButton.textContent = 'Submitting…';
@@ -369,6 +452,7 @@ runLookupForm?.addEventListener('submit', async (event) => {
     return;
   }
   submitting = true;
+  clearEvidenceView();
   if (lookupButton) lookupButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
   if (statusPanel) statusPanel.hidden = false;
@@ -398,6 +482,47 @@ runLookupForm?.addEventListener('submit', async (event) => {
     if (submitButton) submitButton.disabled = !isAuthorized;
   }
 });
+
+exportEvidenceButton?.addEventListener('click', async () => {
+  const requestedJobId = activeJobId;
+  if (
+    !requestedJobId
+    || !isAuthorized
+    || exportingEvidence
+    || !latestJob
+    || latestJob.job_id !== requestedJobId
+    || latestJob.kind !== 'fetch'
+    || latestJob.status !== 'succeeded'
+    || runtime.state !== 'ready'
+  ) return;
+
+  exportingEvidence = true;
+  exportEvidenceButton.disabled = true;
+  clearEvidenceView();
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceStatus) evidenceStatus.textContent = 'Requesting the tenant-scoped evidence package from TWI and validating its content digest.';
+  try {
+    const exported = await runtime.apiClient.exportEvidencePackage(requestedJobId);
+    if (!isAuthorized || activeJobId !== requestedJobId || !latestJob || latestJob.job_id !== requestedJobId) return;
+    renderEvidencePackage(requestedJobId, exported.evidence, exported.bytes);
+  } catch (error) {
+    if (isAuthorized && activeJobId === requestedJobId && evidenceStatus) {
+      evidenceStatus.textContent = error instanceof Error
+        ? error.message
+        : 'The evidence package could not be retrieved or validated. No download is available.';
+      if (evidencePanel) evidencePanel.hidden = false;
+    }
+  } finally {
+    exportingEvidence = false;
+    if (exportEvidenceButton && latestJob) {
+      const exportable = isAuthorized && latestJob.kind === 'fetch' && latestJob.status === 'succeeded';
+      exportEvidenceButton.hidden = !exportable;
+      exportEvidenceButton.disabled = !exportable;
+    }
+  }
+});
+
+downloadEvidenceButton?.addEventListener('click', downloadExactEvidencePackage);
 
 cancelJobButton?.addEventListener('click', async () => {
   if (!activeJobId || !isAuthorized || cancelling || runtime.state !== 'ready') return;
