@@ -309,7 +309,7 @@ function showJob(job, message) {
   if (currentEvidenceJobId && currentEvidenceJobId !== job.job_id) clearEvidenceView();
   latestJob = job;
   if (exportEvidenceButton) {
-    const exportable = isAuthorized && job.kind === 'fetch' && job.status === 'succeeded';
+    const exportable = isAuthorized && job.kind === 'fetch' && job.status === 'succeeded' && job.result !== null;
     exportEvidenceButton.hidden = !exportable;
     exportEvidenceButton.disabled = !exportable || exportingEvidence;
   }
@@ -521,6 +521,7 @@ exportEvidenceButton?.addEventListener('click', async () => {
     || latestJob.job_id !== requestedJobId
     || latestJob.kind !== 'fetch'
     || latestJob.status !== 'succeeded'
+    || latestJob.result === null
     || runtime.state !== 'ready'
   ) return;
 
@@ -543,7 +544,7 @@ exportEvidenceButton?.addEventListener('click', async () => {
   } finally {
     exportingEvidence = false;
     if (exportEvidenceButton && latestJob) {
-      const exportable = isAuthorized && latestJob.kind === 'fetch' && latestJob.status === 'succeeded';
+      const exportable = isAuthorized && latestJob.kind === 'fetch' && latestJob.status === 'succeeded' && latestJob.result !== null;
       exportEvidenceButton.hidden = !exportable;
       exportEvidenceButton.disabled = !exportable;
     }
