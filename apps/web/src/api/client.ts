@@ -16,7 +16,7 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 const MIN_IDEMPOTENCY_KEY_LENGTH = 16;
 const MAX_IDEMPOTENCY_KEY_LENGTH = 256;
 
-function normalizedBaseUrl(value: string): string {
+function normalizedBaseUrl(value: string, allowedOrigins: readonly string[] = []): string {
   if (!value || value !== value.trim()) {
     throw new TwiApiError("configuration_error", "A normalized API base URL is required.");
   }
@@ -26,9 +26,22 @@ function normalizedBaseUrl(value: string): string {
   } catch {
     throw new TwiApiError("configuration_error", "The API base URL is invalid.");
   }
+  const origin = typeof window === "undefined" ? "https://tinlyt.invalid" : window.location.origin;
   const localDevelopment = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-  if (url.protocol !== "https:" && !localDevelopment && !(url.origin === "https://tinlyt.invalid" && value.startsWith("/"))) {
+  const sameOrigin = url.origin === origin;
+  const explicitlyAllowed = allowedOrigins.some((candidate) => {
+    try {
+      const approved = new URL(candidate);
+      return approved.protocol === "https:" && approved.origin === url.origin;
+    } catch {
+      return false;
+    }
+  });
+  if (url.protocol !== "https:" && !localDevelopment) {
     throw new TwiApiError("configuration_error", "The API must use HTTPS outside localhost development.");
+  }
+  if (!sameOrigin && !localDevelopment && !explicitlyAllowed) {
+    throw new TwiApiError("configuration_error", "Cross-origin API requests require an explicit HTTPS origin allowlist.");
   }
   if (url.username || url.password || url.search || url.hash) {
     throw new TwiApiError("configuration_error", "The API base URL must not contain credentials, query parameters, or fragments.");
@@ -155,7 +168,7 @@ function validateCreateRequest(request: CreateJobRequest): void {
       throw new TwiApiError("validation_error", "The browser URL must be absolute.");
     }
     if (url.protocol !== "https:" || url.port && url.port !== "443" || url.username || url.password) {
-      throw new TwiApiError("validation_error", "Browser acquisition requires a public HTTPS URL on port 443.");
+      throw new TwiApiError("validation_error", "Browser acquisition requires an HTTPS URL on port 443.");
     }
   }
 }
@@ -171,7 +184,7 @@ export class TwiApiClient {
     if (!options || !options.tokenProvider || typeof options.tokenProvider.getAccessToken !== "function") {
       throw new TwiApiError("configuration_error", "An approved Platform access-token provider must be injected.");
     }
-    this.baseUrl = normalizedBaseUrl(options.baseUrl);
+    this.baseUrl = normalizedBaseUrl(options.baseUrl, options.allowedOrigins);
     this.tokenProvider = options.tokenProvider;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -252,7 +265,7 @@ export class TwiApiClient {
       if (!response.ok) throw errorForStatus(response.status, requestId);
       if (response.status === 204) return null;
       const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.toLowerCase().includes("application/json")) {
+      if (!contentType.toLowerCase().includes("application/json") && !contentType.toLowerCase().includes("application/vnd.tinlance.twi-evidence+json")) {
         throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
       }
       try {
