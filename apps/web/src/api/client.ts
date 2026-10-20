@@ -582,18 +582,22 @@ export class TwiApiClient {
       limit: String(query.limit ?? 100),
     });
     if (query.cursor !== undefined) params.set("cursor", query.cursor);
-    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }));
+    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }), query);
   }
 
-  private parseUsageResponse(value: unknown): UsageResponse {
+  private parseUsageResponse(value: unknown, query: UsageQuery): UsageResponse {
+    const expectedPeriod = Date.parse(query.period_start);
+    const maximumEvents = query.limit ?? 100;
     if (
       !isRecord(value)
       || !hasOnlyKeys(value, ["schema_version", "dimension", "period_start", "used", "quota_limit", "remaining", "plan_id", "plan_version", "events", "returned", "has_more", "next_cursor"])
       || value.schema_version !== 1
       || typeof value.dimension !== "string"
+      || value.dimension !== query.dimension
       || !/^[A-Za-z0-9_.:-]{1,80}$/.test(value.dimension)
       || typeof value.period_start !== "string"
       || !Number.isFinite(Date.parse(value.period_start))
+      || Date.parse(value.period_start) !== expectedPeriod
       || !/(?:Z|[+-][0-9]{2}:[0-9]{2})$/i.test(value.period_start)
       || typeof value.used !== "number"
       || !Number.isInteger(value.used)
@@ -606,7 +610,7 @@ export class TwiApiClient {
       || (value.quota_limit === null) !== (value.remaining === null)
       || (value.quota_limit !== null && value.remaining !== Math.max(0, value.quota_limit - value.used))
       || !Array.isArray(value.events)
-      || value.events.length > 500
+      || value.events.length > Math.min(500, maximumEvents)
       || typeof value.returned !== "number"
       || !Number.isInteger(value.returned)
       || value.returned !== value.events.length
