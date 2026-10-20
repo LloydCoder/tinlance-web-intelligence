@@ -101,7 +101,103 @@ const monitorRunMetadata = document.querySelector('#monitor-run-metadata');
 const monitorRunLookupForm = document.querySelector('#monitor-run-lookup-form');
 const monitorRunIdField = document.querySelector('#monitor-run-id');
 const lookupMonitorRunButton = document.querySelector('#lookup-monitor-run');
+const usageForm = document.querySelector('#usage-form');
+const usageDimensionField = document.querySelector('#usage-dimension');
+const usagePeriodField = document.querySelector('#usage-period-start');
+const usageLimitField = document.querySelector('#usage-limit');
+const usageCursorField = document.querySelector('#usage-cursor');
+const loadUsageButton = document.querySelector('#load-usage');
+const loadNextUsagePageButton = document.querySelector('#load-next-usage-page');
+const usageStatus = document.querySelector('#usage-status');
+const usageResults = document.querySelector('#usage-results');
+const usageSummary = document.querySelector('#usage-summary');
+const usageEvents = document.querySelector('#usage-events');
 
+function clearUsageView() {
+  latestUsageQuery = null;
+  latestUsageCursor = null;
+  usageLoading = false;
+  if (usageResults) usageResults.hidden = true;
+  if (usageSummary) usageSummary.replaceChildren();
+  if (usageEvents) usageEvents.replaceChildren();
+  if (usageCursorField) usageCursorField.value = '';
+  if (loadUsageButton) loadUsageButton.disabled = !isAuthorized;
+  if (loadNextUsagePageButton) { loadNextUsagePageButton.hidden = true; loadNextUsagePageButton.disabled = true; }
+  if (usageStatus) usageStatus.textContent = runtime.state === 'ready'
+    ? 'Sign in with the approved Platform identity provider and provide a period start to load usage.'
+    : 'Usage is disabled because the approved identity configuration is not ready.';
+}
+
+function appendUsageSummary(label, value) {
+  const term = document.createElement('dt');
+  term.textContent = label;
+  const description = document.createElement('dd');
+  description.textContent = value;
+  usageSummary?.append(term, description);
+}
+
+function renderUsageResponse(response, append = false) {
+  if (!append) {
+    usageSummary?.replaceChildren();
+    usageEvents?.replaceChildren();
+    appendUsageSummary('Dimension', response.dimension);
+    appendUsageSummary('Period start (UTC)', response.period_start);
+    appendUsageSummary('Committed usage', String(response.used));
+    appendUsageSummary('Quota limit', response.quota_limit === null ? 'Not configured / unavailable' : String(response.quota_limit));
+    appendUsageSummary('Remaining allowance', response.remaining === null ? 'Not configured / unavailable' : String(response.remaining));
+    appendUsageSummary('Plan', response.plan_id === null ? 'Not provided' : response.plan_id);
+    appendUsageSummary('Plan version', response.plan_version === null ? 'Not provided' : String(response.plan_version));
+  }
+  for (const event of response.events) {
+    const row = document.createElement('tr');
+    for (const value of [event.occurred_at, event.feature, String(event.quantity), event.event_id]) {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.append(cell);
+    }
+    usageEvents?.append(row);
+  }
+  if (usageResults) usageResults.hidden = false;
+  latestUsageCursor = response.next_cursor;
+  if (loadNextUsagePageButton) {
+    loadNextUsagePageButton.hidden = !response.has_more;
+    loadNextUsagePageButton.disabled = !isAuthorized || usageLoading || !response.has_more;
+  }
+  if (usageStatus) usageStatus.textContent = response.has_more
+    ? `Loaded ${response.returned} usage fact(s). More results are available; use Load next page to continue.`
+    : `Loaded ${response.returned} usage fact(s). This page is complete for the requested cursor position.`;
+}
+
+async function loadUsage(query, append = false) {
+  if (!isAuthorized || usageLoading || !runtime.apiClient) return;
+  const requestSessionEpoch = authSessionEpoch;
+  usageLoading = true;
+  if (loadUsageButton) loadUsageButton.disabled = true;
+  if (loadNextUsagePageButton) loadNextUsagePageButton.disabled = true;
+  if (usageStatus) usageStatus.textContent = 'Loading tenant-scoped usage from TWI…';
+  try {
+    const response = await runtime.apiClient.readUsage(query);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    latestUsageQuery = { dimension: query.dimension, period_start: query.period_start, limit: query.limit };
+    renderUsageResponse(response, append);
+  } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    if (!append) {
+      if (usageResults) usageResults.hidden = true;
+      if (usageSummary) usageSummary.replaceChildren();
+      if (usageEvents) usageEvents.replaceChildren();
+    }
+    if (usageStatus) usageStatus.textContent = error instanceof Error
+      ? error.message
+      : 'Usage could not be loaded. No usage values have been inferred or fabricated.';
+  } finally {
+    if (authSessionEpoch === requestSessionEpoch) {
+      usageLoading = false;
+      if (isAuthorized && loadUsageButton) loadUsageButton.disabled = false;
+      if (loadNextUsagePageButton) loadNextUsagePageButton.disabled = !isAuthorized || !latestUsageCursor;
+    }
+  }
+}
 function showMode(title, description) {
   if (modeTitle) modeTitle.textContent = title;
   if (modeDescription) modeDescription.textContent = description;
@@ -143,10 +239,13 @@ let pendingMonitorCreateFingerprint = null;
 let pendingMonitorCreateKey = null;
 let pendingMonitorRunMonitorId = null;
 let pendingMonitorRunKey = null;
+let usageLoading = false;
+let latestUsageQuery = null;
+let latestUsageCursor = null;
 
 function setLiveControlsEnabled(enabled) {
   authSessionEpoch += 1;
-  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton, monitorRunIdField, lookupMonitorRunButton]) {
+  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton, monitorRunIdField, lookupMonitorRunButton, usageDimensionField, usagePeriodField, usageLimitField, usageCursorField, loadUsageButton, loadNextUsagePageButton]) {
     if (control) control.disabled = !enabled;
   }
   if (signInButton && runtime.state === 'ready') {
@@ -174,6 +273,7 @@ function setLiveControlsEnabled(enabled) {
     clearEvidenceView();
     clearVerificationView();
     clearMonitorView();
+    clearUsageView();
   }
   if (connectionBadge) connectionBadge.textContent = enabled ? 'Authenticated' : 'Not connected';
   if (systemState) systemState.textContent = enabled ? 'Identity ready' : 'API disconnected';
@@ -1368,6 +1468,25 @@ cancelJobButton?.addEventListener('click', async () => {
   }
 });
 
+
+usageForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!isAuthorized || !usageForm?.reportValidity()) return;
+  const query = {
+    dimension: usageDimensionField?.value ?? '',
+    period_start: usagePeriodField?.value ?? '',
+    limit: Number(usageLimitField?.value ?? 100),
+    ...(usageCursorField?.value ? { cursor: usageCursorField.value } : {}),
+  };
+  latestUsageQuery = { dimension: query.dimension, period_start: query.period_start, limit: query.limit };
+  latestUsageCursor = null;
+  await loadUsage(query, false);
+});
+
+loadNextUsagePageButton?.addEventListener('click', async () => {
+  if (!latestUsageQuery || !latestUsageCursor || !isAuthorized || usageLoading) return;
+  await loadUsage({ ...latestUsageQuery, cursor: latestUsageCursor }, true);
+});
 
 if (runtime.state === 'ready') {
   setLiveControlsEnabled(false);

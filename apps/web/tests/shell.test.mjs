@@ -208,3 +208,25 @@ test('developer reference documents supported contracts without exposing credent
   assert.match(js, /Clipboard access is unavailable in this context/);
   assert.doesNotMatch(html, /create API key|rotate API key|billing portal/i);
 });
+
+test('usage interface is tenant-scoped, cursor-paginated, and excludes unsupported administration controls', () => {
+  assert.match(html, /id="usage" class="panel usage-panel"/);
+  assert.match(html, /id="usage-form"/);
+  assert.match(html, /id="usage-dimension"/);
+  assert.match(html, /id="usage-period-start"/);
+  assert.match(html, /id="load-next-usage-page"[^>]*type="button" hidden disabled/);
+  assert.match(html, /twi:usage:read/);
+  assert.match(html, /Tenant and subject are derived by TWI from the verified token/);
+  assert.match(html, /not invoice balances/);
+  assert.match(html, /Unsupported tenant-administration and credential-management actions are not exposed/);
+  assert.match(html, /id="usage-status" role="status" aria-live="polite"/);
+  assert.match(js, /runtime\.apiClient\.readUsage\(query\)/);
+  assert.match(js, /latestUsageCursor/);
+  assert.match(js, /usageForm\?\.addEventListener\('submit'/);
+  assert.match(js, /loadNextUsagePageButton\?\.addEventListener\('click'/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /clearUsageView\(\)/);
+  assert.match(js, /event\.event_id/);
+  assert.doesNotMatch(js, /localStorage/);
+  assert.doesNotMatch(html, /id="(?:tenant-switch|create-api-key|rotate-credentials|invoice-balance)"/i);
+});

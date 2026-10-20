@@ -14,6 +14,8 @@ import type {
   TwiApiClientOptions,
   VerifyResearchRequest,
   VerifyResearchResponse,
+  UsageQuery,
+  UsageResponse,
 } from "./types.js";
 
 const JOB_KINDS = new Set<JobKind>(["search", "fetch", "browser"]);
@@ -559,6 +561,83 @@ export class TwiApiClient {
     ));
     if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
     return monitor;
+  }
+
+  async readUsage(query: UsageQuery): Promise<UsageResponse> {
+    if (
+      !query
+      || typeof query.dimension !== "string"
+      || !/^[A-Za-z0-9_.:-]{1,80}$/.test(query.dimension)
+      || typeof query.period_start !== "string"
+      || !Number.isFinite(Date.parse(query.period_start))
+      || !/(?:Z|[+-][0-9]{2}:[0-9]{2})$/i.test(query.period_start)
+      || (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 500))
+      || (query.cursor !== undefined && (typeof query.cursor !== "string" || query.cursor.length < 1 || query.cursor.length > 1024))
+    ) {
+      throw new TwiApiError("validation_error", "The usage query does not match the supported contract.");
+    }
+    const params = new URLSearchParams({
+      dimension: query.dimension,
+      period_start: query.period_start,
+      limit: String(query.limit ?? 100),
+    });
+    if (query.cursor !== undefined) params.set("cursor", query.cursor);
+    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }));
+  }
+
+  private parseUsageResponse(value: unknown): UsageResponse {
+    if (
+      !isRecord(value)
+      || !hasOnlyKeys(value, ["schema_version", "dimension", "period_start", "used", "quota_limit", "remaining", "plan_id", "plan_version", "events", "returned", "has_more", "next_cursor"])
+      || value.schema_version !== 1
+      || typeof value.dimension !== "string"
+      || !/^[A-Za-z0-9_.:-]{1,80}$/.test(value.dimension)
+      || typeof value.period_start !== "string"
+      || !Number.isFinite(Date.parse(value.period_start))
+      || !/(?:Z|[+-][0-9]{2}:[0-9]{2})$/i.test(value.period_start)
+      || typeof value.used !== "number"
+      || !Number.isInteger(value.used)
+      || value.used < 0
+      || !(value.quota_limit === null || (typeof value.quota_limit === "number" && Number.isInteger(value.quota_limit) && value.quota_limit >= 0))
+      || !(value.remaining === null || (typeof value.remaining === "number" && Number.isInteger(value.remaining) && value.remaining >= 0))
+      || !(value.plan_id === null || (typeof value.plan_id === "string" && /^[A-Za-z0-9._:-]{1,80}$/.test(value.plan_id)))
+      || !(value.plan_version === null || (typeof value.plan_version === "number" && Number.isInteger(value.plan_version) && value.plan_version >= 1))
+      || (value.plan_id === null) !== (value.plan_version === null)
+      || (value.quota_limit === null) !== (value.remaining === null)
+      || (value.quota_limit !== null && value.remaining !== Math.max(0, value.quota_limit - value.used))
+      || !Array.isArray(value.events)
+      || value.events.length > 500
+      || typeof value.returned !== "number"
+      || !Number.isInteger(value.returned)
+      || value.returned !== value.events.length
+      || typeof value.has_more !== "boolean"
+      || !(value.next_cursor === null || (typeof value.next_cursor === "string" && value.next_cursor.length >= 1 && value.next_cursor.length <= 1024))
+      || (value.has_more && value.next_cursor === null)
+      || (!value.has_more && value.next_cursor !== null)
+    ) {
+      throw new TwiApiError("invalid_response", "The API returned a usage response that does not match the supported contract.");
+    }
+    const validEvents = value.events.every((event) =>
+      isRecord(event)
+      && hasOnlyKeys(event, ["event_id", "feature", "dimension", "period_start", "quantity", "occurred_at", "schema_version"])
+      && typeof event.event_id === "string"
+      && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/.test(event.event_id)
+      && typeof event.feature === "string"
+      && /^[A-Za-z0-9_.:-]{1,80}$/.test(event.feature)
+      && event.dimension === value.dimension
+      && event.period_start === value.period_start
+      && typeof event.quantity === "number"
+      && Number.isInteger(event.quantity)
+      && event.quantity > 0
+      && typeof event.occurred_at === "string"
+      && Number.isFinite(Date.parse(event.occurred_at))
+      && /(?:Z|[+-][0-9]{2}:[0-9]{2})$/i.test(event.occurred_at)
+      && event.schema_version === 1
+    );
+    if (!validEvents) {
+      throw new TwiApiError("invalid_response", "The API returned malformed usage events.");
+    }
+    return value as unknown as UsageResponse;
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {

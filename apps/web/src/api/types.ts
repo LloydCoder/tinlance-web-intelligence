@@ -167,3 +167,35 @@ export interface EvidenceExport {
   /** Exact validated response bytes from the evidence endpoint; do not reserialize before download. */
   bytes: Uint8Array;
 }
+
+export interface UsageQuery {
+  dimension: string;
+  period_start: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface UsageEvent {
+  event_id: string;
+  feature: string;
+  dimension: string;
+  period_start: string;
+  quantity: number;
+  occurred_at: string;
+  schema_version: 1;
+}
+
+export interface UsageResponse {
+  schema_version: 1;
+  dimension: string;
+  period_start: string;
+  used: number;
+  quota_limit: number | null;
+  remaining: number | null;
+  plan_id: string | null;
+  plan_version: number | null;
+  events: UsageEvent[];
+  returned: number;
+  has_more: boolean;
+  next_cursor: string | null;
+}
