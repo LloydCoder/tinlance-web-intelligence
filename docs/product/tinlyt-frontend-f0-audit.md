@@ -1,10 +1,10 @@
 # Tinlyt Frontend F0 — Repository Forensic Inventory
 
-**Status:** F0 audit artifact prepared; acceptance requires CI on the resulting PR head.  
+**Status:** Accepted — PR-head CI and post-merge main CI passed.  
 **Repository:** `LloydCoder/tinlance-web-intelligence`  
 **Product:** Tinlyt  
 **Engineering identity:** Tinlance Web Intelligence (TWI)  
-**Audit baseline:** `main` at the repository state inspected on 2026-10-20.  
+**Audit baseline:** `main` inspected on 2026-10-20; acceptance evidence is linked below.  
 **Scope:** frontend presence, monorepo boundaries, existing API contracts, CI coverage, and implementation risks.
 
 ## Executive finding
@@ -27,7 +27,7 @@ The inspected repository is a Python-first TWI service repository. The current `
 | Authority boundaries | `README.md`, `docs/roadmap/phases.md` | Platform owns identity/authz/policy/approvals/secrets/budgets/audit/governed execution; OS owns orchestration/lifecycle; TWI owns acquisition/evidence capture; World Intelligence owns canonical world state; TSIC owns cross-repository conformance. |
 | CI | `.github/workflows/ci.yml`, `Makefile` | Existing checks include Python 3.12/3.13, lint, typing, Bandit, dependency audit, tests, PostgreSQL integration, migration/contract/readiness checks, and browser sandbox smoke. No frontend checks were found in the inspected CI workflow. |
 | Phase ledger | `docs/roadmap/phases.md` | W15 is explicitly not ready; the Platform consumer gate is failed and external deployment/security/governance/privacy/SLO/on-call/live-quality gates remain unevidenced. Frontend work must not relabel this as private-beta or GA readiness. |
-| Product contract | `docs/product/tinlyt-frontend-contract.md` on `feat/tinlyt-product-foundation` | The initial contract correctly establishes evidence-first truth rules and screen boundaries; this F0 report adds observed repo facts and clarifies implementation sequencing. |
+| Product contract | `docs/product/tinlyt-frontend-contract.md` | The contract establishes evidence-first truth rules, screen boundaries, authority boundaries and serial F0–F11 gates. |
 
 ## Frontend blockers and required treatment
 
@@ -46,10 +46,11 @@ The inspected repository is a Python-first TWI service repository. The current `
 - [x] Jobs, evidence, verification, monitor, and authority boundaries mapped to source/docs.
 - [x] Existing CI checks and frontend coverage gap recorded.
 - [x] Blockers and F1 implementation constraints documented.
-- [ ] CI on the exact commit containing this report passes.
-- [ ] Post-commit review confirms the report matches the changed repository state.
+- [x] Exact PR-head CI passed on commit `0773307fc8c71264e5b0d27b4c340ec3aee11fc3` in [run #39374128740](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39374128740).
+- [x] Post-merge main CI passed on merge commit `195bcf970e86537b2d9cdb7d1b96576bd7fb1476` in [run #39374414981](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39374414981).
+- [x] Post-commit forensic review confirmed the report matches the repository state.
 
-## Recommended F1 entry criteria
+## F1 entry criteria
 
 Build an isolated `apps/web` frontend workspace, leaving existing Python `apps/*` services intact. Start with a small responsive shell, design tokens, semantic primitives, accessible navigation, explicit live/fixture separation, and frontend CI. Avoid speculative dashboard metrics. The first end-to-end product slice should be investigation submission → durable job status → source-backed result → authorized evidence inspection.
 
