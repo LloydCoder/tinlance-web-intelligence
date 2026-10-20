@@ -5,6 +5,7 @@ export interface TinlytRuntimeConfig {
   apiBaseUrl: string;
   apiAllowedOrigins?: string[];
   oauth: {
+    issuer: string;
     authorizationEndpoint: string;
     tokenEndpoint: string;
     clientId: string;
@@ -40,6 +41,8 @@ export function createRuntime(config: unknown): TinlytRuntime {
     || typeof config.apiBaseUrl !== "string"
     || !config.apiBaseUrl
     || !isRecord(config.oauth)
+    || typeof config.oauth.issuer !== "string"
+    || !config.oauth.issuer
     || typeof config.oauth.authorizationEndpoint !== "string"
     || !config.oauth.authorizationEndpoint
     || typeof config.oauth.tokenEndpoint !== "string"
@@ -64,6 +67,7 @@ export function createRuntime(config: unknown): TinlytRuntime {
 
   try {
     const tokenProvider = new OAuthPkceTokenProvider({
+      issuer: config.oauth.issuer,
       authorizationEndpoint: config.oauth.authorizationEndpoint,
       tokenEndpoint: config.oauth.tokenEndpoint,
       clientId: config.oauth.clientId,
