@@ -193,3 +193,18 @@ test('monitor interface exposes only the documented explicit lifecycle and never
   assert.doesNotMatch(js, /localStorage/);
   assert.doesNotMatch(html, /Monitor UI planned/);
 });
+
+test('developer reference documents supported contracts without exposing credential controls or sending requests', () => {
+  assert.match(html, /id="developer" class="panel developer-panel"/);
+  assert.match(html, /id="developer-search-example"/);
+  assert.match(html, /id="developer-verify-example"/);
+  assert.match(html, /POST \/v1\/jobs/);
+  assert.match(html, /twi:research:verify/);
+  assert.match(html, /No request is sent from this reference panel/);
+  assert.match(html, /Never paste access tokens into this page/);
+  assert.match(html, /does not assess factual truth or source authority/);
+  assert.match(js, /developerCopyButtons/);
+  assert.match(js, /navigator\.clipboard\?\.writeText/);
+  assert.match(js, /Clipboard access is unavailable in this context/);
+  assert.doesNotMatch(html, /create API key|rotate API key|billing portal/i);
+});
