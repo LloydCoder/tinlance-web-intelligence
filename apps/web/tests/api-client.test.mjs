@@ -137,7 +137,18 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
     content_type: 'text/html',
     byte_size: 5,
     source_revision: 'b'.repeat(40),
-    provenance: { schema_version: '1.0.0' },
+    provenance: {
+      schema_version: '1.0.0',
+      requested_url_sha256: 'e'.repeat(64),
+      final_url_sha256: 'f'.repeat(64),
+      status_code: 200,
+      content_type: 'text/html',
+      content_sha256: 'a'.repeat(64),
+      byte_size: 5,
+      retrieved_at: '2026-10-20T00:00:00Z',
+      redirect_count: 0,
+      extractor_version: 'extractor/1.0'
+    },
     content_base64: 'aGVsbG8=',
     interpretation: {
       provenance_kind: 'acquisition_observation',
