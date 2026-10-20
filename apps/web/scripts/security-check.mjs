@@ -19,7 +19,7 @@ const checks = [
   ['unsafe document writing', /document\.write\s*\(/i],
   ['inline event handler', /\son[a-z]+\s*=/i],
   ['javascript URL', /javascript\s*:/i],
-  ['external resource load', /<(?:script|link)\b[^>]+(?:src|href)\s*=\s*["']https?:\/\//i|@import\s+url\(\s*["']?https?:\/\//i],
+  ['external resource load', /(?:<(?:script|link)\b[^>]+(?:src|href)\s*=\s*["']https?:\/\/|@import\s+url\(\s*["']?https?:\/\/)/i],
   ['private key material', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i],
   ['AWS access key pattern', /\bAKIA[0-9A-Z]{16}\b/],
   ['high-entropy-looking API secret', /\b(?:sk|rk|pk)_[A-Za-z0-9]{32,}\b/],
