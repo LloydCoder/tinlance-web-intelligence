@@ -107,6 +107,9 @@ function setLiveControlsEnabled(enabled) {
   if (sidebarStatus) sidebarStatus.textContent = enabled
     ? 'Authenticated. Job access is still governed by Platform scopes and TWI tenant/subject authorization.'
     : 'Sign in with the approved Platform identity provider to submit live jobs.';
+  if (enabled && !currentEvidenceJobId && evidenceStatus) {
+    evidenceStatus.textContent = 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
+  }
 }
 
 function updateKindFields() {
@@ -231,8 +234,12 @@ function renderJobResult(job) {
 function clearEvidenceView() {
   currentEvidenceBytes = null;
   currentEvidenceJobId = null;
-  if (evidencePanel) evidencePanel.hidden = true;
-  if (evidenceStatus) evidenceStatus.textContent = 'No evidence package loaded.';
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceStatus) evidenceStatus.textContent = !isAuthorized
+    ? runtime.state === 'ready'
+      ? 'Sign in with the approved Platform identity provider to inspect evidence from an accessible successful fetch job.'
+      : 'Evidence export is disabled because the approved identity configuration is not ready.'
+    : 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
   if (evidenceMetadata) evidenceMetadata.replaceChildren();
   if (downloadEvidenceButton) downloadEvidenceButton.disabled = true;
 }
