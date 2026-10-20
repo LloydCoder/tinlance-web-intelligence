@@ -36,6 +36,7 @@ The only verified customer-facing administrative/usage capability in this phase 
 - The first Frontend workflow exposed an overbroad negative assertion: it treated truthful explanatory copy about invoice balances as an unsupported invoice UI. The test now checks for actual unsupported control IDs instead of rejecting accurate boundary language.
 - Review identified a stale-request cleanup race: a request from a prior auth-session epoch could reset the shared loading state after sign-out/re-authentication. The finally block now mutates loading/control state only when its captured session epoch still matches.
 - The response parser rejects mismatched event dimension/period, inconsistent quota arithmetic, invalid event fields, and invalid has_more/cursor combinations.
+- **Post-merge follow-up (PR #86):** forensic comparison found that a self-consistent response could still report a different dimension or period from the request. The follow-up now binds response dimension and timestamp to the original query and rejects event counts above the requested page limit. Regression tests cover mismatched response dimension and period; final acceptance remains pending exact-head and post-merge CI.
 - Session epoch checks prevent old responses from rendering after identity changes; usage results and cursors are not persisted in browser storage.
 
 ## Acceptance gates
