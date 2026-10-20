@@ -49,8 +49,8 @@ test('navigation behavior changes only local presentation', () => {
 
 test('runtime configuration is loaded before the application and contains no credentials', () => {
   assert.ok(html.indexOf('/runtime-config.js') < html.indexOf('/src/main.js'));
-  assert.match(runtimeConfig, /authorizationEndpoint: ''/);
-  assert.match(runtimeConfig, /tokenEndpoint: ''/);
+  assert.match(runtimeConfig, /authorizationEndpoint:\s*""/);
+  assert.match(runtimeConfig, /tokenEndpoint:\s*""/);
   assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token/i);
   assert.match(js, /getRuntime/);
   assert.match(html, /id="sign-in"/);
