@@ -160,6 +160,7 @@ test('monitor interface exposes only the documented explicit lifecycle and never
   assert.match(html, /id="monitor-max-bytes"[^>]*disabled/);
   assert.match(html, /id="monitor-id"[^>]*disabled/);
   assert.match(html, /id="monitor-lookup-form"/);
+  assert.match(html, /id="monitor-id"[^>]*maxlength="64" pattern="\[A-Za-z0-9._:-\]\{1,64\}"/);
   assert.match(html, /There is no monitor-list endpoint in the current API/);
   assert.match(html, /recurrence belongs to Agent OS/);
   assert.match(html, /id="run-monitor"[^>]*disabled/);
