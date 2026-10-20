@@ -566,7 +566,7 @@ export class TwiApiClient {
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(dimension)) {
       throw new TwiApiError("validation_error", "The usage dimension is invalid.");
     }
-    if (typeof periodStart !== "string" || periodStart.length > 40 || !Number.isFinite(Date.parse(periodStart)) || !/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(periodStart)) {
+    if (typeof periodStart !== "string" || periodStart.length > 40 || !Number.isFinite(Date.parse(periodStart)) || !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(periodStart)) {
       throw new TwiApiError("validation_error", "The usage period must be a timezone-aware ISO-8601 timestamp.");
     }
     if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
