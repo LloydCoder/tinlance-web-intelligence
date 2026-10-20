@@ -94,6 +94,8 @@ try {
   }
   const missing = await fetch(new URL('/__tinlyt_release_smoke_missing__', base));
   assert.equal(missing.status, 404, 'missing assets must not be reported as successful');
+  const traversal = await fetch(new URL('/%2e%2e%2fpackage.json', base));
+  assert.equal(traversal.status, 404, 'encoded path traversal must not expose files outside the build output');
   console.log(`Production artifact smoke passed: ${assets.length} page assets served; ${jsFiles.length} JS modules checked; public runtime config contains no credential patterns.`);
 } finally {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
