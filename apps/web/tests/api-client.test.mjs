@@ -419,6 +419,19 @@ test('monitor client rejects unsafe target URLs, unsupported policy fields and m
     malformed.getMonitor('mon_01'),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
+  const wrongMonitor = makeClient(async () => new Response(JSON.stringify({
+    monitor_id: 'mon_02',
+    status: 'active',
+    baseline_digest: null,
+    baseline_observed_at: null,
+    baseline_version: 0,
+    created_at: '2026-10-20T00:00:00Z',
+    updated_at: '2026-10-20T00:00:00Z'
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    wrongMonitor.getMonitor('mon_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
 });
 
 test('monitor run client validates result outcome and baseline digest fields', async () => {
@@ -459,6 +472,14 @@ test('monitor run client validates result outcome and baseline digest fields', a
   }), { status: 200, headers: { 'content-type': 'application/json' } }));
   await assert.rejects(
     malformedClient.getMonitorRun('mon_01', 'job_monitor_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+  const wrongMonitorRun = makeClient(async () => new Response(JSON.stringify({
+    ...validRun,
+    payload: { monitor_id: 'mon_02', baseline_version: 0 }
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    wrongMonitorRun.getMonitorRun('mon_01', 'job_monitor_01'),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
 });
