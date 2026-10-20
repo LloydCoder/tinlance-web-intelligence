@@ -2,7 +2,8 @@
 
 **Phase:** F10  
 **Implementation commit audited:** `4766230685a0a9d4e2a0dc93c209b9c9b7b1636c`  
-**Audit date:** 2026-10-20  
+**Audit date:** 2026-10-20
+**Status:** Accepted after exact-commit Frontend and full repository CI passed.  
 **Scope:** accessibility affordances, unsafe DOM injection sinks, static frontend security gates, and regression tests.
 
 ## Evidence inspected
@@ -28,8 +29,8 @@ These checks are source-level and automated regression controls, not a substitut
 ## CI evidence
 
 - Frontend workflow for the audited main commit: [run #39403242150](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39403242150) — success.
-- Full repository CI for the same main commit: [run #39403241773](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39403241773) — outcome must be confirmed after completion before this phase is considered fully accepted.
+- Full repository CI for the same main commit: [run #39403241773](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39403241773) — success (Python 3.12/3.13 and browser isolation jobs completed successfully).
 
 ## Exit decision
 
-**Implementation reviewed; phase acceptance is conditional on full repository CI completing successfully.** F11 must add a repeatable production-artifact smoke gate. No claim of production deployment, full WCAG conformance, private-beta readiness, or GA readiness is made.
+**Accepted.** Frontend and full repository CI passed on the audited main commit. Source-level controls are evidenced; manual assistive-technology review and deployment-specific checks remain external release gates. F11 must add a repeatable production-artifact smoke gate. No claim of production deployment, full WCAG conformance, private-beta readiness, or GA readiness is made.
