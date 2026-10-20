@@ -1,9 +1,11 @@
 import { TwiApiError } from "./errors.js";
+import { readBoundedJson } from "./json.js";
 import type { AccessTokenProvider } from "./types.js";
 
 const TRANSACTION_KEY = "tinlyt.oauth.pkce.transaction.v1";
 const TRANSACTION_TTL_MS = 10 * 60 * 1000;
 const TOKEN_REFRESH_SKEW_MS = 30_000;
+const MAX_TOKEN_RESPONSE_BYTES = 64_000;
 
 interface PkceTransaction {
   state: string;
@@ -167,14 +169,11 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       if (!response.ok) {
         throw new TwiApiError("authentication_required", "The identity provider could not issue a TWI access token.", response.status);
       }
-      try {
-        tokenResponse = await response.json() as unknown;
-      } catch {
-        if (controller.signal.aborted) {
-          throw new TwiApiError("request_timeout", "The identity token endpoint timed out.");
-        }
-        throw new TwiApiError("invalid_response", "The identity provider returned malformed token data.", response.status);
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.toLowerCase().includes("application/json")) {
+        throw new TwiApiError("invalid_response", "The identity provider returned an unsupported token media type.", response.status);
       }
+      tokenResponse = await readBoundedJson(response, MAX_TOKEN_RESPONSE_BYTES, "The identity token response", controller.signal);
     } catch (error) {
       if (error instanceof TwiApiError) throw error;
       if (controller.signal.aborted) {
