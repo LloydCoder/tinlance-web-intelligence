@@ -44,6 +44,9 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
   assert.match(html, /not an independent verdict about factual truth/);
   assert.match(html, /No fixture data is presented as live activity/);
   assert.match(js, /no completion outcome is assumed/);
+  assert.match(js, /TWI reports that this job failed/);
+  assert.match(js, /TWI reports that this job was cancelled/);
+  assert.match(js, /activeJobId = null/);
 });
 
 test('styles retain visible focus, responsive behavior and reduced motion', () => {
