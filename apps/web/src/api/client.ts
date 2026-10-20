@@ -1,4 +1,5 @@
 import { errorForStatus, TwiApiError } from "./errors.js";
+import { readBoundedJson } from "./json.js";
 import type {
   CreateJobRequest,
   EvidencePackage,
@@ -13,6 +14,7 @@ import type {
 const JOB_KINDS = new Set<JobKind>(["search", "fetch", "browser"]);
 const JOB_STATUSES = new Set<JobStatus>(["queued", "running", "succeeded", "failed", "cancelled"]);
 const DEFAULT_TIMEOUT_MS = 15_000;
+const MAX_API_RESPONSE_BYTES = 30_000_000;
 const MIN_IDEMPOTENCY_KEY_LENGTH = 16;
 const MAX_IDEMPOTENCY_KEY_LENGTH = 256;
 
@@ -410,11 +412,7 @@ export class TwiApiClient {
       if (!contentType.toLowerCase().includes("application/json") && !contentType.toLowerCase().includes("application/vnd.tinlance.twi-evidence+json")) {
         throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
       }
-      try {
-        return await response.json() as unknown;
-      } catch {
-        throw new TwiApiError("invalid_response", "The API returned malformed JSON.", response.status, requestId);
-      }
+      return await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The API response");
     } catch (error) {
       if (error instanceof TwiApiError) throw error;
       if (controller.signal.aborted) {
