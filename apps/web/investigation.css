@@ -31,3 +31,19 @@
 .source-snippet { margin: 0; color: var(--color-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
 .result-summary { margin-bottom: .3rem; color: var(--color-text); font-weight: 700; }
 .result-empty { color: var(--color-muted); }
+
+#cancel-job { margin-left: .5rem; }
+.run-lookup-panel { margin: 1rem 0 1.25rem; }
+#run-lookup-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: .7rem; }
+#run-lookup-form label { grid-column: 1 / -1; margin-bottom: -.4rem; color: var(--color-muted); font-size: .78rem; font-weight: 650; }
+#run-lookup-form input { min-width: 0; padding: .8rem .9rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-canvas); color: var(--color-text); }
+#run-lookup-form input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#run-lookup-form button { white-space: nowrap; }
+#run-lookup-form input:disabled, #run-lookup-form button:disabled { cursor: not-allowed; opacity: .6; }
+#cancel-job[hidden] { display: none !important; }
+@media (max-width: 600px) {
+  #run-lookup-form { grid-template-columns: minmax(0, 1fr); }
+  #run-lookup-form label { grid-column: auto; }
+  #run-lookup-form button { justify-self: start; }
+  #cancel-job { margin: .5rem 0 0; }
+}
