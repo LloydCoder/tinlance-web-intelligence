@@ -29,6 +29,7 @@
           <a class="nav-link" href="#verification"><span aria-hidden="true">✓</span> Verify</a>
           <a class="nav-link" href="#monitors"><span aria-hidden="true">◷</span> Monitors</a>
           <a class="nav-link" href="#developer"><span aria-hidden="true">&lt;/&gt;</span> Developer</a>
+          <a class="nav-link" href="#usage"><span aria-hidden="true">▥</span> Usage</a>
         </nav>
         <div class="sidebar-footer">
           <div class="environment-pill"><span class="status-dot" aria-hidden="true"></span> <span id="environment-label">Foundation mode</span></div>
@@ -227,6 +228,29 @@
               <p class="field-help">Verification reports quote matching against captured text. It does not assess factual truth or source authority. Replace template values with a real, accessible captured job.</p></div>
             <p id="developer-copy-status" role="status" aria-live="polite">Examples are templates. No request is sent from this reference panel.</p>
             <p class="field-help">Canonical details: <code>docs/api/jobs-v1.md</code>, <code>docs/api/evidence-packages-v1.md</code>, and <code>docs/api/monitors-v1.md</code>. Browser access requires a configured same-origin reverse proxy or explicitly approved HTTPS API origin.</p>
+          </section>
+          <section id="usage" class="panel usage-panel" aria-labelledby="usage-title">
+            <div class="panel-topline"><span class="panel-kicker">USAGE & ENTITLEMENTS</span><span class="quiet-badge">Tenant-scoped API</span></div>
+            <h2 id="usage-title">Inspect committed usage</h2>
+            <p>Read usage facts for the authenticated Platform principal. Tenant and subject are derived by TWI from the verified token; this screen does not allow identity switching or administer tenants.</p>
+            <div class="developer-notice" role="note"><strong>Scope and billing boundary</strong><p>Requires <code>twi:usage:read</code> or <code>twi:usage:read:any</code>. Usage facts and configured quotas are not invoice balances, payment settlement, tax, refunds, or provider billing status. Unsupported tenant-administration and credential-management actions are not exposed.</p></div>
+            <form id="usage-form" novalidate>
+              <label for="usage-dimension">Usage dimension</label>
+              <input id="usage-dimension" name="dimension" type="text" maxlength="80" pattern="[A-Za-z0-9_.:-]{1,80}" required disabled value="search_requests_month" autocomplete="off">
+              <label for="usage-period-start">Period start (ISO-8601 with timezone)</label>
+              <input id="usage-period-start" name="period_start" type="text" maxlength="40" required disabled placeholder="2026-10-01T00:00:00Z" autocomplete="off">
+              <label for="usage-limit">Events per page</label>
+              <select id="usage-limit" name="limit" disabled><option value="25">25</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option></select>
+              <label for="usage-cursor">Opaque cursor (optional)</label>
+              <input id="usage-cursor" name="cursor" type="text" maxlength="1024" disabled autocomplete="off" placeholder="Leave blank for the first page">
+              <div class="usage-actions"><button id="load-usage" class="button button-primary" type="submit" disabled>Load usage</button><button id="load-next-usage-page" class="button button-secondary" type="button" hidden disabled>Load next page</button></div>
+            </form>
+            <p id="usage-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider and provide a period start to load usage.</p>
+            <section id="usage-results" class="usage-results" aria-labelledby="usage-results-title" hidden>
+              <h3 id="usage-results-title">Usage response</h3>
+              <dl id="usage-summary" class="evidence-metadata"></dl>
+              <div class="usage-events-wrap"><table class="usage-events"><caption>Payload-free usage facts returned by TWI</caption><thead><tr><th scope="col">Occurred at</th><th scope="col">Feature</th><th scope="col">Quantity</th><th scope="col">Event ID</th></tr></thead><tbody id="usage-events"></tbody></table></div>
+            </section>
           </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
