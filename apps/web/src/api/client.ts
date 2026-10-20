@@ -1,7 +1,8 @@
 import { errorForStatus, TwiApiError } from "./errors.js";
-import { readBoundedJson } from "./json.js";
+import { readBoundedBytes, readBoundedJson } from "./json.js";
 import type {
   CreateJobRequest,
+  EvidenceExport,
   EvidencePackage,
   Job,
   JobKind,
@@ -290,8 +291,27 @@ export class TwiApiClient {
   }
 
   async exportEvidence(jobId: string): Promise<EvidencePackage> {
-    const value = await this.request(`/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`, { method: "GET" }, 60_000);
-    return await parseEvidencePackage(value);
+    return (await this.exportEvidencePackage(jobId)).evidence;
+  }
+
+  async exportEvidencePackage(jobId: string): Promise<EvidenceExport> {
+    const bytes = await this.request(
+      `/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`,
+      { method: "GET" },
+      60_000,
+      "bytes",
+      "application/vnd.tinlance.twi-evidence+json",
+    );
+    if (!(bytes instanceof Uint8Array)) {
+      throw new TwiApiError("invalid_response", "The API did not return evidence package bytes.");
+    }
+    let value: unknown;
+    try {
+      value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+    } catch {
+      throw new TwiApiError("invalid_response", "The evidence package response is not valid UTF-8 JSON.");
+    }
+    return { evidence: await parseEvidencePackage(value), bytes };
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
@@ -439,7 +459,7 @@ export class TwiApiClient {
     return value;
   }
 
-  private async request(path: string, init: RequestInit, timeoutMs = this.timeoutMs): Promise<unknown> {
+  private async request(path: string, init: RequestInit, timeoutMs = this.timeoutMs, responseMode: "json" | "bytes" = "json", expectedMediaType?: string): Promise<unknown | Uint8Array> {
     if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60_000) {
       throw new TwiApiError("configuration_error", "The API request timeout must be between 1000 and 60000 milliseconds.");
     }
@@ -484,8 +504,15 @@ export class TwiApiClient {
       if (!response.ok) throw errorForStatus(response.status, requestId);
       if (response.status === 204) return null;
       const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.toLowerCase().includes("application/json") && !contentType.toLowerCase().includes("application/vnd.tinlance.twi-evidence+json")) {
+      const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+      if (expectedMediaType && mediaType !== expectedMediaType.toLowerCase()) {
+        throw new TwiApiError("invalid_response", "The API returned an unexpected evidence media type.", response.status, requestId);
+      }
+      if (!mediaType.includes("application/json") && !mediaType.includes("application/vnd.tinlance.twi-evidence+json")) {
         throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
+      }
+      if (responseMode === "bytes") {
+        return await readBoundedBytes(response, MAX_API_RESPONSE_BYTES, "The API response", controller.signal);
       }
       return await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The API response", controller.signal);
     } catch (error) {
