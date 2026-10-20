@@ -417,11 +417,6 @@ function addCitationRow() {
   remove.type = 'button';
   remove.className = 'button button-secondary remove-citation';
   remove.textContent = 'Remove citation';
-  remove.addEventListener('click', () => {
-    row.remove();
-    updateVerificationControls();
-  });
-
   row.append(legend, jobLabel, jobId, quoteLabel, quote, remove);
   verificationCitations.append(row);
   updateVerificationControls();
@@ -505,6 +500,66 @@ function renderVerificationResponse(response) {
     }
   }
 }
+
+
+addCitationButton?.addEventListener('click', addCitationRow);
+
+verificationCitations?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const removeButton = target.closest('.remove-citation');
+  if (!removeButton || verifying) return;
+  const row = removeButton.closest('[data-citation-row]');
+  if (!row || getCitationRows().length <= 1) return;
+  row.remove();
+  updateVerificationControls();
+});
+
+verificationForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (verifying) return;
+  if (!isAuthorized || runtime.state !== 'ready') {
+    clearVerificationResult('Sign in with the approved Platform identity provider before verifying citations.');
+    return;
+  }
+  if (!verificationForm.reportValidity()) return;
+
+  const rows = getCitationRows();
+  if (rows.length < 1 || rows.length > 4) {
+    clearVerificationResult('Submit between one and four citations.');
+    return;
+  }
+  const citations = rows.map((row) => ({
+    job_id: row.querySelector('input[name="citation_job_id"]')?.value.trim() ?? '',
+    quote: row.querySelector('textarea[name="citation_quote"]')?.value ?? '',
+  }));
+  const request = {
+    claims: [{
+      claim_id: claimIdField?.value.trim() ?? '',
+      statement: claimStatementField?.value ?? '',
+      citations,
+    }],
+  };
+  const requestSessionEpoch = authSessionEpoch;
+  verifying = true;
+  clearVerificationResult('Submitting citations to TWI for comparison against accessible captured text. This does not assess factual truth.');
+  updateVerificationControls();
+  if (verifyClaimButton) verifyClaimButton.textContent = 'Checking citations…';
+  try {
+    const response = await runtime.apiClient.verifyResearch(request);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    renderVerificationResponse(response);
+  } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    clearVerificationResult(error instanceof Error
+      ? error.message
+      : 'Citation verification failed. No factual-truth conclusion was produced.');
+  } finally {
+    verifying = false;
+    updateVerificationControls();
+    if (verifyClaimButton) verifyClaimButton.textContent = 'Verify citations';
+  }
+});
 
 function showJob(job, message) {
   if (currentEvidenceJobId && currentEvidenceJobId !== job.job_id) clearEvidenceView();
