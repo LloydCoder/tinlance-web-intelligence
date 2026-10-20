@@ -99,6 +99,7 @@
             <div id="job-result-wrap" hidden><h3>Service result</h3><p class="field-help">This is the response returned by TWI. Interpret it alongside source attribution and provenance; it is not a truth guarantee.</p><div id="job-result" class="result-content"></div></div>
             <button id="refresh-job" class="button button-secondary" type="button" hidden>Refresh job status</button>
             <button id="cancel-job" class="button button-secondary" type="button" hidden disabled>Request cancellation</button>
+            <button id="export-evidence" class="button button-primary" type="button" hidden disabled>Inspect and export evidence</button>
           </section>
           <section class="section-heading lower-heading" id="runs">
             <div><p class="eyebrow">WORKSPACE MAP</p><h2>Designed around the evidence lifecycle</h2></div>
@@ -114,9 +115,17 @@
               <button id="lookup-run" class="button button-secondary" type="submit" disabled>Load run details</button>
             </form>
           </section>
+          <section id="evidence" class="panel evidence-panel" aria-labelledby="evidence-title" hidden>
+            <div class="panel-topline"><span class="panel-kicker">CAPTURED EVIDENCE</span><span class="quiet-badge">Integrity checked</span></div>
+            <h2 id="evidence-title">Evidence package</h2>
+            <p id="evidence-status" role="status" aria-live="polite">No evidence package loaded.</p>
+            <p class="field-help">The package records an acquisition observation. Content integrity validation does not establish source truth or source authority. Raw source URLs are not included in the package metadata.</p>
+            <dl id="evidence-metadata" class="evidence-metadata"></dl>
+            <button id="download-evidence" class="button button-secondary" type="button" disabled>Download exact evidence package</button>
+          </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
-            <article class="lifecycle-card" id="evidence"><span class="card-number">02</span><span class="lifecycle-icon" aria-hidden="true">▤</span><h3>Evidence</h3><p>Trace captured content to its source and acquisition metadata.</p><span class="card-status">Evidence view in F5</span></article>
+            <article class="lifecycle-card"><span class="card-number">02</span><span class="lifecycle-icon" aria-hidden="true">▤</span><h3>Evidence</h3><p>Inspect the validated acquisition package for a successful fetch job.</p><span class="card-status">Evidence package v1</span></article>
             <article class="lifecycle-card" id="monitors"><span class="card-number">03</span><span class="lifecycle-icon" aria-hidden="true">◷</span><h3>Monitors</h3><p>Manage explicit monitor runs supported by the existing API.</p><span class="card-status">Monitor UI planned</span></article>
           </section>
           <footer class="page-footer"><span>TINLYT <span aria-hidden="true">·</span> TINLANCE WEB INTELLIGENCE</span><span>Discover sources. Verify claims. Preserve evidence.</span></footer>
