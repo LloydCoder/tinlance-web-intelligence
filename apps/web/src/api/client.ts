@@ -508,7 +508,7 @@ export class TwiApiClient {
       if (expectedMediaType && mediaType !== expectedMediaType.toLowerCase()) {
         throw new TwiApiError("invalid_response", "The API returned an unexpected evidence media type.", response.status, requestId);
       }
-      if (!mediaType.includes("application/json") && !mediaType.includes("application/vnd.tinlance.twi-evidence+json")) {
+      if (mediaType !== "application/json" && mediaType !== "application/vnd.tinlance.twi-evidence+json") {
         throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
       }
       if (responseMode === "bytes") {
