@@ -40,7 +40,7 @@ export function buildJobRequest(
     }
     return { kind: "search", payload: { query, limit } };
   }
-  const url = absoluteUrl(rawUrl, rawKind);
+  const url = absoluteUrl(rawUrl, rawKind as "fetch" | "browser");
   if (rawKind === "fetch") return { kind: "fetch", payload: { url } };
   return { kind: "browser", payload: { url } };
 }
