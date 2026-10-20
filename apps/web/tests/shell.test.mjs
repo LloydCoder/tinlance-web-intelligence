@@ -92,6 +92,7 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
   assert.match(js, /Cancellation is not complete until the service reports a terminal cancelled state/);
   assert.match(js, /if \(polling\) return/);
   assert.match(js, /if \(cancelling\) return latestJob/);
+  assert.match(js, /const job = await runtime\.apiClient\.getJob\(activeJobId\);\s*\/\/ A request that started before cancellation must not overwrite the newer cancellation response\.\s*if \(cancelling\) return latestJob/);
   assert.match(js, /refreshButton\.disabled = !enabled \|\| polling \|\| cancelling/);
   assert.match(js, /refreshButton\.disabled = !isAuthorized \|\| polling/);
   assert.match(js, /job\.cancel_requested/);
