@@ -131,8 +131,8 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   const packageBody = {
     format: 'application/vnd.tinlance.twi-evidence+json',
     schema_version: '1.0.0',
-    export_id: `sha256:${'a'.repeat(64)}`,
-    artifact_id: `sha256:${'a'.repeat(64)}`,
+    export_id: `sha256:${hash}`,
+    artifact_id: `sha256:${'2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'}`,
     content_sha256: 'a'.repeat(64),
     content_type: 'text/html',
     byte_size: 5,
