@@ -94,5 +94,7 @@ export interface TwiApiClientOptions {
   tokenProvider: AccessTokenProvider;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Additional HTTPS API origins explicitly approved by deployment configuration. */
+  allowedOrigins?: readonly string[];
   idempotencyKeyFactory?: () => string;
 }
