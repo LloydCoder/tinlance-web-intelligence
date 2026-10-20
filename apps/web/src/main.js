@@ -277,6 +277,8 @@ async function refreshJob(showProgress = true) {
   if (cancelling) return latestJob;
   try {
     const job = await runtime.apiClient.getJob(activeJobId);
+    // A request that started before cancellation must not overwrite the newer cancellation response.
+    if (cancelling) return latestJob;
     showJob(job, 'Current job state returned by TWI.');
     return job;
   } catch {
