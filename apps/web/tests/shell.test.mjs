@@ -55,3 +55,10 @@ test('runtime configuration is loaded before the application and contains no cre
   assert.match(js, /getRuntime/);
   assert.match(html, /id="sign-in"/);
 });
+
+
+test('runtime readiness messaging never claims unverified API connectivity', () => {
+  assert.match(js, /Identity configuration ready/);
+  assert.match(js, /live operation flows remain in foundation mode/);
+  assert.match(js, /No investigation has been submitted/);
+});
