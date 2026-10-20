@@ -187,6 +187,12 @@
                 <button id="resume-monitor" class="button button-secondary" type="button" disabled>Resume</button>
                 <button id="delete-monitor" class="button button-danger" type="button" disabled>Delete and redact</button>
               </div>
+              <form id="monitor-run-lookup-form" novalidate>
+                <label for="monitor-run-id">Existing monitor run ID</label>
+                <input id="monitor-run-id" name="job_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off" disabled placeholder="Enter a run ID from a prior session">
+                <button id="lookup-monitor-run" class="button button-secondary" type="submit" disabled>Load run status</button>
+              </form>
+              <p class="field-help">Load a known run by ID after loading its monitor. Run history is not listed automatically; deleted monitors intentionally hide run summaries.</p>
               <p id="monitor-run-status" role="status" aria-live="polite">No run has been requested in this session.</p>
               <button id="refresh-monitor-run" class="button button-secondary" type="button" hidden disabled>Refresh run status</button>
               <dl id="monitor-run-metadata" class="evidence-metadata"></dl>
