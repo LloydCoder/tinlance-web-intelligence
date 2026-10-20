@@ -44,12 +44,21 @@ export interface Job {
 }
 
 export interface EvidencePackage {
-  schema_version: string;
-  content: string;
-  content_type: string;
+  format: "application/vnd.tinlance.twi-evidence+json";
+  schema_version: "1.0.0";
+  export_id: string;
+  artifact_id: string;
   content_sha256: string;
-  provenance: Record<string, unknown>;
+  content_type: string;
+  byte_size: number;
   source_revision: string;
+  provenance: Record<string, unknown>;
+  content_base64: string;
+  interpretation: {
+    provenance_kind: "acquisition_observation";
+    truth_assessment: "not_provided";
+    source_authority_assessment: "not_provided";
+  };
 }
 
 export interface CitationRequest {
