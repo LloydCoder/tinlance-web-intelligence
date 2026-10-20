@@ -208,3 +208,20 @@ test('developer reference documents supported contracts without exposing credent
   assert.match(js, /Clipboard access is unavailable in this context/);
   assert.doesNotMatch(html, /create API key|rotate API key|billing portal/i);
 });
+
+
+test('usage panel reads service-reported scoped facts and does not present invoices or fabricated history', () => {
+  assert.match(html, /id="usage" class="panel usage-panel"/);
+  assert.match(html, /id="usage-form"/);
+  assert.match(html, /id="usage-dimension"[^>]*disabled/);
+  assert.match(html, /id="usage-period"[^>]*disabled/);
+  assert.match(html, /id="load-usage"[^>]*disabled/);
+  assert.match(html, /id="usage-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="usage-next"[^>]*hidden[^>]*disabled/);
+  assert.match(html, /not an invoice, payment status, or billing-provider statement/i);
+  assert.match(js, /runtime\.apiClient\.getUsage\(dimension, period, limit, cursor\)/);
+  assert.match(js, /usageNextButton\?\.addEventListener\('click'/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /currentUsageCursor/);
+  assert.doesNotMatch(js, /localStorage/);
+});
