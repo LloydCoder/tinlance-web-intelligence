@@ -15,5 +15,5 @@
     "rootDir": "src",
     "outDir": "dist/src"
   },
-  "include": ["src/api/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
