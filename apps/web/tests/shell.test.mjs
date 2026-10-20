@@ -130,6 +130,9 @@ test('evidence inspector exposes validated provenance and exact-byte export with
 
 test('claim verification controls are wired to the scoped API and render citation matches as non-truth claims', () => {
   assert.match(html, /id="verification-form"/);
+  assert.match(html, /successful fetch or browser job/);
+  assert.match(html, /Captured source job ID/);
+  assert.match(js, /Captured source job ID/);
   assert.match(html, /id="verification-citations"/);
   assert.match(html, /id="add-citation"[^>]*type="button"/);
   assert.match(html, /id="verify-claim"[^>]*disabled/);
