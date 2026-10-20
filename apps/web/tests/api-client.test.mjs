@@ -496,6 +496,20 @@ test('monitor run client validates result outcome and baseline digest fields', a
     inconsistentOutcome.getMonitorRun('mon_01', 'job_monitor_01'),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
+  const changedWithSameDigest = makeClient(async () => new Response(JSON.stringify({
+    ...validRun,
+    result: {
+      ...validRun.result,
+      outcome: 'changed',
+      previous_digest: 'a'.repeat(64),
+      changed: true,
+      changed_units: 1
+    }
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    changedWithSameDigest.getMonitorRun('mon_01', 'job_monitor_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
   const staleCapture = makeClient(async () => new Response(JSON.stringify({
     ...validRun,
     result: { outcome: 'stale_capture', monitor_id: 'mon_01' }
