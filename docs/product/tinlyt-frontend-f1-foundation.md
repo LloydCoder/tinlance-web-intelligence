@@ -10,7 +10,7 @@
 - A responsive application shell with primary navigation, skip link, semantic landmarks, visible focus, reduced-motion support, and narrow-screen layout.
 - Design tokens and reusable CSS primitives for surfaces, typography, spacing, borders, status, forms, panels and navigation.
 - A truthful foundation-mode notice. Investigation submission, account controls, runs, evidence and monitors are visibly unavailable until the real API and identity integration are implemented.
-- A dependency-free Node test suite, source hygiene checks, JavaScript syntax checks and deterministic static asset build.
+- A dependency-free Node test suite, source hygiene checks, JavaScript syntax checks, a deterministic static asset build, and a minimal npm lockfile enforced by `npm ci`.
 - A separate GitHub Actions workflow that runs only when frontend files or the workflow change, with read-only repository permissions and concurrency cancellation.
 
 ## Security and product truth
@@ -19,11 +19,11 @@
 - The form is disabled; this phase does not simulate or fabricate job submission, run results, evidence, metrics, or account state.
 - The UI explicitly states that API integration is not configured.
 - Navigation state is presentation-only and is not an authorization mechanism.
-- The static build currently imports web fonts from Google Fonts. If the deployment requires strict self-hosting, privacy controls, or offline operation, vendor approved font files and remove the external import in a follow-up hardening change.
+- No third-party font, script, analytics, or image requests are made by the frontend foundation.
 
 ## Deliberate limitations
 
-This is a foundation, not a completed product. It does not yet implement authentication, API requests, route-level page rendering, job polling, cancellation, evidence export, verification, monitors, persistence, telemetry, or deployment. F2 must select and implement the approved identity integration and typed API client before any live workflow is enabled.
+This is a foundation, not a completed product. It does not yet implement authentication, API requests, route-level page rendering, job polling, cancellation, evidence export, verification, monitors, persistence, telemetry, or deployment. Before F2 adds interactive product workflows, record an architecture decision for the maintained frontend framework and typed API strategy. F2 must also integrate the approved Platform identity flow; do not introduce a separate identity or authorization plane. Keep all live workflows disabled until these choices are implemented and verified.
 
 ## Verification commands
 
