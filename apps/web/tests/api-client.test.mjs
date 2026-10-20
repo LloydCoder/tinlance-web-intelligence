@@ -224,3 +224,18 @@ test('rejects verification output that overstates factual truth', async () => {
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
 });
+
+
+test('rejects oversized API responses before parsing JSON', async () => {
+  const client = makeClient(async () => new Response('{}', {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'content-length': '30000001'
+    }
+  }));
+  await assert.rejects(
+    client.getJob('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
