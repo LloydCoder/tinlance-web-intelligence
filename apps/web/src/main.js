@@ -118,6 +118,10 @@ let activeMonitor = null;
 let activeMonitorRunId = null;
 let monitorBusy = false;
 let monitorRunPolling = false;
+let pendingMonitorCreateFingerprint = null;
+let pendingMonitorCreateKey = null;
+let pendingMonitorRunMonitorId = null;
+let pendingMonitorRunKey = null;
 
 function setLiveControlsEnabled(enabled) {
   authSessionEpoch += 1;
@@ -606,6 +610,13 @@ verificationForm?.addEventListener('submit', async (event) => {
 });
 
 
+function createMonitorIdempotencyKey() {
+  if (!globalThis.crypto || typeof globalThis.crypto.randomUUID !== 'function') {
+    throw new Error('Secure random generation is unavailable; no monitor request was submitted.');
+  }
+  return `tinlyt-${globalThis.crypto.randomUUID()}`;
+}
+
 function isTerminalMonitorRunStatus(status) {
   return ['succeeded', 'failed', 'cancelled'].includes(status);
 }
@@ -645,6 +656,10 @@ function clearMonitorRunView() {
 
 function clearMonitorView() {
   activeMonitor = null;
+  pendingMonitorCreateFingerprint = null;
+  pendingMonitorCreateKey = null;
+  pendingMonitorRunMonitorId = null;
+  pendingMonitorRunKey = null;
   if (monitorCreateForm) monitorCreateForm.reset();
   if (monitorLookupForm) monitorLookupForm.reset();
   if (monitorDetails) monitorDetails.hidden = true;
@@ -659,6 +674,14 @@ function clearMonitorView() {
 }
 
 function renderMonitor(monitor, message) {
+  if (activeMonitor && activeMonitor.monitor_id !== monitor.monitor_id) {
+    pendingMonitorRunMonitorId = null;
+    pendingMonitorRunKey = null;
+  }
+  if (monitor.status === 'deleted') {
+    pendingMonitorRunMonitorId = null;
+    pendingMonitorRunKey = null;
+  }
   activeMonitor = monitor;
   if (monitorIdField) monitorIdField.value = monitor.monitor_id;
   if (monitorDetails) monitorDetails.hidden = false;
@@ -813,14 +836,22 @@ monitorCreateForm?.addEventListener('submit', async (event) => {
     }
     request.policy = { max_bytes: maxBytes };
   }
+  const fingerprint = JSON.stringify(request);
+  if (pendingMonitorCreateFingerprint !== fingerprint || !pendingMonitorCreateKey) {
+    pendingMonitorCreateFingerprint = fingerprint;
+    pendingMonitorCreateKey = null;
+  }
   monitorBusy = true;
   const requestSessionEpoch = authSessionEpoch;
   updateMonitorControls();
   if (monitorStatus) monitorStatus.textContent = 'Creating the tenant-scoped monitor. TWI will not echo the target URL.';
   let created = null;
   try {
-    created = await runtime.apiClient.createMonitor(request);
+    pendingMonitorCreateKey ??= createMonitorIdempotencyKey();
+    created = await runtime.apiClient.createMonitor(request, pendingMonitorCreateKey);
     if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    pendingMonitorCreateFingerprint = null;
+    pendingMonitorCreateKey = null;
     clearMonitorRunView();
     renderMonitor(created, 'Monitor created. Save its ID to load it again; the current API does not provide a monitor-list endpoint.');
     if (monitorTargetUrlField) monitorTargetUrlField.value = '';
@@ -879,8 +910,14 @@ runMonitorButton?.addEventListener('click', async () => {
   if (monitorRunStatus) monitorRunStatus.textContent = 'Enqueuing one explicit monitor run. No recurring schedule is created.';
   let run = null;
   try {
-    run = await runtime.apiClient.runMonitor(monitorId);
+    if (pendingMonitorRunMonitorId !== monitorId || !pendingMonitorRunKey) {
+      pendingMonitorRunMonitorId = monitorId;
+      pendingMonitorRunKey = createMonitorIdempotencyKey();
+    }
+    run = await runtime.apiClient.runMonitor(monitorId, pendingMonitorRunKey);
     if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeMonitor?.monitor_id !== monitorId) return;
+    pendingMonitorRunMonitorId = null;
+    pendingMonitorRunKey = null;
     activeMonitorRunId = run.job_id;
     renderMonitorRun(run);
   } catch (error) {
