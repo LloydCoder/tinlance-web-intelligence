@@ -1451,7 +1451,7 @@ async function loadUsage(cursor = null) {
   const period = usagePeriodField.value.trim();
   const limit = Number(usageLimitField?.value ?? 100);
   const requestSessionEpoch = authSessionEpoch;
-  if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(dimension) || !period || !Number.isFinite(Date.parse(period)) || !/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(period) || !Number.isInteger(limit) || limit < 1 || limit > 500) {
+  if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(dimension) || !period || !Number.isFinite(Date.parse(period)) || !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(period) || !Number.isInteger(limit) || limit < 1 || limit > 500) {
     if (usageStatus) usageStatus.textContent = 'Enter a valid usage dimension, timezone-aware period start, and page size.';
     return;
   }
