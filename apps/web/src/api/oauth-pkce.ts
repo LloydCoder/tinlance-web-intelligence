@@ -130,11 +130,14 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     this.replaceUrl(url.toString());
 
     this.storage.removeItem(TRANSACTION_KEY);
+    if (!state || state.length > 256 || !transaction || state !== transaction.state) {
+      throw new TwiApiError("authentication_required", "The OAuth callback state is missing or invalid.");
+    }
     if (oauthError) {
       throw new TwiApiError("authentication_required", "The identity provider rejected authorization.");
     }
-    if (!code || code.length > 4096 || !state || state.length > 256 || !transaction || state !== transaction.state) {
-      throw new TwiApiError("authentication_required", "The OAuth callback state is missing or invalid.");
+    if (!code || code.length > 4096) {
+      throw new TwiApiError("authentication_required", "The OAuth authorization code is missing or invalid.");
     }
     if (this.now() - transaction.createdAt > TRANSACTION_TTL_MS || this.now() < transaction.createdAt) {
       throw new TwiApiError("authentication_required", "The OAuth authorization transaction expired.");
