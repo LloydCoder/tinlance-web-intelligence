@@ -103,6 +103,9 @@ test('evidence inspector exposes validated provenance and exact-byte export with
   assert.match(html, /id="export-evidence"[^>]*hidden disabled/);
   assert.match(html, /id="evidence" class="panel evidence-panel"/);
   assert.match(html, /id="evidence-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="evidence-integrity-badge" class="quiet-badge">Awaiting package/);
+  assert.match(js, /evidenceIntegrityBadge\.textContent = 'Digest verified'/);
+  assert.match(js, /evidenceIntegrityBadge\.textContent = 'Awaiting package'/);
   assert.match(html, /id="evidence-metadata" class="evidence-metadata"/);
   assert.match(html, /id="download-evidence"[^>]*disabled/);
   assert.match(html, /does not establish source truth or source authority/);
