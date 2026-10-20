@@ -14,6 +14,7 @@ interface PkceTransaction {
 }
 
 export interface OAuthPkceConfig {
+  issuer: string;
   authorizationEndpoint: string;
   tokenEndpoint: string;
   clientId: string;
@@ -39,6 +40,7 @@ export interface OAuthPkceConfig {
  * expiry, tenant, subject and delegated-scope validation.
  */
 export class OAuthPkceTokenProvider implements AccessTokenProvider {
+  private readonly issuer: string;
   private readonly authorizationEndpoint: URL;
   private readonly tokenEndpoint: URL;
   private readonly redirectUri: URL;
@@ -65,6 +67,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     if (!config.resource || config.resource !== config.resource.trim()) {
       throw new TwiApiError("configuration_error", "The TWI API audience/resource is required.");
     }
+    this.issuer = this.parseIssuer(config.issuer, config.trustedIssuerOrigins);
     this.authorizationEndpoint = this.parseTrustedEndpoint(config.authorizationEndpoint, config.trustedIssuerOrigins);
     this.tokenEndpoint = this.parseTrustedEndpoint(config.tokenEndpoint, config.trustedIssuerOrigins);
     if (this.authorizationEndpoint.origin !== this.tokenEndpoint.origin) {
@@ -125,6 +128,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     const oauthError = url.searchParams.get("error");
+    const responseIssuer = url.searchParams.get("iss");
     const transaction = this.readTransaction();
 
     // Remove one-time OAuth parameters from the visible URL before exchanging the code.
@@ -132,11 +136,17 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     url.searchParams.delete("state");
     url.searchParams.delete("error");
     url.searchParams.delete("error_description");
+    url.searchParams.delete("error_uri");
+    url.searchParams.delete("iss");
+    url.searchParams.delete("session_state");
     this.replaceUrl(url.toString());
 
     this.storage.removeItem(TRANSACTION_KEY);
     if (!state || state.length > 256 || !transaction || state !== transaction.state) {
       throw new TwiApiError("authentication_required", "The OAuth callback state is missing or invalid.");
+    }
+    if (responseIssuer && responseIssuer !== this.issuer) {
+      throw new TwiApiError("authentication_required", "The OAuth response issuer did not match the configured identity issuer.");
     }
     if (oauthError) {
       throw new TwiApiError("authentication_required", "The identity provider rejected authorization.");
@@ -224,6 +234,31 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     this.accessToken = null;
     this.expiresAt = 0;
     this.storage.removeItem(TRANSACTION_KEY);
+  }
+
+  private parseIssuer(value: string, trustedOrigins: readonly string[]): string {
+    let issuer: URL;
+    try { issuer = new URL(value); } catch {
+      throw new TwiApiError("configuration_error", "The identity issuer must be an absolute HTTPS URL.");
+    }
+    if (
+      issuer.protocol !== "https:"
+      || issuer.username
+      || issuer.password
+      || issuer.search
+      || issuer.hash
+      || !trustedOrigins.some((origin) => {
+        try {
+          const parsed = new URL(origin);
+          return parsed.protocol === "https:" && parsed.origin === issuer.origin;
+        } catch {
+          return false;
+        }
+      })
+    ) {
+      throw new TwiApiError("configuration_error", "The identity issuer must use an explicitly trusted HTTPS origin.");
+    }
+    return value;
   }
 
   private parseTrustedEndpoint(value: string, trustedOrigins: readonly string[]): URL {
