@@ -18,6 +18,7 @@ const compile = spawnSync(process.execPath, [
 ], { stdio: 'inherit' });
 if (compile.status !== 0) process.exit(compile.status ?? 1);
 await cp(path.join(root, 'index.html'), path.join(out, 'index.html'));
+await cp(path.join(root, 'runtime-config.js'), path.join(out, 'runtime-config.js'));
 await cp(path.join(root, 'styles.css'), path.join(out, 'styles.css'));
 await cp(path.join(root, 'src/main.js'), path.join(out, 'src/main.js'));
 console.log('Tinlyt frontend built at apps/web/dist');
