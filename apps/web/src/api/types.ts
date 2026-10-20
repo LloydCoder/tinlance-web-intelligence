@@ -119,6 +119,9 @@ export interface VerifyResearchResponse {
   status: "all_citations_match_captured_text" | "citation_mismatch";
   factual_truth_assessed: false;
   claims: VerifiedClaim[];
+  source_count: number;
+  claim_count: number;
+  citation_count: number;
 }
 
 export interface AccessTokenProvider {
