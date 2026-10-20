@@ -58,7 +58,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | Phase | Scope | Exit evidence |
 |---|---|---|
 | F0 | Repository, frontend, API, CI and risk inventory | Audit report reviewed; CI green on exact commit. |
-| F1 | Design system, frontend workspace, app shell and frontend CI | Reproducible locked install, lint/typecheck/tests/build/security checks, accessible responsive primitives. |
+| F1 | Design system, frontend workspace, app shell and frontend CI | Reproducible locked install, lint, JavaScript syntax validation, static security checks, tests/build, accessible responsive primitives. TypeScript typechecking is required once a TypeScript application is adopted; the current JavaScript syntax check must not be described as a typecheck. |
 | F2 | Auth integration and typed API client | Approved identity integration; no browser-held privileged secrets; typed errors, idempotency and cancellation behavior tested. |
 | F3 | Investigation submission and result experience | Supported search/fetch/browser requests; real job lifecycle; partial, blocked, empty and failure states. |
 | F4 | Run detail and lifecycle | Accurate server states, safe polling/cancel behavior, accessible logs where provided. |
