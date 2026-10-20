@@ -55,8 +55,8 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
   assert.match(js, /activeJobId = null/);
   assert.match(js, /runtime\\.apiClient\\.getJob\(requestedId\)/);
   assert.match(js, /runtime\\.apiClient\\.cancelJob\(activeJobId\)/);
-  assert.match(js, /window\\.confirm/);
-  assert.match(js, /job\\.cancel_requested/);
+  assert.match(js, /window\.confirm/);
+  assert.match(js, /job\.cancel_requested/);
 });
 
 test('styles retain visible focus, responsive behavior and reduced motion', () => {
