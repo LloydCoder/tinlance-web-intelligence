@@ -30,6 +30,14 @@ The only verified customer-facing administrative/usage capability in this phase 
 - Usage event output is validated against the requested dimension and period; pagination metadata and counts are checked for consistency.
 - No invoice balance or payment settlement claim is made.
 
+
+## Forensic findings and remediation
+
+- The first Frontend workflow exposed an overbroad negative assertion: it treated truthful explanatory copy about invoice balances as an unsupported invoice UI. The test now checks for actual unsupported control IDs instead of rejecting accurate boundary language.
+- Review identified a stale-request cleanup race: a request from a prior auth-session epoch could reset the shared loading state after sign-out/re-authentication. The finally block now mutates loading/control state only when its captured session epoch still matches.
+- The response parser rejects mismatched event dimension/period, inconsistent quota arithmetic, invalid event fields, and invalid has_more/cursor combinations.
+- Session epoch checks prevent old responses from rendering after identity changes; usage results and cursors are not persisted in browser storage.
+
 ## Acceptance gates
 
 1. Exact-head Frontend workflow passes locked install, lint, syntax check, TypeScript, dependency audit, static security, tests, and build.
