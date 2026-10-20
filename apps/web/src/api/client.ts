@@ -327,6 +327,14 @@ export class TwiApiClient {
       || !/^[0-9a-f]{64}$/.test(value.report_sha256)
       || !["all_citations_match_captured_text", "citation_mismatch"].includes(String(value.status))
       || value.factual_truth_assessed !== false
+      || typeof value.source_count !== "number"
+      || !Number.isInteger(value.source_count)
+      || value.source_count < 0
+      || typeof value.claim_count !== "number"
+      || !Number.isInteger(value.claim_count)
+      || typeof value.citation_count !== "number"
+      || !Number.isInteger(value.citation_count)
+      || value.citation_count < 1
       || !Array.isArray(value.claims)
       || value.claims.length < 1
       || value.claims.length > 20
@@ -383,6 +391,10 @@ export class TwiApiClient {
     });
     if (!claimsValid) {
       throw new TwiApiError("invalid_response", "The API returned malformed claim or citation evidence.");
+    }
+    const actualCitationCount = value.claims.reduce((total, claim) => total + (isRecord(claim) && Array.isArray(claim.citations) ? claim.citations.length : 0), 0);
+    if (value.claim_count !== value.claims.length || value.citation_count !== actualCitationCount || value.source_count > value.citation_count) {
+      throw new TwiApiError("invalid_response", "The verification report counts conflict with its contents.");
     }
     const allMatched = value.claims.every((claim) => isRecord(claim) && claim.citation_status === "all_citations_match_captured_text");
     if ((value.status === "all_citations_match_captured_text") !== allMatched) {
