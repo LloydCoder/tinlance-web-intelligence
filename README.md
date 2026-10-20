@@ -52,6 +52,7 @@ npm run lint
 npm run syntax-check
 npm run typecheck
 npm run security
+npm audit --audit-level=high
 npm test
 npm run build
 ```
