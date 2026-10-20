@@ -28,6 +28,7 @@
           <a class="nav-link" href="#evidence"><span aria-hidden="true">▤</span> Evidence</a>
           <a class="nav-link" href="#verification"><span aria-hidden="true">✓</span> Verify</a>
           <a class="nav-link" href="#monitors"><span aria-hidden="true">◷</span> Monitors</a>
+          <a class="nav-link" href="#developer"><span aria-hidden="true">&lt;/&gt;</span> Developer</a>
         </nav>
         <div class="sidebar-footer">
           <div class="environment-pill"><span class="status-dot" aria-hidden="true"></span> <span id="environment-label">Foundation mode</span></div>
@@ -197,6 +198,35 @@
               <button id="refresh-monitor-run" class="button button-secondary" type="button" hidden disabled>Refresh run status</button>
               <dl id="monitor-run-metadata" class="evidence-metadata"></dl>
             </section>
+          </section>
+          <section id="developer" class="panel developer-panel" aria-labelledby="developer-title">
+            <div class="panel-topline"><span class="panel-kicker">DEVELOPER REFERENCE</span><span class="quiet-badge">API v1</span></div>
+            <h2 id="developer-title">Build on the TWI contracts</h2>
+            <p>Use the documented HTTP API with a Platform-issued access token whose audience is the configured TWI API. These examples describe existing contracts; they do not create credentials or prove that a deployment is configured.</p>
+            <div class="developer-notice" role="note"><strong>Security boundary</strong><p>Never paste access tokens into this page, commit them to source control, or place them in URLs. Obtain tokens through the configured Platform identity flow or an approved trusted runtime. Tenant, subject, scopes, acquisition policy and idempotency are enforced by TWI.</p></div>
+            <div class="developer-endpoints"><h3>Supported endpoints</h3><ul>
+              <li><code>POST /v1/jobs</code> — create search, fetch, or browser jobs; requires <code>Idempotency-Key</code> and matching <code>twi:search</code>, <code>twi:fetch</code>, or <code>twi:browser</code> scope.</li>
+              <li><code>GET /v1/jobs/{job_id}</code> — inspect a tenant-scoped job with <code>twi:jobs:read</code>.</li>
+              <li><code>POST /v1/jobs/{job_id}/cancel</code> — request cooperative cancellation with <code>twi:jobs:cancel</code>.</li>
+              <li><code>GET /v1/jobs/{job_id}/evidence</code> — export a successful in-scope fetch job with <code>twi:evidence:export</code>.</li>
+              <li><code>POST /v1/research/verify</code> — compare bounded citations against captured text with <code>twi:research:verify</code>.</li>
+              <li><code>/v1/monitors</code> — create/read monitors and explicitly enqueue, inspect, pause, resume, or delete using documented monitor scopes.</li>
+            </ul></div>
+            <div class="developer-example"><div class="panel-topline"><h3>Create a search job</h3><button class="button button-secondary copy-example" type="button" data-copy-target="developer-search-example">Copy example</button></div>
+              <pre><code id="developer-search-example">curl --fail-with-body --request POST "$TWI_API_BASE_URL/v1/jobs" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: $TWI_IDEMPOTENCY_KEY" \
+  --data '{"kind":"search","payload":{"query":"primary sources for a published claim","limit":5}}'</code></pre>
+              <p class="field-help">Set variables in your trusted runtime. Use a fresh idempotency key for a new logical operation; reuse it only when retrying that same request.</p></div>
+            <div class="developer-example"><div class="panel-topline"><h3>Verify captured citations</h3><button class="button button-secondary copy-example" type="button" data-copy-target="developer-verify-example">Copy example</button></div>
+              <pre><code id="developer-verify-example">curl --fail-with-body --request POST "$TWI_API_BASE_URL/v1/research/verify" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"claims":[{"claim_id":"claim-1","statement":"The source makes this statement.","citations":[{"job_id":"REPLACE_WITH_CAPTURED_JOB_ID","quote":"REPLACE_WITH_AN_EXACT_QUOTE_FROM_CAPTURED_TEXT"}]}]}'</code></pre>
+              <p class="field-help">Verification reports quote matching against captured text. It does not assess factual truth or source authority. Replace template values with a real, accessible captured job.</p></div>
+            <p id="developer-copy-status" role="status" aria-live="polite">Examples are templates. No request is sent from this reference panel.</p>
+            <p class="field-help">Canonical details: <code>docs/api/jobs-v1.md</code>, <code>docs/api/evidence-packages-v1.md</code>, and <code>docs/api/monitors-v1.md</code>. Browser access requires a configured same-origin reverse proxy or explicitly approved HTTPS API origin.</p>
           </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
