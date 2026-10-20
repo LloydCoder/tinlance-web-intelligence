@@ -26,6 +26,9 @@ test('primary navigation and main landmark are labelled', () => {
 
 test('live investigation controls are disabled until authentication completes', () => {
   assert.match(html, /id="investigation-form"/);
+  assert.match(html, /id="run-lookup-form"/);
+  assert.match(html, /id="run-id"[^>]*disabled/);
+  assert.match(html, /id="cancel-job"[^>]*hidden disabled/);
   assert.match(html, /id="submit-investigation"[^>]*disabled/);
   assert.match(html, /id="job-kind"[^>]*disabled/);
   assert.match(html, /id="sign-in"/);
@@ -50,6 +53,10 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
   assert.match(js, /TWI reports that this job failed/);
   assert.match(js, /TWI reports that this job was cancelled/);
   assert.match(js, /activeJobId = null/);
+  assert.match(js, /runtime\\.apiClient\\.getJob\(requestedId\)/);
+  assert.match(js, /runtime\\.apiClient\\.cancelJob\(activeJobId\)/);
+  assert.match(js, /window\\.confirm/);
+  assert.match(js, /job\\.cancel_requested/);
 });
 
 test('styles retain visible focus, responsive behavior and reduced motion', () => {
