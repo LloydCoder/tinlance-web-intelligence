@@ -174,6 +174,8 @@ test('monitor interface exposes only the documented explicit lifecycle and never
   assert.match(js, /runtime\.apiClient\.pauseMonitor\(monitorId\)/);
   assert.match(js, /runtime\.apiClient\.resumeMonitor\(monitorId\)/);
   assert.match(js, /runtime\.apiClient\.deleteMonitor\(monitorId\)/);
+  assert.match(js, /Captured source job: \\${citation\.job_id}/);
+  assert.doesNotMatch(js, /Captured fetch job:/);
   assert.match(js, /Delete this monitor and redact its stored target, policy, and run summaries/);
   assert.match(js, /already accepted worker lease may finish/);
   assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
