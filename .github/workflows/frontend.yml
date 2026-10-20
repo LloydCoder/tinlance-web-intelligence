@@ -5,11 +5,13 @@ on:
     paths:
       - "apps/web/**"
       - ".github/workflows/frontend.yml"
+      - "docs/product/tinlyt-frontend-*.md"
   push:
     branches: [main]
     paths:
       - "apps/web/**"
       - ".github/workflows/frontend.yml"
+      - "docs/product/tinlyt-frontend-*.md"
   workflow_dispatch:
 
 permissions:
