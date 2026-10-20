@@ -111,9 +111,18 @@ function parseEvidencePackage(value: unknown): EvidencePackage {
     || typeof value.content_base64 !== "string"
     || typeof value.content_type !== "string"
     || typeof value.content_sha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(value.content_sha256)
+    || typeof value.export_id !== "string"
+    || !/^sha256:[0-9a-f]{64}$/.test(value.export_id)
+    || typeof value.artifact_id !== "string"
+    || !/^sha256:[0-9a-f]{64}$/.test(value.artifact_id)
     || typeof value.byte_size !== "number"
+    || !Number.isInteger(value.byte_size)
+    || value.byte_size < 0
+    || value.byte_size > 20_000_000
     || !isRecord(value.provenance)
     || typeof value.source_revision !== "string"
+    || !/^[0-9a-f]{40}$/.test(value.source_revision)
     || !isRecord(value.interpretation)
     || value.interpretation.provenance_kind !== "acquisition_observation"
     || value.interpretation.truth_assessment !== "not_provided"
@@ -128,8 +137,8 @@ function validateCreateRequest(request: CreateJobRequest): void {
   if (!request || !JOB_KINDS.has(request.kind) || !isRecord(request.payload)) {
     throw new TwiApiError("validation_error", "The job request is invalid.");
   }
-  const payload = request.payload;
   if (request.kind === "search") {
+    const payload = request.payload;
     if (
       typeof payload.query !== "string"
       || payload.query.trim().length < 1
@@ -140,6 +149,7 @@ function validateCreateRequest(request: CreateJobRequest): void {
       throw new TwiApiError("validation_error", "The search request does not match the supported contract.");
     }
   } else if (request.kind === "fetch") {
+    const payload = request.payload;
     if (
       typeof payload.url !== "string"
       || Object.keys(payload).some((key) => key !== "url")
@@ -154,6 +164,7 @@ function validateCreateRequest(request: CreateJobRequest): void {
       throw new TwiApiError("validation_error", "The fetch URL scheme or authority is not supported.");
     }
   } else {
+    const payload = request.payload;
     if (
       typeof payload.url !== "string"
       || (payload.wait_until !== undefined && !["domcontentloaded", "load"].includes(String(payload.wait_until)))
