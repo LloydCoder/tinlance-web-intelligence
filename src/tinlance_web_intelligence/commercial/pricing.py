@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Literal, Mapping
+from typing import Mapping
 
 
 PRICING_VERSION = 1
