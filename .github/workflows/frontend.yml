@@ -43,6 +43,9 @@ jobs:
       - name: JavaScript syntax check
         working-directory: apps/web
         run: npm run syntax-check
+      - name: TypeScript typecheck
+        working-directory: apps/web
+        run: npm run typecheck
       - name: Static security checks
         working-directory: apps/web
         run: npm run security
