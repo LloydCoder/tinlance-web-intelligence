@@ -13,7 +13,8 @@
     "security": "node scripts/security-check.mjs",
     "test": "node scripts/test.mjs",
     "build": "node scripts/build.mjs",
-    "check": "npm run lint && npm run syntax-check && npm run typecheck && npm run security && npm test && npm run build"
+    "check": "npm run lint && npm run syntax-check && npm run typecheck && npm run security && npm test && npm run build",
+    "release-check": "node scripts/release-check.mjs"
   },
   "type": "module",
   "devDependencies": {

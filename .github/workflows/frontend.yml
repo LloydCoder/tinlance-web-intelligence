@@ -5,11 +5,13 @@ on:
     paths:
       - "apps/web/**"
       - ".github/workflows/frontend.yml"
+      - "docs/product/tinlyt-frontend-*.md"
   push:
     branches: [main]
     paths:
       - "apps/web/**"
       - ".github/workflows/frontend.yml"
+      - "docs/product/tinlyt-frontend-*.md"
   workflow_dispatch:
 
 permissions:
@@ -58,6 +60,9 @@ jobs:
       - name: Build
         working-directory: apps/web
         run: npm run build
+      - name: Production artifact HTTP smoke check
+        working-directory: apps/web
+        run: npm run release-check
       - name: Install pinned Playwright browser test runner
         run: python -m pip install --disable-pip-version-check --no-input playwright==1.64.0
       - name: Install Chromium for accessibility and responsive tests
