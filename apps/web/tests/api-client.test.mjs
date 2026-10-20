@@ -607,6 +607,15 @@ test('usage client rejects malformed pagination, inconsistent quotas and invalid
     malformed.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
+  const partialEntitlement = makeClient(async () => new Response(JSON.stringify({
+    ...base,
+    plan_id: null,
+    plan_version: null
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    partialEntitlement.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
   const wrongResponseDimension = makeClient(async () => new Response(JSON.stringify({
     ...base,
     dimension: 'fetch_requests_month'
