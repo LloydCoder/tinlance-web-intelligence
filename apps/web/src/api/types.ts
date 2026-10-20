@@ -143,6 +143,31 @@ export interface VerifyResearchResponse {
   citation_count: number;
 }
 
+export interface UsageEvent {
+  event_id: string;
+  feature: string;
+  dimension: string;
+  period_start: string;
+  quantity: number;
+  occurred_at: string;
+  schema_version: 1;
+}
+
+export interface UsageResponse {
+  schema_version: 1;
+  dimension: string;
+  period_start: string;
+  used: number;
+  quota_limit: number | null;
+  remaining: number | null;
+  plan_id: string | null;
+  plan_version: number | null;
+  events: UsageEvent[];
+  returned: number;
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
 export interface AccessTokenProvider {
   /**
    * Returns a short-lived, audience-bound Platform access token for the TWI API.
