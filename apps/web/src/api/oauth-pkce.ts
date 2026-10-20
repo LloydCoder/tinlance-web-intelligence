@@ -148,6 +148,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     });
 
     let response: Response;
+    let tokenResponse: unknown;
     const controller = new AbortController();
     const timeout = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -163,23 +164,22 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
         credentials: "omit",
         cache: "no-store",
       });
-    } catch {
+      if (!response.ok) {
+        throw new TwiApiError("authentication_required", "The identity provider could not issue a TWI access token.", response.status);
+      }
+      try {
+        tokenResponse = await response.json() as unknown;
+      } catch {
+        throw new TwiApiError("invalid_response", "The identity provider returned malformed token data.", response.status);
+      }
+    } catch (error) {
+      if (error instanceof TwiApiError) throw error;
       if (controller.signal.aborted) {
         throw new TwiApiError("request_timeout", "The identity token endpoint timed out.");
       }
       throw new TwiApiError("network_error", "The identity token endpoint could not be reached.");
     } finally {
       globalThis.clearTimeout(timeout);
-    }
-    if (!response.ok) {
-      throw new TwiApiError("authentication_required", "The identity provider could not issue a TWI access token.", response.status);
-    }
-
-    let tokenResponse: unknown;
-    try {
-      tokenResponse = await response.json() as unknown;
-    } catch {
-      throw new TwiApiError("invalid_response", "The identity provider returned malformed token data.", response.status);
     }
     if (
       !this.isRecord(tokenResponse)
