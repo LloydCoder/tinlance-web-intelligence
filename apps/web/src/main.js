@@ -99,7 +99,20 @@ function showJob(job, message) {
   if (!statusPanel) return;
   statusPanel.hidden = false;
   if (statusBadge) statusBadge.textContent = job.status;
-  if (statusMessage) statusMessage.textContent = message;
+  if (statusMessage) {
+    const stateMessages = {
+      queued: 'TWI reports that this job is queued.',
+      running: 'TWI reports that this job is running.',
+      succeeded: job.result === null
+        ? 'TWI reports success but returned no result payload.'
+        : 'TWI reports success. Acquisition success does not establish factual truth.',
+      failed: job.error_code
+        ? 'TWI reports that this job failed. Error code: ' + job.error_code
+        : 'TWI reports that this job failed. Detailed diagnostics are not available in this response.',
+      cancelled: 'TWI reports that this job was cancelled.',
+    };
+    statusMessage.textContent = isTerminalJobStatus(job.status) ? stateMessages[job.status] : message;
+  }
   if (metadataList) {
     metadataList.replaceChildren();
     const entries = [
@@ -177,6 +190,7 @@ form?.addEventListener('submit', async (event) => {
     return;
   }
   submitting = true;
+  activeJobId = null;
   submitButton.disabled = true;
   submitButton.textContent = 'Submitting…';
   if (statusPanel) statusPanel.hidden = false;
