@@ -28,6 +28,7 @@
           <a class="nav-link" href="#evidence"><span aria-hidden="true">▤</span> Evidence</a>
           <a class="nav-link" href="#verification"><span aria-hidden="true">✓</span> Verify</a>
           <a class="nav-link" href="#monitors"><span aria-hidden="true">◷</span> Monitors</a>
+          <a class="nav-link" href="#usage"><span aria-hidden="true">▥</span> Usage</a>
           <a class="nav-link" href="#developer"><span aria-hidden="true">&lt;/&gt;</span> Developer</a>
         </nav>
         <div class="sidebar-footer">
@@ -198,6 +199,25 @@
               <button id="refresh-monitor-run" class="button button-secondary" type="button" hidden disabled>Refresh run status</button>
               <dl id="monitor-run-metadata" class="evidence-metadata"></dl>
             </section>
+          </section>
+          <section id="usage" class="panel usage-panel" aria-labelledby="usage-title">
+            <div class="panel-topline"><span class="panel-kicker">ACCOUNT USAGE</span><span class="quiet-badge">Service-reported facts</span></div>
+            <h2 id="usage-title">Usage and allowance</h2>
+            <p>Inspect usage facts returned by TWI for a configured dimension and period. This is not an invoice, payment status, or billing-provider statement. The API enforces your tenant and subject scopes.</p>
+            <form id="usage-form" novalidate>
+              <label for="usage-dimension">Usage dimension</label>
+              <input id="usage-dimension" name="dimension" type="text" maxlength="80" pattern="[A-Za-z0-9_.:-]{1,80}" value="requests_month" required disabled autocomplete="off">
+              <label for="usage-period">Period start (timezone-aware ISO-8601)</label>
+              <input id="usage-period" name="period_start" type="text" maxlength="40" value="" required disabled autocomplete="off">
+              <label for="usage-limit">Events per page</label>
+              <select id="usage-limit" name="limit" disabled><option value="25">25</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option></select>
+              <button id="load-usage" class="button button-primary" type="submit" disabled>Load usage</button>
+            </form>
+            <p class="field-help">Use the dimension configured for your tenant plan. The API returns HTTP 503 when configured entitlement state or a requested quota dimension is unavailable.</p>
+            <p id="usage-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider to read scoped usage.</p>
+            <dl id="usage-metadata" class="evidence-metadata"></dl>
+            <div id="usage-events" class="usage-events"></div>
+            <button id="usage-next" class="button button-secondary" type="button" hidden disabled>Next page</button>
           </section>
           <section id="developer" class="panel developer-panel" aria-labelledby="developer-title">
             <div class="panel-topline"><span class="panel-kicker">DEVELOPER REFERENCE</span><span class="quiet-badge">API v1</span></div>
