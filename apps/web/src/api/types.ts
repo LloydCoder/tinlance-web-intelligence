@@ -142,3 +142,9 @@ export interface TwiApiClientOptions {
   allowedOrigins?: readonly string[];
   idempotencyKeyFactory?: () => string;
 }
+
+export interface EvidenceExport {
+  evidence: EvidencePackage;
+  /** Exact validated response bytes from the evidence endpoint; do not reserialize before download. */
+  bytes: Uint8Array;
+}
