@@ -104,6 +104,11 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
 
   async handleCallback(callbackUrl?: string): Promise<void> {
     const url = new URL(callbackUrl ?? this.currentUrl());
+    if (url.origin !== this.redirectUri.origin || url.pathname !== this.redirectUri.pathname) {
+      throw new TwiApiError("authentication_required", "The OAuth callback URL does not match the configured redirect URI.");
+    }
+    this.accessToken = null;
+    this.expiresAt = 0;
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     const oauthError = url.searchParams.get("error");
@@ -171,7 +176,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       || tokenResponse.token_type.toLowerCase() !== "bearer"
       || typeof tokenResponse.expires_in !== "number"
       || !Number.isInteger(tokenResponse.expires_in)
-      || tokenResponse.expires_in < 1
+      || tokenResponse.expires_in <= TOKEN_REFRESH_SKEW_MS / 1000
       || tokenResponse.expires_in > 86_400
     ) {
       throw new TwiApiError("invalid_response", "The identity provider returned an unsupported token response.");
@@ -249,6 +254,9 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
         || typeof value.state !== "string"
         || typeof value.verifier !== "string"
         || typeof value.createdAt !== "number"
+      || !Number.isFinite(value.createdAt)
+      || !/^[A-Za-z0-9_-]{43}$/.test(value.state)
+      || !/^[A-Za-z0-9_-]{64}$/.test(value.verifier)
       ) return null;
       return { state: value.state, verifier: value.verifier, createdAt: value.createdAt };
     } catch {
