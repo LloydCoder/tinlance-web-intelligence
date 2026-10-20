@@ -243,3 +243,17 @@ test('rejects oversized API responses before parsing JSON', async () => {
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
 });
+
+
+test('bounds Platform access-token provider latency', async () => {
+  const client = new TwiApiClient({
+    baseUrl: '/api/twi',
+    tokenProvider: { getAccessToken: () => new Promise(() => {}) },
+    timeoutMs: 1000,
+    fetchImpl: async () => { throw new Error('fetch must not be called'); }
+  });
+  await assert.rejects(
+    client.getJob('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'request_timeout'
+  );
+});
