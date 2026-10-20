@@ -281,7 +281,7 @@ export class TwiApiClient {
   }
 
   async exportEvidence(jobId: string): Promise<EvidencePackage> {
-    const value = await this.request(`/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`, { method: "GET" });
+    const value = await this.request(`/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`, { method: "GET" }, 60_000);
     return await parseEvidencePackage(value);
   }
 
@@ -426,7 +426,10 @@ export class TwiApiClient {
     return value;
   }
 
-  private async request(path: string, init: RequestInit): Promise<unknown> {
+  private async request(path: string, init: RequestInit, timeoutMs = this.timeoutMs): Promise<unknown> {
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60_000) {
+      throw new TwiApiError("configuration_error", "The API request timeout must be between 1000 and 60000 milliseconds.");
+    }
     let token: string;
     let tokenTimeout: ReturnType<typeof globalThis.setTimeout> | undefined;
     try {
@@ -435,7 +438,7 @@ export class TwiApiClient {
         new Promise<string>((_resolve, reject) => {
           tokenTimeout = globalThis.setTimeout(
             () => reject(new TwiApiError("request_timeout", "The Platform identity provider timed out.")),
-            this.timeoutMs,
+            timeoutMs,
           );
         }),
       ]);
@@ -450,7 +453,7 @@ export class TwiApiClient {
     }
 
     const controller = new AbortController();
-    const timeout = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await this.fetchImpl(new URL(path.replace(/^\//, ""), `${this.baseUrl.replace(/\/$/, "")}/`), {
         ...init,
