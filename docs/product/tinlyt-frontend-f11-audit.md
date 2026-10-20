@@ -1,8 +1,8 @@
 # Tinlyt Frontend F11 — Production Artifact and Release Qualification
 
 **Phase:** F11  
-**Status:** Exact-head Frontend and full repository CI passed; final acceptance awaits merge and post-merge CI.  
-**Implementation head audited:** `0bfea2472d7f2f550eea7cedf9b331be98810f23`  
+**Status:** Accepted for repository implementation after exact-head and post-merge Frontend/full-repository CI passed.  
+**Implementation head audited:** `fcafa2705509fff17851a49e3251823095fc01b3`  
 **Scope:** deterministic validation of the built static artifact and a loopback HTTP delivery smoke test.
 
 ## Implementation
@@ -19,8 +19,8 @@ The workflow path filters now include `docs/product/tinlyt-frontend-*.md`, so ph
 
 ## Exact-head validation evidence
 
-- Frontend workflow run [#39405667576](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39405667576) — success on implementation head `0bfea2472d7f2f550eea7cedf9b331be98810f23`.
-- Full repository CI run [#39405667756](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39405667756) — success on the same head. Python 3.12, Python 3.13, browser-container isolation and reproducible artifact validation passed.
+- Frontend workflow run [#39406088452](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39406088452) — success on implementation head `fcafa2705509fff17851a49e3251823095fc01b3`.
+- Full repository CI run [#39406088353](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39406088353) — success on the same head. Python 3.12, Python 3.13, browser-container isolation and reproducible artifact validation passed.
 - The initial failed Frontend attempt was on the preceding head and was superseded by the corrected, green run above.
 
 ## Forensic boundaries
@@ -36,9 +36,9 @@ The workflow path filters now include `docs/product/tinlyt-frontend-*.md`, so ph
 - [x] Exact PR-head Frontend workflow passes including `npm run release-check`.
 - [x] Exact PR-head full repository CI passes (Python 3.12/3.13, browser-container isolation and reproducible artifact validation).
 - [x] Forensic review confirms missing assets, wrong MIME types, traversal attempts and invalid methods fail without weakening assertions.
-- [ ] Post-merge Frontend and full repository CI pass on the exact main commit.
+- [x] Post-merge Frontend workflow [#39406472939](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39406472939) and full repository CI [#39406472729](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39406472729) both pass on main merge commit `bd8efebf88fa249fdad8db98d7099a33794fed25`.
 - [ ] Deployment-specific smoke, identity/API, security-header and operational evidence is tracked separately before any deployment or release-readiness claim.
 
 ## Acceptance decision
 
-The repository implementation is provisionally qualified at the exact PR head. F11 will be accepted only after merge, post-merge Frontend/full-repository CI, and final audit-ledger reconciliation. External deployment qualification remains open until exercised against an explicitly configured target environment.
+F11 repository implementation is accepted: PR #92 merged at `bd8efebf88fa249fdad8db98d7099a33794fed25`; exact-head and post-merge Frontend/full-repository CI passed. External deployment qualification remains open until exercised against an explicitly configured target environment. The remaining unchecked deployment-specific gate is intentionally separate from repository implementation acceptance.
