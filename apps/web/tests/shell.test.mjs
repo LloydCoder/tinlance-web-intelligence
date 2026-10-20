@@ -112,5 +112,9 @@ test('evidence inspector exposes validated provenance and exact-byte export with
   assert.match(js, /Requested URL SHA-256/);
   assert.match(js, /Final URL SHA-256/);
   assert.match(js, /source truth and source authority not assessed/);
+  assert.match(js, /let authSessionEpoch = 0/);
+  assert.match(js, /authSessionEpoch \+= 1/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /activeJobId = null;\s*latestJob = null/);
   assert.match(js, /!isAuthorized \|\| activeJobId !== requestedJobId/);
 });
