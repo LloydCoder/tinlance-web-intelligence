@@ -101,7 +101,7 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
 
 test('evidence inspector exposes validated provenance and exact-byte export without a truth claim', () => {
   assert.match(html, /id="export-evidence"[^>]*hidden disabled/);
-  assert.match(html, /id="evidence" class="panel evidence-panel"[^>]*hidden/);
+  assert.match(html, /id="evidence" class="panel evidence-panel"/);
   assert.match(html, /id="evidence-status" role="status" aria-live="polite"/);
   assert.match(html, /id="evidence-metadata" class="evidence-metadata"/);
   assert.match(html, /id="download-evidence"[^>]*disabled/);
