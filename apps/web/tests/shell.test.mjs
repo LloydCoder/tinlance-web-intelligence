@@ -92,7 +92,7 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
   assert.match(js, /Cancellation is not complete until the service reports a terminal cancelled state/);
   assert.match(js, /if \(polling\) return/);
   assert.match(js, /if \(cancelling\) return latestJob/);
-  assert.match(js, /const job = await runtime\.apiClient\.getJob\(activeJobId\);\s*\/\/ A request that started before cancellation must not overwrite the newer cancellation response\.\s*if \(cancelling\) return latestJob/);
+  assert.match(js, /const job = await runtime\.apiClient\.getJob\(requestedJobId\)/);
   assert.match(js, /refreshButton\.disabled = !enabled \|\| polling \|\| cancelling/);
   assert.match(js, /refreshButton\.disabled = !isAuthorized \|\| polling/);
   assert.match(js, /job\.cancel_requested/);
@@ -118,5 +118,5 @@ test('evidence inspector exposes validated provenance and exact-byte export with
   assert.match(js, /authSessionEpoch \+= 1/);
   assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
   assert.match(js, /activeJobId = null;\s*latestJob = null/);
-  assert.match(js, /!isAuthorized \|\| activeJobId !== requestedJobId/);
+  assert.match(js, /!isAuthorized \|\| authSessionEpoch !== requestSessionEpoch \|\| activeJobId !== requestedJobId/);
 });
