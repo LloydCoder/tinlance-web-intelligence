@@ -43,6 +43,25 @@ export interface Job {
   cancel_requested: boolean;
 }
 
+export type MonitorStatus = "active" | "paused" | "deleted";
+
+export interface Monitor {
+  monitor_id: string;
+  status: MonitorStatus;
+  baseline_digest: string | null;
+  baseline_observed_at: string | null;
+  baseline_version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonitorCreateRequest {
+  target_url: string;
+  policy?: { max_bytes?: number };
+}
+
+export type MonitorRun = Omit<Job, "kind"> & { kind: "monitor" };
+
 export interface EvidenceProvenance {
   schema_version: "1.0.0";
   requested_url_sha256: string;

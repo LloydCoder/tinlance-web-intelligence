@@ -158,10 +158,50 @@
               <div id="verified-claims" class="verified-claims"></div>
             </section>
           </section>
+          <section id="monitors" class="panel monitor-panel" aria-labelledby="monitors-title">
+            <div class="panel-topline"><span class="panel-kicker">CHANGE MONITORS</span><span class="quiet-badge">Explicit runs only</span></div>
+            <h2 id="monitors-title">Monitor a public web target</h2>
+            <p>Monitors store a tenant- and subject-scoped target and compare captured text digests. This interface starts runs only when you ask; recurrence belongs to Agent OS. TWI does not return the target URL in monitor responses.</p>
+            <form id="monitor-create-form" novalidate>
+              <label for="monitor-target-url">Target URL</label>
+              <input id="monitor-target-url" name="target_url" type="url" maxlength="4096" required disabled autocomplete="url" placeholder="https://example.com/page">
+              <p class="field-help">Use a public HTTP(S) URL. The server enforces the safe acquisition policy. Do not include credentials or secrets in URLs; query values are not echoed by the API.</p>
+              <label for="monitor-max-bytes">Maximum response bytes (optional)</label>
+              <input id="monitor-max-bytes" name="max_bytes" type="number" min="1" step="1" inputmode="numeric" disabled placeholder="Use service default">
+              <button id="create-monitor" class="button button-primary" type="submit" disabled>Create monitor</button>
+            </form>
+            <div class="monitor-lookup-divider" aria-hidden="true"></div>
+            <form id="monitor-lookup-form" novalidate>
+              <label for="monitor-id">Existing monitor ID</label>
+              <input id="monitor-id" name="monitor_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required disabled autocomplete="off" placeholder="Enter a monitor ID">
+              <button id="lookup-monitor" class="button button-secondary" type="submit" disabled>Load monitor</button>
+            </form>
+            <p class="field-help">There is no monitor-list endpoint in the current API. Load a monitor by its ID; this page does not invent or persist a list of recent monitors.</p>
+            <p id="monitor-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider to create or inspect tenant-scoped monitors.</p>
+            <section id="monitor-details" class="monitor-details" aria-labelledby="monitor-details-title" hidden>
+              <h3 id="monitor-details-title">Monitor details</h3>
+              <dl id="monitor-metadata" class="evidence-metadata"></dl>
+              <div class="monitor-actions">
+                <button id="run-monitor" class="button button-primary" type="button" disabled>Run now</button>
+                <button id="pause-monitor" class="button button-secondary" type="button" disabled>Pause</button>
+                <button id="resume-monitor" class="button button-secondary" type="button" disabled>Resume</button>
+                <button id="delete-monitor" class="button button-danger" type="button" disabled>Delete and redact</button>
+              </div>
+              <form id="monitor-run-lookup-form" novalidate>
+                <label for="monitor-run-id">Existing monitor run ID</label>
+                <input id="monitor-run-id" name="job_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off" disabled placeholder="Enter a run ID from a prior session">
+                <button id="lookup-monitor-run" class="button button-secondary" type="submit" disabled>Load run status</button>
+              </form>
+              <p class="field-help">Load a known run by ID after loading its monitor. Run history is not listed automatically; deleted monitors intentionally hide run summaries.</p>
+              <p id="monitor-run-status" role="status" aria-live="polite">No run has been requested in this session.</p>
+              <button id="refresh-monitor-run" class="button button-secondary" type="button" hidden disabled>Refresh run status</button>
+              <dl id="monitor-run-metadata" class="evidence-metadata"></dl>
+            </section>
+          </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
             <article class="lifecycle-card"><span class="card-number">02</span><span class="lifecycle-icon" aria-hidden="true">▤</span><h3>Evidence</h3><p>Inspect the validated acquisition package for a successful fetch job.</p><span class="card-status">Evidence package v1</span></article>
-            <article class="lifecycle-card" id="monitors"><span class="card-number">03</span><span class="lifecycle-icon" aria-hidden="true">◷</span><h3>Monitors</h3><p>Manage explicit monitor runs supported by the existing API.</p><span class="card-status">Monitor UI planned</span></article>
+
           </section>
           <footer class="page-footer"><span>TINLYT <span aria-hidden="true">·</span> TINLANCE WEB INTELLIGENCE</span><span>Discover sources. Verify claims. Preserve evidence.</span></footer>
         </main>
