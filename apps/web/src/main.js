@@ -66,9 +66,9 @@ const isExpectedCallback = Boolean(callbackPath && currentUrl.pathname === callb
 if (hasOAuthResponse && runtime.state === 'ready' && isExpectedCallback) {
   runtime.handleCallback().then(() => {
     if (signInButton) {
-      signInButton.disabled = true;
-      signInButton.textContent = 'Signed in';
-      signInButton.setAttribute('aria-label', 'Signed in; account menu is not available yet');
+      signInButton.disabled = false;
+      signInButton.textContent = 'Reauthenticate';
+      signInButton.setAttribute('aria-label', 'Reauthenticate with Platform');
     }
     showMode(
       'Identity authorization completed',
