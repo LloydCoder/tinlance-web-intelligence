@@ -17,6 +17,7 @@ files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'), path.jo
 const checks = [
   ['dynamic code execution', /\beval\s*\(|\bnew\s+Function\s*\(/i],
   ['unsafe document writing', /document\.write\s*\(/i],
+  ['unsafe HTML injection sink', /(?:\.innerHTML\s*=|\.outerHTML\s*=|\.insertAdjacentHTML\s*\()/i],
   ['inline event handler', /\son[a-z]+\s*=/i],
   ['javascript URL', /javascript\s*:/i],
   ['external resource load', /(?:<(?:script|link)\b[^>]+(?:src|href)\s*=\s*["']https?:\/\/|@import\s+url\(\s*["']?https?:\/\/)/i],

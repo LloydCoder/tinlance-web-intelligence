@@ -1330,7 +1330,10 @@ form?.addEventListener('submit', async (event) => {
     submitting = false;
     if (submitButton) {
       submitButton.disabled = !isAuthorized;
-      submitButton.innerHTML = 'Start investigation <span aria-hidden="true">→</span>';
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '→';
+      submitButton.replaceChildren(document.createTextNode('Start investigation '), arrow);
     }
     if (lookupButton) lookupButton.disabled = !isAuthorized;
   }

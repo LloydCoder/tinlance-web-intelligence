@@ -67,7 +67,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | F7 | Collections and monitors | Monitors follow existing API; persistent collections remain gated on a real persistence contract. |
 | F8 | Developer experience | API docs/examples generated or checked against canonical schemas; no invented credential controls. |
 | F9 | Tenant administration and usage | Only APIs/scopes that exist; tenant boundaries tested; unsupported billing/admin features omitted. |
-| F10 | Accessibility, security and resilience | Keyboard/screen-reader, contrast, responsive, XSS/content isolation, dependency and failure-path checks. |
+| F10 | Accessibility, security and resilience | Keyboard/screen-reader, contrast including forced-colors, responsive, XSS/content isolation, dependency and failure-path checks; source-level checks reject unsafe HTML injection sinks. |
 | F11 | End-to-end release qualification | Exact-commit frontend/backend contract tests and deployment-specific smoke evidence; no unsupported beta/GA claims. |
 
 Each phase is accepted only after its own criteria and forensic review pass. A scaffold, documentation-only merge, or successful compile is insufficient. Frontend CI does not close external TWI release gates.

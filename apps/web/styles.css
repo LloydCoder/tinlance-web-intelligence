@@ -141,3 +141,28 @@ textarea::placeholder { color: var(--color-subtle); }
 }
 @media (max-width: 420px) { .heading-mark { display: none; } .breadcrumb { gap: .4rem; } .section-index { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
+
+
+/* F10: preserve keyboard affordances and system high-contrast preferences. */
+:where(input, select, textarea, button, a, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 3px;
+}
+:where(input, select, textarea, button):disabled {
+  cursor: not-allowed;
+}
+@media (forced-colors: active) {
+  :where(input, select, textarea, button, a, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+  .nav-link.is-active,
+  .button-primary,
+  .quiet-badge,
+  .status-dot {
+    forced-color-adjust: auto;
+    border: 1px solid ButtonText;
+  }
+  .status-dot { background: CanvasText; box-shadow: none; }
+}
