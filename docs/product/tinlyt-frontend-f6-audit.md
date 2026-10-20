@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-10-20  
 **Phase:** F6 — Claim verification  
-**Status:** Implementation merged; post-merge repository CI is pending at the time of this draft. Do not treat F6 as closed until the gate below is green.
+**Status:** Accepted for repository implementation after exact-head and post-merge Frontend/repository CI passed. Production integration remains a separate deployment gate.
 
 ## Scope and exact-commit evidence
 
@@ -14,7 +14,7 @@ F6 connects the claim-verification panel to the existing TWI research verificati
 - Exact-head Frontend workflow: [#39393076817](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39393076817) — success.
 - Exact-head repository CI: [#39393076842](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39393076842) — success.
 - Post-merge Frontend workflow: [#39393404371](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39393404371) — success.
-- Post-merge repository CI: [#39393404382](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39393404382) — pending at draft time; verify before accepting this audit.
+- Post-merge repository CI: [#39393404382](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39393404382) — success.
 
 ## Forensic findings and remediation
 
@@ -42,7 +42,7 @@ Claim statements, quotes, identifiers, metadata, and source details are rendered
 
 ## Test evidence
 
-The exact-head Frontend workflow passed its locked dependency install, lint/source hygiene, JavaScript syntax check, TypeScript typecheck, dependency audit, static security checks, tests, and build. The full repository CI passed its Python 3.12 and 3.13 quality/test jobs, browser container isolation checks, and reproducible release artifact validation on the exact PR head. Post-merge Frontend passed. The post-merge full repository CI result must be verified before the exit decision is final.
+The exact-head Frontend workflow passed its locked dependency install, lint/source hygiene, JavaScript syntax check, TypeScript typecheck, dependency audit, static security checks, tests, and build. The full repository CI passed its Python 3.12 and 3.13 quality/test jobs, browser container isolation checks, and reproducible release artifact validation on the exact PR head. Both post-merge Frontend and full repository CI passed on merge commit `806954d1e35a7c88258fea8835e95d968af7018b`.
 
 ## Residual limitations and non-claims
 
@@ -53,4 +53,4 @@ The exact-head Frontend workflow passed its locked dependency install, lint/sour
 
 ## F6 exit decision
 
-**Pending final post-merge CI verification.** Accept F6 for repository implementation only after the post-merge repository CI linked above is green, this audit is reconciled with the final run, and the audit closeout is merged.
+**Accepted for repository implementation.** Exact-head Frontend/repository CI and both post-merge main workflows passed. The findings above were fixed before merge. Proceed to F7 without treating repository CI as production deployment certification.
