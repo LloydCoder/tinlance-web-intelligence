@@ -1,6 +1,26 @@
 import { getRuntime } from "./app/runtime.js";
 import { buildJobRequest, isTerminalJobStatus } from "./app/investigation.js";
 
+const developerCopyStatus = document.querySelector('#developer-copy-status');
+const developerCopyButtons = document.querySelectorAll('[data-copy-target]');
+for (const button of developerCopyButtons) {
+  button.addEventListener('click', async () => {
+    const targetId = button.getAttribute('data-copy-target');
+    const target = targetId ? document.getElementById(targetId) : null;
+    const value = target?.textContent ?? '';
+    if (!value) {
+      if (developerCopyStatus) developerCopyStatus.textContent = 'This example is unavailable.';
+      return;
+    }
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(value);
+      if (developerCopyStatus) developerCopyStatus.textContent = 'Example copied. Replace template values and keep credentials in your trusted runtime.';
+    } catch {
+      if (developerCopyStatus) developerCopyStatus.textContent = 'Clipboard access is unavailable in this context. Select and copy the example manually; no request was sent.';
+    }
+  });
+}
 const activeLinks = document.querySelectorAll('.nav-link');
 for (const link of activeLinks) {
   link.addEventListener('click', () => {
