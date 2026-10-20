@@ -42,6 +42,9 @@ test('job response uses text rendering and announces status accessibly', () => {
   assert.match(js, /safeWebUrl/);
   assert.match(js, /appendSourceLink/);
   assert.match(js, /link\.rel = 'noopener noreferrer'/);
+  assert.match(js, /sourceUrl\.search \|\| sourceUrl\.hash/);
+  assert.match(js, /query and fragment omitted for privacy/);
+  assert.match(js, /const safeDisplayUrl = sourceUrl\.origin \+ sourceUrl\.pathname/);
   assert.match(js, /appendText\(resultContainer, 'pre', 'result-json'/);
   assert.doesNotMatch(js, /innerHTML\s*=\s*serialized/);
 });
