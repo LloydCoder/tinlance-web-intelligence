@@ -412,7 +412,7 @@ export class TwiApiClient {
       if (!contentType.toLowerCase().includes("application/json") && !contentType.toLowerCase().includes("application/vnd.tinlance.twi-evidence+json")) {
         throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
       }
-      return await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The API response");
+      return await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The API response", controller.signal);
     } catch (error) {
       if (error instanceof TwiApiError) throw error;
       if (controller.signal.aborted) {
