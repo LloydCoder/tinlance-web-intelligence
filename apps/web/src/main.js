@@ -41,6 +41,12 @@ const resultWrap = document.querySelector('#job-result-wrap');
 const resultContainer = document.querySelector('#job-result');
 const refreshButton = document.querySelector('#refresh-job');
 const cancelJobButton = document.querySelector('#cancel-job');
+const exportEvidenceButton = document.querySelector('#export-evidence');
+const evidencePanel = document.querySelector('#evidence');
+const evidenceStatus = document.querySelector('#evidence-status');
+const evidenceIntegrityBadge = document.querySelector('#evidence-integrity-badge');
+const evidenceMetadata = document.querySelector('#evidence-metadata');
+const downloadEvidenceButton = document.querySelector('#download-evidence');
 const runLookupForm = document.querySelector('#run-lookup-form');
 const runIdField = document.querySelector('#run-id');
 const lookupButton = document.querySelector('#lookup-run');
@@ -66,13 +72,18 @@ try {
 }
 
 let isAuthorized = false;
+let authSessionEpoch = 0;
 let activeJobId = null;
 let submitting = false;
 let polling = false;
 let cancelling = false;
 let latestJob = null;
+let exportingEvidence = false;
+let currentEvidenceBytes = null;
+let currentEvidenceJobId = null;
 
 function setLiveControlsEnabled(enabled) {
+  authSessionEpoch += 1;
   for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton]) {
     if (control) control.disabled = !enabled;
   }
@@ -82,9 +93,23 @@ function setLiveControlsEnabled(enabled) {
     signInButton.setAttribute('aria-label', enabled ? 'Clear the local Tinlyt session' : 'Sign in to Tinlyt');
   }
   if (refreshButton) refreshButton.disabled = !enabled || polling || cancelling;
-  if (!enabled && cancelJobButton) {
-    cancelJobButton.hidden = true;
-    cancelJobButton.disabled = true;
+  if (!enabled) {
+    activeJobId = null;
+    latestJob = null;
+    if (statusPanel) statusPanel.hidden = true;
+    if (metadataList) metadataList.replaceChildren();
+    if (resultContainer) resultContainer.replaceChildren();
+    if (resultWrap) resultWrap.hidden = true;
+    if (refreshButton) refreshButton.hidden = true;
+    if (cancelJobButton) {
+      cancelJobButton.hidden = true;
+      cancelJobButton.disabled = true;
+    }
+    if (exportEvidenceButton) {
+      exportEvidenceButton.hidden = true;
+      exportEvidenceButton.disabled = true;
+    }
+    clearEvidenceView();
   }
   if (connectionBadge) connectionBadge.textContent = enabled ? 'Authenticated' : 'Not connected';
   if (systemState) systemState.textContent = enabled ? 'Identity ready' : 'API disconnected';
@@ -92,6 +117,9 @@ function setLiveControlsEnabled(enabled) {
   if (sidebarStatus) sidebarStatus.textContent = enabled
     ? 'Authenticated. Job access is still governed by Platform scopes and TWI tenant/subject authorization.'
     : 'Sign in with the approved Platform identity provider to submit live jobs.';
+  if (enabled && !currentEvidenceJobId && evidenceStatus) {
+    evidenceStatus.textContent = 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
+  }
 }
 
 function updateKindFields() {
@@ -213,8 +241,81 @@ function renderJobResult(job) {
     : serialized);
 }
 
+function clearEvidenceView() {
+  currentEvidenceBytes = null;
+  currentEvidenceJobId = null;
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceStatus) evidenceStatus.textContent = !isAuthorized
+    ? runtime.state === 'ready'
+      ? 'Sign in with the approved Platform identity provider to inspect evidence from an accessible successful fetch job.'
+      : 'Evidence export is disabled because the approved identity configuration is not ready.'
+    : 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
+  if (evidenceMetadata) evidenceMetadata.replaceChildren();
+  if (evidenceIntegrityBadge) evidenceIntegrityBadge.textContent = 'Awaiting package';
+  if (downloadEvidenceButton) downloadEvidenceButton.disabled = true;
+}
+
+function renderEvidencePackage(jobId, evidence, bytes) {
+  currentEvidenceBytes = bytes;
+  currentEvidenceJobId = jobId;
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceIntegrityBadge) evidenceIntegrityBadge.textContent = 'Digest verified';
+  if (evidenceStatus) {
+    evidenceStatus.textContent = 'Package schema, captured byte size, and content SHA-256 validated. This detects content modification; it is not a digital signature or a truth verdict.';
+  }
+  if (evidenceMetadata) {
+    evidenceMetadata.replaceChildren();
+    const entries = [
+      ['Format', evidence.format],
+      ['Schema version', evidence.schema_version],
+      ['Export ID', evidence.export_id],
+      ['Artifact ID', evidence.artifact_id],
+      ['Captured content SHA-256', evidence.content_sha256],
+      ['Content type', evidence.content_type],
+      ['Captured bytes', String(evidence.byte_size)],
+      ['Source revision', evidence.source_revision],
+      ['Observed HTTP status', String(evidence.provenance.status_code)],
+      ['Retrieved at', evidence.provenance.retrieved_at],
+      ['Requested URL SHA-256', evidence.provenance.requested_url_sha256],
+      ['Final URL SHA-256', evidence.provenance.final_url_sha256],
+      ['Redirect count', String(evidence.provenance.redirect_count)],
+      ['Extractor version', evidence.provenance.extractor_version],
+      ['Interpretation', 'Acquisition observation; source truth and source authority not assessed'],
+    ];
+    for (const [label, value] of entries) {
+      const term = document.createElement('dt');
+      term.textContent = label;
+      const description = document.createElement('dd');
+      description.textContent = value;
+      evidenceMetadata.append(term, description);
+    }
+  }
+  if (downloadEvidenceButton) downloadEvidenceButton.disabled = !isAuthorized || !(bytes instanceof Uint8Array);
+}
+
+function downloadExactEvidencePackage() {
+  if (!isAuthorized || !currentEvidenceBytes || !currentEvidenceJobId) return;
+  const blob = new Blob([currentEvidenceBytes], { type: 'application/vnd.tinlance.twi-evidence+json' });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = `twi-evidence-${currentEvidenceJobId}.json`;
+  link.rel = 'noopener';
+  link.hidden = true;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  globalThis.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 function showJob(job, message) {
+  if (currentEvidenceJobId && currentEvidenceJobId !== job.job_id) clearEvidenceView();
   latestJob = job;
+  if (exportEvidenceButton) {
+    const exportable = isAuthorized && job.kind === 'fetch' && job.status === 'succeeded' && job.result !== null;
+    exportEvidenceButton.hidden = !exportable;
+    exportEvidenceButton.disabled = !exportable || exportingEvidence;
+  }
   if (!statusPanel) return;
   statusPanel.hidden = false;
   if (statusBadge) statusBadge.textContent = job.status;
@@ -272,16 +373,22 @@ function wait(milliseconds) {
 }
 
 async function refreshJob(showProgress = true) {
-  if (!activeJobId || runtime.state !== 'ready' || !isAuthorized) return;
+  const requestedJobId = activeJobId;
+  const requestSessionEpoch = authSessionEpoch;
+  if (!requestedJobId || runtime.state !== 'ready' || !isAuthorized) return;
   // Do not let a GET already in the polling loop overwrite the state returned by a cancellation POST.
   if (cancelling) return latestJob;
   try {
-    const job = await runtime.apiClient.getJob(activeJobId);
+    const job = await runtime.apiClient.getJob(requestedJobId);
+    // Discard results from an earlier session or an old job selection.
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId) return null;
     // A request that started before cancellation must not overwrite the newer cancellation response.
     if (cancelling) return latestJob;
     showJob(job, 'Current job state returned by TWI.');
     return job;
   } catch {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId) return null;
+    if (cancelling) return latestJob;
     if (statusMessage) statusMessage.textContent = 'The latest job state could not be retrieved. Check the connection and retry; the existing job may still be running.';
     if (refreshButton) refreshButton.hidden = false;
     return null;
@@ -327,6 +434,13 @@ form?.addEventListener('submit', async (event) => {
   }
   submitting = true;
   activeJobId = null;
+  latestJob = null;
+  clearEvidenceView();
+  if (exportEvidenceButton) {
+    exportEvidenceButton.hidden = true;
+    exportEvidenceButton.disabled = true;
+  }
+  const requestSessionEpoch = authSessionEpoch;
   submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
   submitButton.textContent = 'Submitting…';
@@ -338,6 +452,7 @@ form?.addEventListener('submit', async (event) => {
   if (refreshButton) refreshButton.hidden = true;
   try {
     const job = await runtime.apiClient.createJob(request);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = job.job_id;
     showJob(job, 'TWI accepted the request. Waiting for the service-reported job state.');
     await pollJob(job);
@@ -369,6 +484,13 @@ runLookupForm?.addEventListener('submit', async (event) => {
     return;
   }
   submitting = true;
+  clearEvidenceView();
+  latestJob = null;
+  if (exportEvidenceButton) {
+    exportEvidenceButton.hidden = true;
+    exportEvidenceButton.disabled = true;
+  }
+  const requestSessionEpoch = authSessionEpoch;
   if (lookupButton) lookupButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
   if (statusPanel) statusPanel.hidden = false;
@@ -381,10 +503,12 @@ runLookupForm?.addEventListener('submit', async (event) => {
   activeJobId = null;
   try {
     const job = await runtime.apiClient.getJob(requestedId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = job.job_id;
     showJob(job, 'Current job state returned by TWI.');
     await pollJob(job);
   } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     activeJobId = null;
     if (statusBadge) statusBadge.textContent = 'Run lookup failed';
     if (statusMessage) statusMessage.textContent = error instanceof Error
@@ -399,9 +523,54 @@ runLookupForm?.addEventListener('submit', async (event) => {
   }
 });
 
+exportEvidenceButton?.addEventListener('click', async () => {
+  const requestedJobId = activeJobId;
+  const requestSessionEpoch = authSessionEpoch;
+  if (
+    !requestedJobId
+    || !isAuthorized
+    || exportingEvidence
+    || !latestJob
+    || latestJob.job_id !== requestedJobId
+    || latestJob.kind !== 'fetch'
+    || latestJob.status !== 'succeeded'
+    || latestJob.result === null
+    || runtime.state !== 'ready'
+  ) return;
+
+  exportingEvidence = true;
+  exportEvidenceButton.disabled = true;
+  clearEvidenceView();
+  if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceStatus) evidenceStatus.textContent = 'Requesting the tenant-scoped evidence package from TWI and validating its content digest.';
+  try {
+    const exported = await runtime.apiClient.exportEvidencePackage(requestedJobId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeJobId !== requestedJobId || !latestJob || latestJob.job_id !== requestedJobId) return;
+    renderEvidencePackage(requestedJobId, exported.evidence, exported.bytes);
+  } catch (error) {
+    if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeJobId === requestedJobId && evidenceStatus) {
+      evidenceStatus.textContent = error instanceof Error
+        ? error.message
+        : 'The evidence package could not be retrieved or validated. No download is available.';
+      if (evidencePanel) evidencePanel.hidden = false;
+    }
+  } finally {
+    exportingEvidence = false;
+    if (authSessionEpoch === requestSessionEpoch && activeJobId !== requestedJobId) clearEvidenceView();
+    if (exportEvidenceButton && latestJob && activeJobId === latestJob.job_id) {
+      const exportable = isAuthorized && latestJob.kind === 'fetch' && latestJob.status === 'succeeded' && latestJob.result !== null;
+      exportEvidenceButton.hidden = !exportable;
+      exportEvidenceButton.disabled = !exportable;
+    }
+  }
+});
+
+downloadEvidenceButton?.addEventListener('click', downloadExactEvidencePackage);
+
 cancelJobButton?.addEventListener('click', async () => {
   if (!activeJobId || !isAuthorized || cancelling || runtime.state !== 'ready') return;
   if (!window.confirm('Request cancellation for this TWI job? A running acquisition may finish its bounded operation before TWI confirms cancellation.')) return;
+  const requestSessionEpoch = authSessionEpoch;
   cancelling = true;
   cancelJobButton.disabled = true;
   if (refreshButton) refreshButton.disabled = true;
@@ -410,11 +579,13 @@ cancelJobButton?.addEventListener('click', async () => {
   if (statusMessage) statusMessage.textContent = 'Sending cancellation request to TWI. Cancellation is not complete until the service reports a terminal cancelled state.';
   try {
     const job = await runtime.apiClient.cancelJob(activeJobId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     showJob(job, job.cancel_requested
       ? 'TWI accepted the cancellation request; waiting for a terminal state.'
       : 'TWI returned the current state after the cancellation request.');
     if (!isTerminalJobStatus(job.status)) await pollJob(job);
   } catch (error) {
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
     if (statusMessage) statusMessage.textContent = error instanceof Error
       ? error.message
       : 'Cancellation could not be requested. The service-reported job state has not been changed in the interface.';

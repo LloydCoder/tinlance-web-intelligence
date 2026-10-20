@@ -1,12 +1,12 @@
 import { TwiApiError } from "./errors.js";
 
-export async function readBoundedJson(response: Response, maximumBytes: number, label: string, signal?: AbortSignal): Promise<unknown> {
+export async function readBoundedBytes(response: Response, maximumBytes: number, label: string, signal?: AbortSignal): Promise<Uint8Array> {
   const declaredLength = response.headers.get("content-length");
   if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > maximumBytes) {
     throw new TwiApiError("invalid_response", `${label} exceeded the response size limit.`, response.status, response.headers.get("x-request-id"));
   }
   if (!response.body) {
-    throw new TwiApiError("invalid_response", `${label} returned an empty JSON body.`, response.status, response.headers.get("x-request-id"));
+    throw new TwiApiError("invalid_response", `${label} returned an empty body.`, response.status, response.headers.get("x-request-id"));
   }
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -35,6 +35,11 @@ export async function readBoundedJson(response: Response, maximumBytes: number, 
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return bytes;
+}
+
+export async function readBoundedJson(response: Response, maximumBytes: number, label: string, signal?: AbortSignal): Promise<unknown> {
+  const bytes = await readBoundedBytes(response, maximumBytes, label, signal);
   try {
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
   } catch {

@@ -92,9 +92,34 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
   assert.match(js, /Cancellation is not complete until the service reports a terminal cancelled state/);
   assert.match(js, /if \(polling\) return/);
   assert.match(js, /if \(cancelling\) return latestJob/);
-  assert.match(js, /const job = await runtime\.apiClient\.getJob\(activeJobId\);\s*\/\/ A request that started before cancellation must not overwrite the newer cancellation response\.\s*if \(cancelling\) return latestJob/);
+  assert.match(js, /const job = await runtime\.apiClient\.getJob\(requestedJobId\)/);
   assert.match(js, /refreshButton\.disabled = !enabled \|\| polling \|\| cancelling/);
   assert.match(js, /refreshButton\.disabled = !isAuthorized \|\| polling/);
   assert.match(js, /job\.cancel_requested/);
   assert.match(html, /Tenant-scoped/);
+});
+
+test('evidence inspector exposes validated provenance and exact-byte export without a truth claim', () => {
+  assert.match(html, /id="export-evidence"[^>]*hidden disabled/);
+  assert.match(html, /id="evidence" class="panel evidence-panel"/);
+  assert.match(html, /id="evidence-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="evidence-integrity-badge" class="quiet-badge">Awaiting package/);
+  assert.match(js, /evidenceIntegrityBadge\.textContent = 'Digest verified'/);
+  assert.match(js, /evidenceIntegrityBadge\.textContent = 'Awaiting package'/);
+  assert.match(html, /id="evidence-metadata" class="evidence-metadata"/);
+  assert.match(html, /id="download-evidence"[^>]*disabled/);
+  assert.match(html, /does not establish source truth or source authority/);
+  assert.match(js, /runtime\.apiClient\.exportEvidencePackage\(requestedJobId\)/);
+  assert.match(js, /job\.result !== null/);
+  assert.match(js, /latestJob\.result === null/);
+  assert.match(js, /new Blob\(\[currentEvidenceBytes\]/);
+  assert.match(js, /link\.download = `twi-evidence-/);
+  assert.match(js, /Requested URL SHA-256/);
+  assert.match(js, /Final URL SHA-256/);
+  assert.match(js, /source truth and source authority not assessed/);
+  assert.match(js, /let authSessionEpoch = 0/);
+  assert.match(js, /authSessionEpoch \+= 1/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /activeJobId = null;\s*latestJob = null/);
+  assert.match(js, /!isAuthorized \|\| authSessionEpoch !== requestSessionEpoch \|\| activeJobId !== requestedJobId/);
 });

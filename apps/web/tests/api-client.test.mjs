@@ -158,17 +158,46 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
     }
   };
   let captured;
+  const exactResponseBody = JSON.stringify(packageBody, null, 2) + '\n';
   const client = makeClient(async (url, init) => {
     captured = { url: String(url), init };
-    return new Response(JSON.stringify(packageBody), {
+    return new Response(exactResponseBody, {
       status: 200,
-      headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json' }
+      headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json; charset=utf-8' }
     });
   });
-  const result = await client.exportEvidence('job_01');
-  assert.equal(result.schema_version, '1.0.0');
-  assert.equal(result.interpretation.truth_assessment, 'not_provided');
+  const result = await client.exportEvidencePackage('job_01');
+  assert.equal(result.evidence.schema_version, '1.0.0');
+  assert.equal(result.evidence.interpretation.truth_assessment, 'not_provided');
+  assert.equal(new TextDecoder().decode(result.bytes), exactResponseBody);
+  assert.equal(captured.init.cache, 'no-store');
   assert.match(captured.url, /\/v1\/jobs\/job_01\/evidence$/);
+  const legacyResult = await client.exportEvidence('job_01');
+  assert.equal(legacyResult.content_sha256, contentSha);
+  const wrongMediaTypeClient = makeClient(async () => new Response(JSON.stringify(packageBody), {
+    status: 200,
+    headers: { 'content-type': 'application/json' }
+  }));
+  await assert.rejects(
+    wrongMediaTypeClient.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+  const deniedEvidenceClient = makeClient(async () => new Response(JSON.stringify({ detail: 'must not be surfaced' }), {
+    status: 403,
+    headers: { 'content-type': 'application/json' }
+  }));
+  await assert.rejects(
+    deniedEvidenceClient.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'permission_denied' && !error.message.includes('must not be surfaced')
+  );
+  const malformedEvidenceClient = makeClient(async () => new Response('{broken', {
+    status: 200,
+    headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json' }
+  }));
+  await assert.rejects(
+    malformedEvidenceClient.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
   const tamperedClient = makeClient(async () => new Response(JSON.stringify({
     ...packageBody,
     content_base64: 'd29ybGQ='
@@ -178,6 +207,20 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   }));
   await assert.rejects(
     tamperedClient.exportEvidence('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
+
+test('bounds raw evidence package bytes before JSON parsing', async () => {
+  const client = makeClient(async () => new Response('oversized', {
+    status: 200,
+    headers: {
+      'content-type': 'application/vnd.tinlance.twi-evidence+json',
+      'content-length': '30000001'
+    }
+  }));
+  await assert.rejects(
+    client.exportEvidencePackage('job_01'),
     (error) => error instanceof TwiApiError && error.code === 'invalid_response'
   );
 });
