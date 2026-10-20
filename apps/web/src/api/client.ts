@@ -91,12 +91,20 @@ function parseJob(value: unknown): Job {
 function parseEvidencePackage(value: unknown): EvidencePackage {
   if (
     !isRecord(value)
-    || typeof value.schema_version !== "string"
-    || typeof value.content !== "string"
+    || value.format !== "application/vnd.tinlance.twi-evidence+json"
+    || value.schema_version !== "1.0.0"
+    || typeof value.export_id !== "string"
+    || typeof value.artifact_id !== "string"
+    || typeof value.content_base64 !== "string"
     || typeof value.content_type !== "string"
     || typeof value.content_sha256 !== "string"
+    || typeof value.byte_size !== "number"
     || !isRecord(value.provenance)
     || typeof value.source_revision !== "string"
+    || !isRecord(value.interpretation)
+    || value.interpretation.provenance_kind !== "acquisition_observation"
+    || value.interpretation.truth_assessment !== "not_provided"
+    || value.interpretation.source_authority_assessment !== "not_provided"
   ) {
     throw new TwiApiError("invalid_response", "The evidence package does not match the supported contract.");
   }
