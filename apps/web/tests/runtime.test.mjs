@@ -52,6 +52,7 @@ test('runtime composes the API client and Platform token adapter only with expli
     assert.equal(typeof runtime.tokenProvider.beginLogin, 'function');
     assert.equal(typeof runtime.beginLogin, 'function');
     assert.equal(typeof runtime.handleCallback, 'function');
+    assert.equal(typeof runtime.clearSession, 'function');
   } finally {
     if (originalWindow === undefined) delete globalThis.window;
     else globalThis.window = originalWindow;
