@@ -49,7 +49,8 @@ Run the dependency-free frontend checks with Node.js 22 or newer:
 cd apps/web
 npm ci --ignore-scripts --no-audit --no-fund
 npm run lint
-npm run typecheck
+npm run syntax-check
+npm run security
 npm test
 npm run build
 ```
