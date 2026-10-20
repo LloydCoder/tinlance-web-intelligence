@@ -83,7 +83,7 @@ function parseJob(value: unknown): Job {
   }
   if (
     typeof value.job_id !== "string"
-    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.job_id)
+    || !/^[A-Za-z0-9._:-]{1,64}$/.test(value.job_id)
     || typeof value.kind !== "string"
     || !JOB_KINDS.has(value.kind as JobKind)
     || typeof value.status !== "string"
@@ -127,7 +127,7 @@ function parseMonitor(value: unknown): Monitor {
     !isRecord(value)
     || !hasOnlyKeys(value, ["monitor_id", "status", "baseline_digest", "baseline_observed_at", "baseline_version", "created_at", "updated_at"])
     || typeof value.monitor_id !== "string"
-    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.monitor_id)
+    || !/^[A-Za-z0-9._:-]{1,64}$/.test(value.monitor_id)
     || typeof value.status !== "string"
     || !MONITOR_STATUSES.has(value.status as MonitorStatus)
     || !(value.baseline_digest === null || (typeof value.baseline_digest === "string" && /^[0-9a-f]{64}$/.test(value.baseline_digest)))
@@ -158,7 +158,7 @@ function parseMonitorRun(value: unknown): MonitorRun {
   if (
     !isRecord(value)
     || typeof value.job_id !== "string"
-    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.job_id)
+    || !/^[A-Za-z0-9._:-]{1,64}$/.test(value.job_id)
     || value.kind !== "monitor"
     || typeof value.status !== "string"
     || !JOB_STATUSES.has(value.status as JobStatus)
@@ -179,7 +179,7 @@ function parseMonitorRun(value: unknown): MonitorRun {
     || !(value.error_code === null || typeof value.error_code === "string")
     || !isRecord(value.payload)
     || typeof value.payload.monitor_id !== "string"
-    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.payload.monitor_id)
+    || !/^[A-Za-z0-9._:-]{1,64}$/.test(value.payload.monitor_id)
     || typeof value.payload.baseline_version !== "number"
     || !Number.isInteger(value.payload.baseline_version)
     || value.payload.baseline_version < 0
