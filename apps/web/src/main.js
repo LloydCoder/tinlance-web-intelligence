@@ -431,7 +431,12 @@ form?.addEventListener('submit', async (event) => {
   }
   submitting = true;
   activeJobId = null;
+  latestJob = null;
   clearEvidenceView();
+  if (exportEvidenceButton) {
+    exportEvidenceButton.hidden = true;
+    exportEvidenceButton.disabled = true;
+  }
   const requestSessionEpoch = authSessionEpoch;
   submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
@@ -477,6 +482,11 @@ runLookupForm?.addEventListener('submit', async (event) => {
   }
   submitting = true;
   clearEvidenceView();
+  latestJob = null;
+  if (exportEvidenceButton) {
+    exportEvidenceButton.hidden = true;
+    exportEvidenceButton.disabled = true;
+  }
   const requestSessionEpoch = authSessionEpoch;
   if (lookupButton) lookupButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
@@ -543,7 +553,8 @@ exportEvidenceButton?.addEventListener('click', async () => {
     }
   } finally {
     exportingEvidence = false;
-    if (exportEvidenceButton && latestJob) {
+    if (authSessionEpoch === requestSessionEpoch && activeJobId !== requestedJobId) clearEvidenceView();
+    if (exportEvidenceButton && latestJob && activeJobId === latestJob.job_id) {
       const exportable = isAuthorized && latestJob.kind === 'fetch' && latestJob.status === 'succeeded' && latestJob.result !== null;
       exportEvidenceButton.hidden = !exportable;
       exportEvidenceButton.disabled = !exportable;
