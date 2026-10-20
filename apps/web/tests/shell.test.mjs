@@ -123,3 +123,25 @@ test('evidence inspector exposes validated provenance and exact-byte export with
   assert.match(js, /activeJobId = null;\s*latestJob = null/);
   assert.match(js, /!isAuthorized \|\| authSessionEpoch !== requestSessionEpoch \|\| activeJobId !== requestedJobId/);
 });
+
+
+test('claim verification controls are wired to the scoped API and render citation matches as non-truth claims', () => {
+  assert.match(html, /id="verification-form"/);
+  assert.match(html, /id="verification-citations"/);
+  assert.match(html, /id="add-citation"[^>]*type="button"/);
+  assert.match(html, /id="verify-claim"[^>]*disabled/);
+  assert.match(html, /id="verification-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="verification-result"[^>]*hidden/);
+  assert.match(js, /addCitationButton\?\.addEventListener\('click', addCitationRow\)/);
+  assert.match(js, /verificationCitations\?\.addEventListener\('click'/);
+  assert.match(js, /verificationForm\?\.addEventListener\('submit'/);
+  assert.match(js, /runtime\.apiClient\.verifyResearch\(request\)/);
+  assert.match(js, /requestSessionEpoch = authSessionEpoch/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /rows\.length >= 4/);
+  assert.match(js, /This does not assess factual truth/);
+  assert.match(js, /Factual truth assessed', 'No'/);
+  assert.match(js, /quote\.textContent = citation\.quote/);
+  assert.match(js, /link\.rel = 'noopener noreferrer'/);
+  assert.doesNotMatch(js, /verificationResult\.innerHTML\s*=/);
+});
