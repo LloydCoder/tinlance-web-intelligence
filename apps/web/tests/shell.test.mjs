@@ -35,7 +35,7 @@ test('live investigation controls are disabled until authentication completes', 
 
 test('job response uses text rendering and announces status accessibly', () => {
   assert.match(html, /aria-live="polite"/);
-  assert.match(html, /id="job-result" class="result-json"/);
+  assert.match(html, /id="job-result" class="result-content"/);
   assert.match(js, /resultPre\.textContent/);
   assert.doesNotMatch(js, /innerHTML\s*=\s*serialized/);
 });
