@@ -18,7 +18,7 @@
 
 ## Deployment configuration still required
 
-No production identity-provider endpoints, public client ID, approved redirect URI, CORS policy, or TWI audience were present in the inspected TWI or Platform repository configuration. Do not invent or commit these values. The deployment must configure an approved Platform identity issuer that supports Authorization Code + PKCE for a public client, allows the exact Tinlyt redirect URI, returns short-lived TWI-audience tokens with least-privilege scopes, and permits the configured browser token exchange under its CORS policy.
+No production identity issuer identifier/endpoints, public client ID, approved redirect URI, CORS policy, or TWI audience were present in the inspected TWI or Platform repository configuration. Do not invent or commit these values. The deployment must configure an approved Platform identity issuer that supports Authorization Code + PKCE for a public client, allows the exact Tinlyt redirect URI, returns short-lived TWI-audience tokens with least-privilege scopes, and permits the configured browser token exchange under its CORS policy.
 
 The adapter fails closed when trusted origins or token provider configuration are absent. Deployments must serve the runtime configuration without secrets and rewrite the exact configured callback path to the frontend entry point. The current application shell remains in foundation mode; this phase does not claim a live login, live API deployment, or production user session. Live product controls must remain disabled until the deployment supplies and verifies the approved identity configuration.
 
