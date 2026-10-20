@@ -78,6 +78,9 @@ const deleteMonitorButton = document.querySelector('#delete-monitor');
 const monitorRunStatus = document.querySelector('#monitor-run-status');
 const refreshMonitorRunButton = document.querySelector('#refresh-monitor-run');
 const monitorRunMetadata = document.querySelector('#monitor-run-metadata');
+const monitorRunLookupForm = document.querySelector('#monitor-run-lookup-form');
+const monitorRunIdField = document.querySelector('#monitor-run-id');
+const lookupMonitorRunButton = document.querySelector('#lookup-monitor-run');
 
 function showMode(title, description) {
   if (modeTitle) modeTitle.textContent = title;
@@ -118,7 +121,7 @@ let monitorRunPolling = false;
 
 function setLiveControlsEnabled(enabled) {
   authSessionEpoch += 1;
-  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton]) {
+  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton, monitorRunIdField, lookupMonitorRunButton]) {
     if (control) control.disabled = !enabled;
   }
   if (signInButton && runtime.state === 'ready') {
@@ -615,6 +618,9 @@ function updateMonitorControls() {
   if (monitorMaxBytesField) monitorMaxBytesField.disabled = !authorized || monitorBusy || monitorRunPolling;
   if (lookupMonitorButton) lookupMonitorButton.disabled = !authorized || monitorBusy || monitorRunPolling;
   if (monitorIdField) monitorIdField.disabled = !authorized || monitorBusy || monitorRunPolling;
+  const canLookupRun = Boolean(activeMonitor && monitorStatusValue !== 'deleted');
+  if (lookupMonitorRunButton) lookupMonitorRunButton.disabled = !authorized || monitorBusy || monitorRunPolling || !canLookupRun;
+  if (monitorRunIdField) monitorRunIdField.disabled = !authorized || monitorBusy || monitorRunPolling || !canLookupRun;
   if (runMonitorButton) runMonitorButton.disabled = !authorized || monitorBusy || monitorRunPolling || !activeMonitor || monitorStatusValue !== 'active';
   if (pauseMonitorButton) pauseMonitorButton.disabled = !authorized || monitorBusy || !activeMonitor || monitorStatusValue !== 'active';
   if (resumeMonitorButton) resumeMonitorButton.disabled = !authorized || monitorBusy || !activeMonitor || monitorStatusValue !== 'paused';
@@ -628,6 +634,7 @@ function updateMonitorControls() {
 
 function clearMonitorRunView() {
   activeMonitorRunId = null;
+  if (monitorRunLookupForm) monitorRunLookupForm.reset();
   if (monitorRunStatus) monitorRunStatus.textContent = 'No run has been requested in this session.';
   if (monitorRunMetadata) monitorRunMetadata.replaceChildren();
   if (refreshMonitorRunButton) {
@@ -676,6 +683,7 @@ function renderMonitor(monitor, message) {
 }
 
 function renderMonitorRun(run) {
+  if (monitorRunIdField) monitorRunIdField.value = run.job_id;
   if (monitorRunStatus) {
     if (run.status === 'queued' || run.status === 'running') {
       monitorRunStatus.textContent = `TWI reports that monitor run ${run.job_id} is ${run.status}. No change outcome is assumed until the service returns it.`;
@@ -903,6 +911,48 @@ refreshMonitorRunButton?.addEventListener('click', async () => {
   } finally {
     monitorBusy = false;
     updateMonitorControls();
+  }
+});
+
+
+monitorRunLookupForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (monitorBusy || monitorRunPolling || !isAuthorized || runtime.state !== 'ready' || !activeMonitor || activeMonitor.status === 'deleted') {
+    if (monitorRunStatus) monitorRunStatus.textContent = 'Load an active or paused monitor before looking up its run history.';
+    return;
+  }
+  if (!monitorRunLookupForm.reportValidity()) return;
+  const requestedRunId = monitorRunIdField?.value.trim() ?? '';
+  if (!/^[A-Za-z0-9._:-]{1,64}$/.test(requestedRunId)) {
+    if (monitorRunStatus) monitorRunStatus.textContent = 'Enter a valid monitor run ID.';
+    return;
+  }
+  const monitorId = activeMonitor.monitor_id;
+  const requestSessionEpoch = authSessionEpoch;
+  monitorBusy = true;
+  updateMonitorControls();
+  if (monitorRunStatus) monitorRunStatus.textContent = 'Requesting this run from TWI within the currently loaded monitor scope.';
+  let run = null;
+  try {
+    run = await runtime.apiClient.getMonitorRun(monitorId, requestedRunId);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch || activeMonitor?.monitor_id !== monitorId) return;
+    activeMonitorRunId = run.job_id;
+    renderMonitorRun(run);
+  } catch (error) {
+    if (isAuthorized && authSessionEpoch === requestSessionEpoch && activeMonitor?.monitor_id === monitorId && monitorRunStatus) {
+      monitorRunStatus.textContent = error instanceof Error
+        ? error.message
+        : 'The monitor run could not be retrieved. No run state is assumed.';
+    }
+  } finally {
+    monitorBusy = false;
+    updateMonitorControls();
+  }
+  if (!run || !isAuthorized || authSessionEpoch !== requestSessionEpoch || activeMonitor?.monitor_id !== monitorId) return;
+  if (!isTerminalMonitorRunStatus(run.status)) {
+    await pollMonitorRun(run, requestSessionEpoch, monitorId);
+  } else if (run.status === 'succeeded') {
+    await refreshMonitorRun(requestSessionEpoch, monitorId, run.job_id);
   }
 });
 
