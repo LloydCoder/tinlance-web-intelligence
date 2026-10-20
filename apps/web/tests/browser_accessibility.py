@@ -62,20 +62,31 @@ def main() -> None:
                           ? Boolean(document.getElementById(link.getAttribute('href').slice(1)))
                           : true
                       }));
-                      const controls = [...document.querySelectorAll('input:not([type="hidden"]), select, textarea')].map(el => ({
+                      const controls = [...document.querySelectorAll(
+                        'input:not([type="hidden"]), select, textarea'
+                      )].map(el => ({
                         id: el.id,
                         labelled: Boolean(
                           el.getAttribute('aria-label')
                           || el.getAttribute('aria-labelledby')
-                          || [...document.querySelectorAll('label')].some(label => label.htmlFor === el.id)
+                          || [...document.querySelectorAll('label')].some(
+                            label => label.htmlFor === el.id
+                          )
                           || el.closest('label')
                         )
                       }));
                       const buttons = [...document.querySelectorAll('button')].filter(el => {
                         const style = getComputedStyle(el);
-                        return style.display !== 'none' && style.visibility !== 'hidden' && el.getClientRects().length > 0;
+                        return style.display !== 'none'
+                          && style.visibility !== 'hidden'
+                          && el.getClientRects().length > 0;
                       }).map(el => ({
-                        label: (el.getAttribute('aria-label') || el.getAttribute('title') || el.innerText || '').trim(),
+                        label: (
+                          el.getAttribute('aria-label')
+                          || el.getAttribute('title')
+                          || el.innerText
+                          || ''
+                        ).trim(),
                         disabled: el.disabled
                       }));
                       return { duplicates, nav, controls, buttons };
@@ -105,7 +116,11 @@ def main() -> None:
                     """() => {
                       const el = document.activeElement;
                       const style = getComputedStyle(el);
-                      return { tag: el?.tagName, outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+                      return {
+                        tag: el?.tagName,
+                        outlineStyle: style.outlineStyle,
+                        outlineWidth: style.outlineWidth
+                      };
                     }"""
                 )
                 assert focus_style["outlineStyle"] == "solid", focus_style
@@ -115,7 +130,11 @@ def main() -> None:
                 # Check representative text roles against their actual composited backgrounds.
                 contrast_samples = page.evaluate(
                     """() => {
-                      const selectors = ['body', '.nav-link', '.nav-link.is-active', '#runtime-message', '#mode-description', '.field-help', '#usage-status'];
+                      const selectors = [
+                        'body', '.nav-link', '.nav-link.is-active',
+                        '#runtime-message', '#mode-description',
+                        '.field-help', '#usage-status'
+                      ];
                       const rgb = value => value.match(/[0-9.]+/g)?.map(Number) || [];
                       const luminance = value => {
                         const values = rgb(value).slice(0, 3).map(v => {
@@ -139,8 +158,14 @@ def main() -> None:
                         if (!element) return { selector, missing: true };
                         const foreground = getComputedStyle(element).color;
                         const background = effectiveBackground(element);
-                        const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
-                        return { selector, ratio: (values[0] + 0.05) / (values[1] + 0.05), foreground, background };
+                        const values = [luminance(foreground), luminance(background)]
+                          .sort((a, b) => b - a);
+                        return {
+                          selector,
+                          ratio: (values[0] + 0.05) / (values[1] + 0.05),
+                          foreground,
+                          background
+                        };
                       });
                     }"""
                 )
@@ -165,7 +190,9 @@ def main() -> None:
                           right: Math.round(rect.right),
                           width: Math.round(rect.width),
                           overflowX: style.overflowX,
-                          parentOverflowX: getComputedStyle(el.parentElement || document.body).overflowX
+                          parentOverflowX: getComputedStyle(
+                            el.parentElement || document.body
+                          ).overflowX
                         };
                       }).filter(el => el.width > 0 && el.right > window.innerWidth + 1
                         && !['auto', 'scroll', 'hidden', 'clip'].includes(el.parentOverflowX))
@@ -189,7 +216,9 @@ def main() -> None:
                 motion = page.evaluate(
                     """() => ({
                       scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
-                      transitionDuration: getComputedStyle(document.querySelector('.nav-link')).transitionDuration
+                      transitionDuration: getComputedStyle(
+                        document.querySelector('.nav-link')
+                      ).transitionDuration
                     })"""
                 )
                 assert motion["scrollBehavior"] == "auto", motion
