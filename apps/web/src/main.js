@@ -101,6 +101,15 @@ const monitorRunMetadata = document.querySelector('#monitor-run-metadata');
 const monitorRunLookupForm = document.querySelector('#monitor-run-lookup-form');
 const monitorRunIdField = document.querySelector('#monitor-run-id');
 const lookupMonitorRunButton = document.querySelector('#lookup-monitor-run');
+const usageForm = document.querySelector('#usage-form');
+const usageDimensionField = document.querySelector('#usage-dimension');
+const usagePeriodField = document.querySelector('#usage-period');
+const usageLimitField = document.querySelector('#usage-limit');
+const usageStatus = document.querySelector('#usage-status');
+const usageMetadata = document.querySelector('#usage-metadata');
+const usageEvents = document.querySelector('#usage-events');
+const usageNextButton = document.querySelector('#usage-next');
+const usageLoadButton = document.querySelector('#load-usage');
 
 function showMode(title, description) {
   if (modeTitle) modeTitle.textContent = title;
@@ -143,10 +152,13 @@ let pendingMonitorCreateFingerprint = null;
 let pendingMonitorCreateKey = null;
 let pendingMonitorRunMonitorId = null;
 let pendingMonitorRunKey = null;
+let currentUsageCursor = null;
+let currentUsageQuery = null;
+let usageBusy = false;
 
 function setLiveControlsEnabled(enabled) {
   authSessionEpoch += 1;
-  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton, monitorRunIdField, lookupMonitorRunButton]) {
+  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton, monitorTargetUrlField, monitorMaxBytesField, createMonitorButton, monitorIdField, lookupMonitorButton, runMonitorButton, pauseMonitorButton, resumeMonitorButton, deleteMonitorButton, monitorRunIdField, lookupMonitorRunButton, usageDimensionField, usagePeriodField, usageLimitField, usageLoadButton]) {
     if (control) control.disabled = !enabled;
   }
   if (signInButton && runtime.state === 'ready') {
@@ -156,6 +168,12 @@ function setLiveControlsEnabled(enabled) {
   }
   if (refreshButton) refreshButton.disabled = !enabled || polling || cancelling;
   if (!enabled) {
+    currentUsageCursor = null;
+    currentUsageQuery = null;
+    if (usageMetadata) usageMetadata.replaceChildren();
+    if (usageEvents) usageEvents.replaceChildren();
+    if (usageStatus) usageStatus.textContent = 'Sign in with the approved Platform identity provider to read scoped usage.';
+    if (usageNextButton) usageNextButton.hidden = true;
     activeJobId = null;
     latestJob = null;
     if (statusPanel) statusPanel.hidden = true;
@@ -1368,6 +1386,118 @@ cancelJobButton?.addEventListener('click', async () => {
   }
 });
 
+
+function renderUsage(response) {
+  if (usageMetadata) usageMetadata.replaceChildren();
+  if (usageEvents) usageEvents.replaceChildren();
+  const fields = [
+    ['Usage dimension', response.dimension],
+    ['Period start (UTC)', response.period_start],
+    ['Committed usage', String(response.used)],
+    ['Configured quota', response.quota_limit === null ? 'Not returned by the entitlement resolver' : String(response.quota_limit)],
+    ['Remaining allowance', response.remaining === null ? 'Not available' : String(response.remaining)],
+    ['Plan identifier', response.plan_id ?? 'Not available'],
+    ['Plan version', response.plan_version === null ? 'Not available' : String(response.plan_version)],
+    ['Events in this page', String(response.returned)],
+  ];
+  for (const [label, value] of fields) {
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    usageMetadata?.append(dt, dd);
+  }
+  if (response.events.length === 0 && usageEvents) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No usage events were returned for this dimension and period.';
+    usageEvents.append(empty);
+  } else if (usageEvents) {
+    const table = document.createElement('table');
+    table.className = 'usage-table';
+    const caption = document.createElement('caption');
+    caption.textContent = 'Usage events returned by TWI';
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    for (const label of ['Occurred at', 'Feature', 'Quantity', 'Event ID']) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = label;
+      headerRow.append(th);
+    }
+    thead.append(headerRow);
+    const tbody = document.createElement('tbody');
+    for (const event of response.events) {
+      const tr = document.createElement('tr');
+      for (const value of [event.occurred_at, event.feature, String(event.quantity), event.event_id]) {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+    table.append(caption, thead, tbody);
+    usageEvents.append(table);
+  }
+  currentUsageCursor = response.next_cursor;
+  if (usageNextButton) {
+    usageNextButton.hidden = !response.has_more;
+    usageNextButton.disabled = !isAuthorized || usageBusy || !response.next_cursor;
+  }
+}
+
+async function loadUsage(cursor = null) {
+  if (!isAuthorized || runtime.state !== 'ready' || usageBusy || !usageDimensionField || !usagePeriodField) return;
+  const dimension = usageDimensionField.value.trim();
+  const period = usagePeriodField.value.trim();
+  const limit = Number(usageLimitField?.value ?? 100);
+  const requestSessionEpoch = authSessionEpoch;
+  if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(dimension) || !period || !Number.isFinite(Date.parse(period)) || !/(?:Z|[+-]\\d{2}:?\\d{2})$/i.test(period) || !Number.isInteger(limit) || limit < 1 || limit > 500) {
+    if (usageStatus) usageStatus.textContent = 'Enter a valid usage dimension, timezone-aware period start, and page size.';
+    return;
+  }
+  if (!cursor) {
+    currentUsageCursor = null;
+    currentUsageQuery = { dimension, period, limit };
+    if (usageMetadata) usageMetadata.replaceChildren();
+    if (usageEvents) usageEvents.replaceChildren();
+  } else if (!currentUsageQuery || currentUsageQuery.dimension !== dimension || currentUsageQuery.period !== period || currentUsageQuery.limit !== limit) {
+    if (usageStatus) usageStatus.textContent = 'The usage query changed. Load the first page again before requesting another page.';
+    return;
+  }
+  usageBusy = true;
+  if (usageLoadButton) usageLoadButton.disabled = true;
+  if (usageNextButton) usageNextButton.disabled = true;
+  if (usageStatus) usageStatus.textContent = cursor ? 'Loading the next usage page from TWI…' : 'Loading tenant- and subject-scoped usage facts from TWI…';
+  try {
+    const response = await runtime.apiClient.getUsage(dimension, period, limit, cursor);
+    if (!isAuthorized || authSessionEpoch !== requestSessionEpoch) return;
+    renderUsage(response);
+    if (usageStatus) usageStatus.textContent = response.has_more
+      ? 'Usage page loaded. More events are available; continue with Next page to follow the server cursor.'
+      : 'Usage page loaded. No further event pages were reported.';
+  } catch (error) {
+    if (isAuthorized && authSessionEpoch === requestSessionEpoch && usageStatus) {
+      usageStatus.textContent = error instanceof Error ? error.message : 'Usage data could not be loaded.';
+    }
+  } finally {
+    usageBusy = false;
+    if (usageLoadButton) usageLoadButton.disabled = !isAuthorized;
+    if (usageNextButton) usageNextButton.disabled = !isAuthorized || !currentUsageCursor;
+  }
+}
+
+usageForm?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  void loadUsage();
+});
+usageNextButton?.addEventListener('click', () => {
+  if (currentUsageCursor) void loadUsage(currentUsageCursor);
+});
+
+if (usagePeriodField) {
+  const now = new Date();
+  usagePeriodField.value = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().replace(/\\.000Z$/, 'Z');
+}
 
 if (runtime.state === 'ready') {
   setLiveControlsEnabled(false);
