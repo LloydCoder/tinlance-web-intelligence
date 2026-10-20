@@ -38,7 +38,7 @@ const statusBadge = document.querySelector('#job-status-badge');
 const statusMessage = document.querySelector('#job-status-message');
 const metadataList = document.querySelector('#job-metadata');
 const resultWrap = document.querySelector('#job-result-wrap');
-const resultPre = document.querySelector('#job-result');
+const resultContainer = document.querySelector('#job-result');
 const refreshButton = document.querySelector('#refresh-job');
 
 function showMode(title, description) {
@@ -95,6 +95,112 @@ function updateKindFields() {
 kindSelect?.addEventListener('change', updateKindFields);
 updateKindFields();
 
+function safeWebUrl(value) {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function appendText(parent, tagName, className, value) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = typeof value === 'string' ? value : String(value);
+  parent.append(element);
+  return element;
+}
+
+function appendSourceLink(parent, urlValue, label) {
+  const safeUrl = safeWebUrl(urlValue);
+  if (!safeUrl) {
+    appendText(parent, 'p', 'source-url', typeof urlValue === 'string' ? urlValue.slice(0, 2048) : 'Source URL unavailable');
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = safeUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.referrerPolicy = 'no-referrer';
+  link.textContent = label;
+  parent.append(link);
+}
+
+function renderSearchResults(container, result) {
+  if (!Array.isArray(result.results)) return false;
+  const heading = appendText(container, 'p', 'result-summary', result.results.length + ' result record(s) returned by TWI');
+  heading.setAttribute('aria-live', 'polite');
+  if (typeof result.provider === 'string' && result.provider.length <= 100) {
+    appendText(container, 'p', 'result-provider', 'Search provider: ' + result.provider);
+  }
+  if (result.results.length === 0) {
+    appendText(container, 'p', 'result-empty', 'TWI returned no search results for this job.');
+    return true;
+  }
+  for (const item of result.results.slice(0, 20)) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      appendText(container, 'pre', 'result-json', JSON.stringify(item).slice(0, 1000));
+      continue;
+    }
+    const card = document.createElement('article');
+    card.className = 'source-result';
+    const title = typeof item.title === 'string' ? item.title.slice(0, 500) : 'Untitled source';
+    appendText(card, 'h4', 'source-result-title', title);
+    if (Number.isInteger(item.rank) && item.rank > 0) appendText(card, 'span', 'source-rank', 'Rank ' + item.rank);
+    appendSourceLink(card, item.url, safeWebUrl(item.url) ?? 'Source URL unavailable');
+    if (typeof item.snippet === 'string' && item.snippet) appendText(card, 'p', 'source-snippet', item.snippet.slice(0, 2000));
+    if (typeof item.provider === 'string' && item.provider.length <= 100) appendText(card, 'small', 'source-provider', item.provider);
+    container.append(card);
+  }
+  if (result.results.length > 20) appendText(container, 'p', 'field-help', 'Only the first 20 result records are displayed here.');
+  return true;
+}
+
+function renderFetchResult(container, result) {
+  if (typeof result.source_url !== 'string' || typeof result.content_sha256 !== 'string') return false;
+  appendText(container, 'p', 'result-summary', 'Captured page response returned by TWI');
+  if (typeof result.title === 'string' && result.title) appendText(container, 'h4', 'source-result-title', result.title.slice(0, 500));
+  appendSourceLink(container, result.source_url, safeWebUrl(result.source_url) ?? 'Source URL unavailable');
+  const metadata = [
+    ['HTTP status', result.status_code],
+    ['Retrieved at', result.retrieved_at],
+    ['Content type', result.content_type],
+    ['SHA-256 content digest', result.content_sha256],
+  ];
+  const definitionList = document.createElement('dl');
+  definitionList.className = 'job-metadata';
+  for (const [label, value] of metadata) {
+    if (typeof value !== 'string' && typeof value !== 'number') continue;
+    appendText(definitionList, 'dt', '', label);
+    appendText(definitionList, 'dd', '', String(value).slice(0, 512));
+  }
+  container.append(definitionList);
+  if (typeof result.description === 'string' && result.description) appendText(container, 'p', 'source-snippet', result.description.slice(0, 2000));
+  if (typeof result.text === 'string' && result.text) {
+    appendText(container, 'h4', 'source-result-title', 'Captured text preview');
+    appendText(container, 'pre', 'result-json', result.text.slice(0, 8000));
+    if (result.text.length > 8000) appendText(container, 'p', 'field-help', 'Captured text preview truncated to 8,000 characters in the interface.');
+  }
+  return true;
+}
+
+function renderJobResult(job) {
+  if (!resultContainer) return;
+  resultContainer.replaceChildren();
+  const result = job.result;
+  if (job.kind === 'search' && renderSearchResults(resultContainer, result)) return;
+  if (job.kind === 'fetch' && renderFetchResult(resultContainer, result)) return;
+  let serialized = '';
+  try { serialized = JSON.stringify(result, null, 2); } catch { serialized = '[Result could not be displayed]'; }
+  const limit = 20_000;
+  appendText(resultContainer, 'pre', 'result-json', serialized.length > limit
+    ? serialized.slice(0, limit) + '\n… Output truncated in the interface. The API response was validated before rendering.'
+    : serialized);
+}
+
 function showJob(job, message) {
   if (!statusPanel) return;
   statusPanel.hidden = false;
@@ -132,14 +238,8 @@ function showJob(job, message) {
   }
   const hasResult = job.status === 'succeeded' && job.result !== null;
   if (resultWrap) resultWrap.hidden = !hasResult;
-  if (resultPre && hasResult) {
-    let serialized = '';
-    try { serialized = JSON.stringify(job.result, null, 2); } catch { serialized = '[Result could not be displayed]'; }
-    const limit = 20_000;
-    resultPre.textContent = serialized.length > limit
-      ? serialized.slice(0, limit) + '\n… Output truncated in the interface. The API response was validated before rendering.'
-      : serialized;
-  }
+  if (resultContainer && hasResult) renderJobResult(job);
+  else if (resultContainer) resultContainer.replaceChildren();
   if (refreshButton) refreshButton.hidden = isTerminalJobStatus(job.status);
 }
 
