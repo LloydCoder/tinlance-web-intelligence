@@ -50,6 +50,7 @@ cd apps/web
 npm ci --ignore-scripts --no-audit --no-fund
 npm run lint
 npm run syntax-check
+npm run typecheck
 npm run security
 npm test
 npm run build
