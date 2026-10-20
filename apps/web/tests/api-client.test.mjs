@@ -167,7 +167,23 @@ test('validates verification responses without claiming factual truth', async ()
     report_sha256: 'c'.repeat(64),
     status: 'citation_mismatch',
     factual_truth_assessed: false,
-    claims: []
+    claims: [{
+      claim_id: 'claim-1',
+      statement: 'A claim to check',
+      citation_status: 'citation_mismatch',
+      citations: [{
+        job_id: 'job_01',
+        quote: 'quoted text longer than eight',
+        quote_match: false,
+        match_status: 'quote_not_found',
+        source: {
+          url: 'https://example.com/source',
+          retrieved_at: '2026-10-20T00:00:00Z',
+          media_type: 'text/html',
+          content_sha256: 'd'.repeat(64)
+        }
+      }]
+    }]
   };
   const client = makeClient(async () => new Response(JSON.stringify(verification), {
     status: 200,
