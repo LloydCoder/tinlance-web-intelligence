@@ -80,3 +80,17 @@ test('API result is bounded before display and polling is bounded', () => {
   assert.match(js, /attempt < 20/);
   assert.match(js, /redirect|truth/i);
 });
+
+
+test('run inspection and cooperative cancellation remain tenant-scoped and explicit', () => {
+  assert.match(html, /id="run-lookup-form"/);
+  assert.match(html, /id="run-id"[^>]*disabled/);
+  assert.match(html, /id="cancel-job"[^>]*hidden disabled/);
+  assert.match(js, /runtime\.apiClient\.getJob\(requestedId\)/);
+  assert.match(js, /runtime\.apiClient\.cancelJob\(activeJobId\)/);
+  assert.match(js, /window\.confirm/);
+  assert.match(js, /Cancellation is not complete until the service reports a terminal cancelled state/);
+  assert.match(js, /if \(polling\) return/);
+  assert.match(js, /job\.cancel_requested/);
+  assert.match(html, /Tenant-scoped/);
+});
