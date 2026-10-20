@@ -7,6 +7,10 @@ import type {
   Job,
   JobKind,
   JobStatus,
+  Monitor,
+  MonitorCreateRequest,
+  MonitorRun,
+  MonitorStatus,
   TwiApiClientOptions,
   VerifyResearchRequest,
   VerifyResearchResponse,
@@ -14,6 +18,7 @@ import type {
 
 const JOB_KINDS = new Set<JobKind>(["search", "fetch", "browser"]);
 const JOB_STATUSES = new Set<JobStatus>(["queued", "running", "succeeded", "failed", "cancelled"]);
+const MONITOR_STATUSES = new Set<MonitorStatus>(["active", "paused", "deleted"]);
 const DEFAULT_TIMEOUT_MS = 15_000;
 const MAX_API_RESPONSE_BYTES = 30_000_000;
 const MIN_IDEMPOTENCY_KEY_LENGTH = 16;
@@ -115,6 +120,155 @@ function parseJob(value: unknown): Job {
     error_code: value.error_code,
     cancel_requested: value.cancel_requested,
   };
+}
+
+function parseMonitor(value: unknown): Monitor {
+  if (
+    !isRecord(value)
+    || !hasOnlyKeys(value, ["monitor_id", "status", "baseline_digest", "baseline_observed_at", "baseline_version", "created_at", "updated_at"])
+    || typeof value.monitor_id !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.monitor_id)
+    || typeof value.status !== "string"
+    || !MONITOR_STATUSES.has(value.status as MonitorStatus)
+    || !(value.baseline_digest === null || (typeof value.baseline_digest === "string" && /^[0-9a-f]{64}$/.test(value.baseline_digest)))
+    || !(value.baseline_observed_at === null || (typeof value.baseline_observed_at === "string" && Number.isFinite(Date.parse(value.baseline_observed_at))))
+    || typeof value.baseline_version !== "number"
+    || !Number.isInteger(value.baseline_version)
+    || value.baseline_version < 0
+    || typeof value.created_at !== "string"
+    || !Number.isFinite(Date.parse(value.created_at))
+    || typeof value.updated_at !== "string"
+    || !Number.isFinite(Date.parse(value.updated_at))
+    || Date.parse(value.updated_at) < Date.parse(value.created_at)
+  ) {
+    throw new TwiApiError("invalid_response", "The API returned a monitor that does not match the supported contract.");
+  }
+  return {
+    monitor_id: value.monitor_id,
+    status: value.status as MonitorStatus,
+    baseline_digest: value.baseline_digest,
+    baseline_observed_at: value.baseline_observed_at,
+    baseline_version: value.baseline_version,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+  };
+}
+
+function parseMonitorRun(value: unknown): MonitorRun {
+  if (
+    !isRecord(value)
+    || typeof value.job_id !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.job_id)
+    || value.kind !== "monitor"
+    || typeof value.status !== "string"
+    || !JOB_STATUSES.has(value.status as JobStatus)
+    || typeof value.created_at !== "string"
+    || !Number.isFinite(Date.parse(value.created_at))
+    || typeof value.updated_at !== "string"
+    || !Number.isFinite(Date.parse(value.updated_at))
+    || Date.parse(value.updated_at) < Date.parse(value.created_at)
+    || typeof value.attempts !== "number"
+    || !Number.isInteger(value.attempts)
+    || value.attempts < 0
+    || typeof value.max_attempts !== "number"
+    || !Number.isInteger(value.max_attempts)
+    || value.max_attempts < 1
+    || value.attempts > value.max_attempts
+    || typeof value.cancel_requested !== "boolean"
+    || !(value.result === null || isRecord(value.result))
+    || !(value.error_code === null || typeof value.error_code === "string")
+    || !isRecord(value.payload)
+    || typeof value.payload.monitor_id !== "string"
+    || !/^[A-Za-z0-9._:-]{1,128}$/.test(value.payload.monitor_id)
+    || typeof value.payload.baseline_version !== "number"
+    || !Number.isInteger(value.payload.baseline_version)
+    || value.payload.baseline_version < 0
+  ) {
+    throw new TwiApiError("invalid_response", "The API returned a monitor run that does not match the supported contract.");
+  }
+  if (value.result !== null) {
+    const result = value.result;
+    const allowed = ["outcome", "monitor_id", "job_id", "previous_digest", "current_digest", "changed", "changed_units", "observed_at", "artifact_id"];
+    if (
+      !hasOnlyKeys(result, allowed)
+      || !["baseline_established", "changed", "unchanged", "stale_capture"].includes(String(result.outcome))
+      || result.monitor_id !== value.payload.monitor_id
+    ) {
+      throw new TwiApiError("invalid_response", "The monitor run result does not match the supported contract.");
+    }
+    if (result.outcome === "stale_capture") {
+      if (Object.keys(result).some((key) => !["outcome", "monitor_id"].includes(key))) {
+        throw new TwiApiError("invalid_response", "The stale monitor result contains unsupported fields.");
+      }
+    } else if (
+      result.job_id !== value.job_id
+      || !(result.previous_digest === null || (typeof result.previous_digest === "string" && /^[0-9a-f]{64}$/.test(result.previous_digest)))
+      || typeof result.current_digest !== "string"
+      || !/^[0-9a-f]{64}$/.test(result.current_digest)
+      || !(result.changed === null || typeof result.changed === "boolean")
+      || typeof result.changed_units !== "number"
+      || !Number.isInteger(result.changed_units)
+      || result.changed_units < 0
+      || result.changed_units > 10000
+      || typeof result.observed_at !== "string"
+      || !Number.isFinite(Date.parse(result.observed_at))
+      || typeof result.artifact_id !== "string"
+      || !result.artifact_id
+      || result.artifact_id.length > 256
+    ) {
+      throw new TwiApiError("invalid_response", "The monitor run result does not match the supported contract.");
+    }
+  }
+  return {
+    job_id: value.job_id,
+    kind: "monitor",
+    payload: value.payload,
+    status: value.status as JobStatus,
+    created_at: value.created_at,
+    updated_at: value.updated_at,
+    attempts: value.attempts,
+    max_attempts: value.max_attempts,
+    result: value.result,
+    error_code: value.error_code,
+    cancel_requested: value.cancel_requested,
+  };
+}
+
+function validateMonitorCreateRequest(request: MonitorCreateRequest): void {
+  if (
+    !request
+    || typeof request.target_url !== "string"
+    || request.target_url.trim() !== request.target_url
+    || request.target_url.length < 1
+    || request.target_url.length > 4096
+  ) {
+    throw new TwiApiError("validation_error", "The monitor target URL is invalid.");
+  }
+  let url: URL;
+  try {
+    url = new URL(request.target_url);
+  } catch {
+    throw new TwiApiError("validation_error", "The monitor target URL must be absolute.");
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+    throw new TwiApiError("validation_error", "The monitor target URL scheme or authority is not supported.");
+  }
+  if (Object.keys(request).some((key) => !["target_url", "policy"].includes(key))) {
+    throw new TwiApiError("validation_error", "The monitor request contains unsupported fields.");
+  }
+  if (request.policy !== undefined) {
+    if (
+      !isRecord(request.policy)
+      || Object.keys(request.policy).some((key) => key !== "max_bytes")
+      || (request.policy.max_bytes !== undefined && (
+        typeof request.policy.max_bytes !== "number"
+        || !Number.isInteger(request.policy.max_bytes)
+        || request.policy.max_bytes < 1
+      ))
+    ) {
+      throw new TwiApiError("validation_error", "The monitor policy does not match the supported contract.");
+    }
+  }
 }
 
 async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
@@ -312,6 +466,56 @@ export class TwiApiClient {
       throw new TwiApiError("invalid_response", "The evidence package response is not valid UTF-8 JSON.");
     }
     return { evidence: await parseEvidencePackage(value), bytes };
+  }
+
+  async createMonitor(request: MonitorCreateRequest, idempotencyKey?: string): Promise<Monitor> {
+    validateMonitorCreateRequest(request);
+    const key = validIdempotencyKey(idempotencyKey ?? this.idempotencyKeyFactory());
+    return parseMonitor(await this.request("/v1/monitors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+      body: JSON.stringify(request),
+    }));
+  }
+
+  async getMonitor(monitorId: string): Promise<Monitor> {
+    return parseMonitor(await this.request(`/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}`, { method: "GET" }));
+  }
+
+  async runMonitor(monitorId: string, idempotencyKey?: string): Promise<MonitorRun> {
+    const key = validIdempotencyKey(idempotencyKey ?? this.idempotencyKeyFactory());
+    return parseMonitorRun(await this.request(
+      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/runs`,
+      { method: "POST", headers: { "Idempotency-Key": key } },
+    ));
+  }
+
+  async getMonitorRun(monitorId: string, jobId: string): Promise<MonitorRun> {
+    return parseMonitorRun(await this.request(
+      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/runs/${encodeURIComponent(this.validateId(jobId))}`,
+      { method: "GET" },
+    ));
+  }
+
+  async pauseMonitor(monitorId: string): Promise<Monitor> {
+    return parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/pause`,
+      { method: "POST" },
+    ));
+  }
+
+  async resumeMonitor(monitorId: string): Promise<Monitor> {
+    return parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/resume`,
+      { method: "POST" },
+    ));
+  }
+
+  async deleteMonitor(monitorId: string): Promise<Monitor> {
+    return parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}`,
+      { method: "DELETE" },
+    ));
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
