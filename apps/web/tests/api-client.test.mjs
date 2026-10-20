@@ -169,6 +169,17 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   assert.equal(result.schema_version, '1.0.0');
   assert.equal(result.interpretation.truth_assessment, 'not_provided');
   assert.match(captured.url, /\/v1\/jobs\/job_01\/evidence$/);
+  const tamperedClient = makeClient(async () => new Response(JSON.stringify({
+    ...packageBody,
+    content_base64: 'd29ybGQ='
+  }), {
+    status: 200,
+    headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json' }
+  }));
+  await assert.rejects(
+    tamperedClient.exportEvidence('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
 });
 
 test('validates verification responses without claiming factual truth', async () => {
