@@ -9,7 +9,7 @@ async function collect(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) await collect(full);
-    else if (entry.isFile() && /\.(js|css|html)$/.test(entry.name)) files.push(full);
+    else if (entry.isFile() && /\.(js|ts|css|html)$/.test(entry.name)) files.push(full);
   }
 }
 await collect(sourceRoot);
