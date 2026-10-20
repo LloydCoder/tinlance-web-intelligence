@@ -1,0 +1,16 @@
+{
+  "name": "@tinlyt/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tinlyt customer-facing web application foundation",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "node scripts/typecheck.mjs",
+    "test": "node --test",
+    "build": "node scripts/build.mjs",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+  }
+}
