@@ -37,3 +37,21 @@ PostgreSQL is the production persistence backend for jobs, usage facts, billing-
 Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md). Backup and recovery procedures are documented in [backup and restore](docs/operations/backup-and-restore.md). W6 private-beta readiness is tracked in [the readiness checklist](docs/operations/private-beta-readiness.md).
 
 See [workstream plan](docs/roadmap/phases.md), [component boundaries](docs/architecture/component-boundaries.md), [browser isolation](docs/security/browser-isolation.md), and [Platform MCP integration](docs/integration/platform-mcp.md).
+
+
+## Tinlyt frontend
+
+The customer-facing Tinlyt web workspace lives in `apps/web/`. It is intentionally in foundation mode until the approved Platform identity integration and typed API client are implemented. The current UI does not submit jobs or display live account, run, evidence, or usage data.
+
+Run the dependency-free frontend checks with Node.js 22 or newer:
+
+```sh
+cd apps/web
+npm ci --ignore-scripts --no-audit --no-fund
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+The build output is written to `apps/web/dist/`. The independent frontend workflow is defined in `.github/workflows/frontend.yml`; it complements rather than replaces the existing Python CI. See `docs/product/tinlyt-frontend-contract.md` and `docs/product/tinlyt-frontend-f1-foundation.md` for product truth rules, screen boundaries, and phase acceptance gates.
