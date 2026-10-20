@@ -98,3 +98,19 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
   assert.match(js, /job\.cancel_requested/);
   assert.match(html, /Tenant-scoped/);
 });
+
+test('evidence inspector exposes validated provenance and exact-byte export without a truth claim', () => {
+  assert.match(html, /id="export-evidence"[^>]*hidden disabled/);
+  assert.match(html, /id="evidence" class="panel evidence-panel"[^>]*hidden/);
+  assert.match(html, /id="evidence-status" role="status" aria-live="polite"/);
+  assert.match(html, /id="evidence-metadata" class="evidence-metadata"/);
+  assert.match(html, /id="download-evidence"[^>]*disabled/);
+  assert.match(html, /does not establish source truth or source authority/);
+  assert.match(js, /runtime\.apiClient\.exportEvidencePackage\(requestedJobId\)/);
+  assert.match(js, /new Blob\(\[currentEvidenceBytes\]/);
+  assert.match(js, /link\.download = `twi-evidence-/);
+  assert.match(js, /Requested URL SHA-256/);
+  assert.match(js, /Final URL SHA-256/);
+  assert.match(js, /source truth and source authority not assessed/);
+  assert.match(js, /if \(!isAuthorized\) \{/);
+});
