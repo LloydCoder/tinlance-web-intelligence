@@ -10,7 +10,7 @@
 - A responsive application shell with primary navigation, skip link, semantic landmarks, visible focus, reduced-motion support, and narrow-screen layout.
 - Design tokens and reusable CSS primitives for surfaces, typography, spacing, borders, status, forms, panels and navigation.
 - A truthful foundation-mode notice. Investigation submission, account controls, runs, evidence and monitors are visibly unavailable until the real API and identity integration are implemented.
-- A dependency-free Node test suite, source hygiene checks, JavaScript syntax checks, a deterministic static asset build, and a minimal npm lockfile enforced by `npm ci`.
+- A dependency-free Node test suite, source hygiene checks, JavaScript syntax checks, static security checks, a deterministic static asset build, and a minimal npm lockfile enforced by `npm ci`.
 - A separate GitHub Actions workflow that runs only when frontend files or the workflow change, with read-only repository permissions and concurrency cancellation.
 
 ## Security and product truth
@@ -23,7 +23,7 @@
 
 ## Deliberate limitations
 
-This is a foundation, not a completed product. It does not yet implement authentication, API requests, route-level page rendering, job polling, cancellation, evidence export, verification, monitors, persistence, telemetry, or deployment. Before F2 adds interactive product workflows, record an architecture decision for the maintained frontend framework and typed API strategy. F2 must also integrate the approved Platform identity flow; do not introduce a separate identity or authorization plane. Keep all live workflows disabled until these choices are implemented and verified.
+This is a foundation, not a completed product. It does not yet implement authentication, API requests, route-level page rendering, job polling, cancellation, evidence export, verification, monitors, persistence, telemetry, or deployment. Before F2 adds interactive product workflows, record an architecture decision for the maintained frontend framework and typed API strategy. The current JavaScript syntax gate is not a TypeScript typecheck; TypeScript must be introduced and genuinely typechecked if selected in that decision. F2 must also integrate the approved Platform identity flow; do not introduce a separate identity or authorization plane. Keep all live workflows disabled until these choices are implemented and verified.
 
 ## Verification commands
 
@@ -31,7 +31,8 @@ Run from `apps/web/`:
 
 ```sh
 npm run lint
-npm run typecheck
+npm run syntax-check
+npm run security
 npm test
 npm run build
 ```
