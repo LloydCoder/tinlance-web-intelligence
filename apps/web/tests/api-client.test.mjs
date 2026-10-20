@@ -400,6 +400,10 @@ test('monitor client rejects unsafe target URLs, unsupported policy fields and m
     client.createMonitor({ target_url: 'https://example.com/', policy: { unexpected: true } }),
     (error) => error instanceof TwiApiError && error.code === 'validation_error'
   );
+  await assert.rejects(
+    client.createMonitor({ target_url: 'https://example.com/', policy: { max_bytes: Number.MAX_SAFE_INTEGER + 1 } }),
+    (error) => error instanceof TwiApiError && error.code === 'validation_error'
+  );
   assert.equal(called, false);
 
   const malformed = makeClient(async () => new Response(JSON.stringify({
