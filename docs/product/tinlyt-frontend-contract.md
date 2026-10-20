@@ -89,6 +89,10 @@ Each phase is accepted only after its own criteria and forensic review pass. A s
 This ledger records repository implementation evidence only. It does not claim a live deployment, production identity readiness, private-beta readiness, or GA readiness.
 
 
+- **F10 — implementation merged; audit recorded:** main commit `4766230685a0a9d4e2a0dc93c209b9c9b7b1636c`; Frontend run #39403242150 passed. Forensic report: `docs/product/tinlyt-frontend-f10-audit.md`. Full repository CI outcome must be confirmed after the run completes.
+- **F11 — implementation in progress:** production artifact/module-graph and HTTP asset smoke check added in `apps/web/scripts/release-check.mjs` and wired into `.github/workflows/frontend.yml`. Forensic report: `docs/product/tinlyt-frontend-f11-audit.md`. Acceptance requires exact-head and post-merge Frontend plus full repository CI. Live deployment identity/API/security-header smoke remains an external gate until a target environment is explicitly configured.
+
+
 ## Security research references
 
 - IETF [RFC 10017 — OAuth 2.0 for Browser-Based Applications](https://www.rfc-editor.org/rfc/rfc10017.html) (August 2026): public browser clients use Authorization Code + PKCE and protect the redirect flow against CSRF. Tinlyt continues to use the existing approved Platform identity integration; no parallel identity plane is introduced.
