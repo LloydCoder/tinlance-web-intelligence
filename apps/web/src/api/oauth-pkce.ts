@@ -25,6 +25,7 @@ export interface OAuthPkceConfig {
   navigate?: (url: string) => void;
   replaceUrl?: (url: string) => void;
   now?: () => number;
+  timeoutMs?: number;
 }
 
 /**
@@ -48,6 +49,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
   private readonly navigate: (url: string) => void;
   private readonly replaceUrl: (url: string) => void;
   private readonly now: () => number;
+  private readonly timeoutMs: number;
   private accessToken: string | null = null;
   private expiresAt = 0;
 
@@ -78,6 +80,10 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       if (typeof window !== "undefined") window.history.replaceState(null, "", url);
     });
     this.now = config.now ?? Date.now;
+    this.timeoutMs = config.timeoutMs ?? 10_000;
+    if (!Number.isInteger(this.timeoutMs) || this.timeoutMs < 1000 || this.timeoutMs > 30_000) {
+      throw new TwiApiError("configuration_error", "The identity token endpoint timeout must be between 1000 and 30000 milliseconds.");
+    }
     if (!this.cryptoImpl?.subtle || !this.cryptoImpl.getRandomValues) {
       throw new TwiApiError("configuration_error", "Web Crypto with SHA-256 is required for PKCE.");
     }
@@ -142,6 +148,8 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     });
 
     let response: Response;
+    const controller = new AbortController();
+    const timeout = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       response = await this.fetchImpl(this.tokenEndpoint, {
         method: "POST",
@@ -150,12 +158,18 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: body.toString(),
+        signal: controller.signal,
         redirect: "error",
         credentials: "omit",
         cache: "no-store",
       });
     } catch {
+      if (controller.signal.aborted) {
+        throw new TwiApiError("request_timeout", "The identity token endpoint timed out.");
+      }
       throw new TwiApiError("network_error", "The identity token endpoint could not be reached.");
+    } finally {
+      globalThis.clearTimeout(timeout);
     }
     if (!response.ok) {
       throw new TwiApiError("authentication_required", "The identity provider could not issue a TWI access token.", response.status);
