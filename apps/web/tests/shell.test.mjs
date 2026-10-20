@@ -188,6 +188,7 @@ test('monitor interface exposes only the documented explicit lifecycle and never
   assert.match(js, /already accepted worker lease may finish/);
   assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
   assert.match(js, /No recurring schedule is created/);
+  assert.match(js, /runStillActive = Boolean\(activeMonitorRunStatus && !isTerminalMonitorRunStatus\(activeMonitorRunStatus\)\)/);
   assert.match(js, /Monitor state refreshed after the run/);
   assert.doesNotMatch(js, /localStorage/);
   assert.doesNotMatch(html, /Monitor UI planned/);
