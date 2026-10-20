@@ -138,3 +138,18 @@ test('rejects callback URLs outside the configured redirect origin and path', as
   );
   assert.equal(called, false);
 });
+
+
+test('rejects an OAuth response issuer mismatch before token exchange', async () => {
+  let called = false;
+  const { provider, storage } = makeProvider({
+    fetchImpl: async () => { called = true; return new Response('{}'); }
+  });
+  await provider.beginLogin();
+  const transaction = JSON.parse(storage.getItem('tinlyt.oauth.pkce.transaction.v1'));
+  await assert.rejects(
+    provider.handleCallback(`https://tinlyt.example.com/auth/callback?code=auth-code&state=${transaction.state}&iss=https%3A%2F%2Fevil.example`),
+    (error) => error instanceof TwiApiError && error.code === 'authentication_required'
+  );
+  assert.equal(called, false);
+});
