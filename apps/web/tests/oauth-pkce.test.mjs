@@ -124,3 +124,15 @@ test('rejects unsupported token response and never retains it', async () => {
   );
   await assert.rejects(provider.getAccessToken(), (error) => error.code === 'authentication_required');
 });
+
+
+test('rejects callback URLs outside the configured redirect origin and path', async () => {
+  let called = false;
+  const { provider } = makeProvider({ fetchImpl: async () => { called = true; return new Response('{}'); } });
+  await provider.beginLogin();
+  await assert.rejects(
+    provider.handleCallback('https://attacker.example/callback?code=stolen&state=wrong'),
+    (error) => error instanceof TwiApiError && error.code === 'authentication_required'
+  );
+  assert.equal(called, false);
+});
