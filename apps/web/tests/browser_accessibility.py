@@ -5,7 +5,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
 
-from playwright.sync_api import Browser, Page, sync_playwright
+from playwright.sync_api import Browser, sync_playwright
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
 DIST_ROOT = WEB_ROOT / "dist"
@@ -14,20 +14,6 @@ DIST_ROOT = WEB_ROOT / "dist"
 class QuietStaticHandler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         return
-
-
-def contrast_ratio(foreground: str, background: str) -> float:
-    def channels(value: str) -> list[float]:
-        parts = value.removeprefix("rgb(").removeprefix("rgba(").removesuffix(")").split(",")
-        rgb = [int(part.strip()) / 255 for part in parts[:3]]
-        return [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in rgb]
-
-    def luminance(value: str) -> float:
-        red, green, blue = channels(value)
-        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
-
-    first, second = sorted((luminance(foreground), luminance(background)), reverse=True)
-    return (first + 0.05) / (second + 0.05)
 
 
 def main() -> None:
@@ -57,7 +43,9 @@ def main() -> None:
                     else None,
                 )
                 response = page.goto(base_url, wait_until="networkidle")
-                assert response is not None and response.status == 200, "Tinlyt document did not load"
+                assert response is not None and response.status == 200, (
+                    "Tinlyt document did not load"
+                )
                 assert page.title() == "Tinlyt — Web Intelligence"
                 assert page.locator("main#main").count() == 1
                 assert page.locator("h1").count() == 1
@@ -94,15 +82,21 @@ def main() -> None:
                     }"""
                 )
                 assert not audit["duplicates"], f"Duplicate IDs: {audit['duplicates']}"
-                assert all(item["label"] and item["targetExists"] for item in audit["nav"]), audit["nav"]
+                assert all(
+                    item["label"] and item["targetExists"] for item in audit["nav"]
+                ), audit["nav"]
                 assert all(item["labelled"] for item in audit["controls"]), audit["controls"]
                 assert all(item["label"] for item in audit["buttons"]), audit["buttons"]
 
                 # The first keyboard stop is the skip link and Enter moves focus to main.
                 page.keyboard.press("Tab")
-                assert page.evaluate("document.activeElement?.classList.contains('skip-link')"), "Skip link is not first in keyboard order"
+                assert page.evaluate(
+                    "document.activeElement?.classList.contains('skip-link')"
+                ), "Skip link is not first in keyboard order"
                 page.keyboard.press("Enter")
-                assert page.evaluate("document.activeElement?.id === 'main'"), "Skip link did not move focus to main"
+                assert page.evaluate(
+                    "document.activeElement?.id === 'main'"
+                ), "Skip link did not move focus to main"
 
                 # Keyboard focus must remain visible, including in system forced-colors mode.
                 page.emulate_media(forced_colors="active")
@@ -150,7 +144,9 @@ def main() -> None:
                       });
                     }"""
                 )
-                assert all(not sample.get("missing") for sample in contrast_samples), contrast_samples
+                assert all(
+                    not sample.get("missing") for sample in contrast_samples
+                ), contrast_samples
                 assert all(sample["ratio"] >= 4.5 for sample in contrast_samples), contrast_samples
 
                 # Mobile layout must reflow without document-level horizontal scrolling.
@@ -176,7 +172,11 @@ def main() -> None:
                 )
                 assert motion["scrollBehavior"] == "auto", motion
                 duration = motion["transitionDuration"].split(",")[0].strip()
-                seconds = float(duration.removesuffix("ms")) / 1000 if duration.endswith("ms") else float(duration.removesuffix("s"))
+                seconds = (
+                    float(duration.removesuffix("ms")) / 1000
+                    if duration.endswith("ms")
+                    else float(duration.removesuffix("s"))
+                )
                 assert seconds <= 0.001, motion
 
                 assert not page_errors, f"Uncaught browser errors: {page_errors}"
