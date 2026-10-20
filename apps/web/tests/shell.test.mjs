@@ -151,3 +151,30 @@ test('claim verification controls are wired to the scoped API and render citatio
   assert.match(js, /link\.rel = 'noopener noreferrer'/);
   assert.doesNotMatch(js, /verificationResult\.innerHTML\s*=/);
 });
+
+
+test('monitor interface exposes only the documented explicit lifecycle and never fabricates a monitor list', () => {
+  assert.match(html, /id="monitors" class="panel monitor-panel"/);
+  assert.match(html, /id="monitor-create-form"/);
+  assert.match(html, /id="monitor-lookup-form"/);
+  assert.match(html, /There is no monitor-list endpoint in the current API/);
+  assert.match(html, /recurrence belongs to Agent OS/);
+  assert.match(html, /id="run-monitor"[^>]*disabled/);
+  assert.match(html, /id="pause-monitor"[^>]*disabled/);
+  assert.match(html, /id="resume-monitor"[^>]*disabled/);
+  assert.match(html, /id="delete-monitor"[^>]*disabled/);
+  assert.match(html, /id="monitor-status" role="status" aria-live="polite"/);
+  assert.match(js, /runtime\.apiClient\.createMonitor\(request\)/);
+  assert.match(js, /runtime\.apiClient\.getMonitor\(requestedId\)/);
+  assert.match(js, /runtime\.apiClient\.runMonitor\(monitorId\)/);
+  assert.match(js, /runtime\.apiClient\.getMonitorRun\(monitorId, runId\)/);
+  assert.match(js, /runtime\.apiClient\.pauseMonitor\(monitorId\)/);
+  assert.match(js, /runtime\.apiClient\.resumeMonitor\(monitorId\)/);
+  assert.match(js, /runtime\.apiClient\.deleteMonitor\(monitorId\)/);
+  assert.match(js, /Delete this monitor and redact its stored target, policy, and run summaries/);
+  assert.match(js, /already accepted worker lease may finish/);
+  assert.match(js, /authSessionEpoch !== requestSessionEpoch/);
+  assert.match(js, /No recurring schedule is created/);
+  assert.doesNotMatch(js, /localStorage/);
+  assert.doesNotMatch(html, /Monitor UI planned/);
+});
