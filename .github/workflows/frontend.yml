@@ -40,9 +40,12 @@ jobs:
       - name: Lint
         working-directory: apps/web
         run: npm run lint
-      - name: Syntax check
+      - name: JavaScript syntax check
         working-directory: apps/web
-        run: npm run typecheck
+        run: npm run syntax-check
+      - name: Static security checks
+        working-directory: apps/web
+        run: npm run security
       - name: Tests
         working-directory: apps/web
         run: npm test
