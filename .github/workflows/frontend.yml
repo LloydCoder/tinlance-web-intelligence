@@ -1,0 +1,48 @@
+name: Frontend
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/frontend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Frontend quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate workspace manifest
+        working-directory: apps/web
+        run: node -e "const p=require('./package.json'); if(p.name!=='@tinlyt/web') process.exit(1)"
+      - name: Lint
+        working-directory: apps/web
+        run: npm run lint
+      - name: Syntax check
+        working-directory: apps/web
+        run: npm run typecheck
+      - name: Tests
+        working-directory: apps/web
+        run: npm test
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
