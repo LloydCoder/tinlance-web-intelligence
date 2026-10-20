@@ -311,3 +311,151 @@ test('bounds Platform access-token provider latency', async () => {
     (error) => error instanceof TwiApiError && error.code === 'request_timeout'
   );
 });
+
+
+test('monitor client covers create, read, explicit run, pause, resume and destructive delete contracts', async () => {
+  const baseMonitor = {
+    monitor_id: 'mon_01',
+    status: 'active',
+    baseline_digest: null,
+    baseline_observed_at: null,
+    baseline_version: 0,
+    created_at: '2026-10-20T00:00:00Z',
+    updated_at: '2026-10-20T00:00:00Z'
+  };
+  const monitorRun = {
+    job_id: 'job_monitor_01',
+    tenant_id: 'tenant-private',
+    subject_id: 'subject-private',
+    kind: 'monitor',
+    payload: { monitor_id: 'mon_01', baseline_version: 0 },
+    status: 'queued',
+    created_at: '2026-10-20T00:00:00Z',
+    updated_at: '2026-10-20T00:00:00Z',
+    attempts: 0,
+    max_attempts: 3,
+    result: null,
+    error_code: null,
+    cancel_requested: false
+  };
+  const calls = [];
+  const client = makeClient(async (url, init) => {
+    const path = new URL(String(url), 'https://tinlyt.test').pathname;
+    calls.push({ path, method: init.method, headers: init.headers, body: init.body });
+    if (path === '/api/twi/v1/monitors' && init.method === 'POST') {
+      return new Response(JSON.stringify(baseMonitor), { status: 201, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01' && init.method === 'GET') {
+      return new Response(JSON.stringify(baseMonitor), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01/runs' && init.method === 'POST') {
+      return new Response(JSON.stringify(monitorRun), { status: 202, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01/runs/job_monitor_01' && init.method === 'GET') {
+      return new Response(JSON.stringify(monitorRun), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01/pause' && init.method === 'POST') {
+      return new Response(JSON.stringify({ ...baseMonitor, status: 'paused', updated_at: '2026-10-20T00:01:00Z' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01/resume' && init.method === 'POST') {
+      return new Response(JSON.stringify({ ...baseMonitor, updated_at: '2026-10-20T00:02:00Z' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (path === '/api/twi/v1/monitors/mon_01' && init.method === 'DELETE') {
+      return new Response(JSON.stringify({ ...baseMonitor, status: 'deleted', updated_at: '2026-10-20T00:03:00Z' }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
+  });
+
+  const created = await client.createMonitor({
+    target_url: 'https://example.com/private?access_token=not-echoed',
+    policy: { max_bytes: 2048 }
+  }, 'monitor-create-key-0001');
+  assert.equal(created.monitor_id, 'mon_01');
+  assert.equal('target_url' in created, false);
+  assert.equal('access_token' in JSON.stringify(created), false);
+  const read = await client.getMonitor('mon_01');
+  assert.equal(read.status, 'active');
+  const queued = await client.runMonitor('mon_01', 'monitor-run-key-0001');
+  assert.equal(queued.kind, 'monitor');
+  assert.equal(queued.status, 'queued');
+  assert.equal((await client.getMonitorRun('mon_01', 'job_monitor_01')).job_id, 'job_monitor_01');
+  assert.equal((await client.pauseMonitor('mon_01')).status, 'paused');
+  assert.equal((await client.resumeMonitor('mon_01')).status, 'active');
+  assert.equal((await client.deleteMonitor('mon_01')).status, 'deleted');
+
+  assert.equal(calls[0].headers['Idempotency-Key'], 'monitor-create-key-0001');
+  assert.equal(calls[0].init, undefined);
+  assert.equal(JSON.parse(calls[0].body).policy.max_bytes, 2048);
+  assert.equal(calls[2].headers['Idempotency-Key'], 'monitor-run-key-0001');
+  assert.equal(calls.every((call) => call.headers.Authorization === 'Bearer ephemeral-test-token'), true);
+});
+
+test('monitor client rejects unsafe target URLs, unsupported policy fields and malformed monitor responses', async () => {
+  let called = false;
+  const client = makeClient(async () => { called = true; return new Response('{}'); });
+  await assert.rejects(
+    client.createMonitor({ target_url: 'javascript:alert(1)' }),
+    (error) => error instanceof TwiApiError && error.code === 'validation_error'
+  );
+  await assert.rejects(
+    client.createMonitor({ target_url: 'https://example.com/', policy: { unexpected: true } }),
+    (error) => error instanceof TwiApiError && error.code === 'validation_error'
+  );
+  assert.equal(called, false);
+
+  const malformed = makeClient(async () => new Response(JSON.stringify({
+    monitor_id: 'mon_01',
+    status: 'invented',
+    baseline_digest: null,
+    baseline_observed_at: null,
+    baseline_version: 0,
+    created_at: '2026-10-20T00:00:00Z',
+    updated_at: '2026-10-20T00:00:00Z'
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    malformed.getMonitor('mon_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
+
+test('monitor run client validates result outcome and baseline digest fields', async () => {
+  const validRun = {
+    job_id: 'job_monitor_01',
+    kind: 'monitor',
+    payload: { monitor_id: 'mon_01', baseline_version: 0 },
+    status: 'succeeded',
+    created_at: '2026-10-20T00:00:00Z',
+    updated_at: '2026-10-20T00:01:00Z',
+    attempts: 1,
+    max_attempts: 3,
+    result: {
+      outcome: 'baseline_established',
+      monitor_id: 'mon_01',
+      job_id: 'job_monitor_01',
+      previous_digest: null,
+      current_digest: 'a'.repeat(64),
+      changed: null,
+      changed_units: 0,
+      observed_at: '2026-10-20T00:01:00Z',
+      artifact_id: 'sha256:' + 'b'.repeat(64)
+    },
+    error_code: null,
+    cancel_requested: false
+  };
+  const client = makeClient(async () => new Response(JSON.stringify(validRun), {
+    status: 200,
+    headers: { 'content-type': 'application/json' }
+  }));
+  const run = await client.getMonitorRun('mon_01', 'job_monitor_01');
+  assert.equal(run.result.outcome, 'baseline_established');
+  assert.equal(run.result.changed, null);
+
+  const malformedClient = makeClient(async () => new Response(JSON.stringify({
+    ...validRun,
+    result: { ...validRun.result, current_digest: 'not-a-digest' }
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    malformedClient.getMonitorRun('mon_01', 'job_monitor_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
