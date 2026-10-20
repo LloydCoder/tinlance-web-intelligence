@@ -234,6 +234,7 @@ export class TwiApiClient {
     for (const claim of request.claims) {
       if (
         !claim
+        || typeof claim.claim_id !== "string"
         || !/^[A-Za-z0-9._:-]{1,64}$/.test(claim.claim_id)
         || ids.has(claim.claim_id)
         || typeof claim.statement !== "string"
@@ -290,17 +291,21 @@ export class TwiApiClient {
         || typeof claim.claim_id !== "string"
         || !/^[A-Za-z0-9._:-]{1,64}$/.test(claim.claim_id)
         || typeof claim.statement !== "string"
+        || !claim.statement.trim()
         || !["all_citations_match_captured_text", "citation_mismatch", "partially_matched_citations"].includes(String(claim.citation_status))
         || !Array.isArray(claim.citations)
         || claim.citations.length < 1
         || claim.citations.length > 4
       ) return false;
-      return claim.citations.every((citation) => {
+      let matchedCount = 0;
+      const citationsValid = claim.citations.every((citation) => {
         if (
           !isRecord(citation)
           || typeof citation.job_id !== "string"
           || !this.isValidJobId(citation.job_id)
           || typeof citation.quote !== "string"
+          || citation.quote.length < 8
+          || citation.quote.length > 350
           || typeof citation.quote_match !== "boolean"
           || citation.match_status !== (citation.quote_match ? "matched" : "quote_not_found")
           || !isRecord(citation.source)
@@ -308,9 +313,11 @@ export class TwiApiClient {
           || typeof citation.source.retrieved_at !== "string"
           || !Number.isFinite(Date.parse(citation.source.retrieved_at))
           || typeof citation.source.media_type !== "string"
+          || !citation.source.media_type
           || typeof citation.source.content_sha256 !== "string"
           || !/^[0-9a-f]{64}$/.test(citation.source.content_sha256)
         ) return false;
+        if (citation.quote_match) matchedCount += 1;
         try {
           const sourceUrl = new URL(citation.source.url);
           return ["http:", "https:"].includes(sourceUrl.protocol) && !sourceUrl.username && !sourceUrl.password;
@@ -318,6 +325,13 @@ export class TwiApiClient {
           return false;
         }
       });
+      if (!citationsValid) return false;
+      const expectedStatus = matchedCount === claim.citations.length
+        ? "all_citations_match_captured_text"
+        : matchedCount === 0
+          ? "citation_mismatch"
+          : "partially_matched_citations";
+      return claim.citation_status === expectedStatus;
     });
     if (!claimsValid) {
       throw new TwiApiError("invalid_response", "The API returned malformed claim or citation evidence.");
