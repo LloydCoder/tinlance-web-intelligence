@@ -103,7 +103,7 @@ function parseJob(value: unknown): Job {
   };
 }
 
-function parseEvidencePackage(value: unknown): EvidencePackage {
+async function parseEvidencePackage(value: unknown): Promise<EvidencePackage> {
   if (
     !isRecord(value)
     || value.format !== "application/vnd.tinlance.twi-evidence+json"
@@ -152,6 +152,29 @@ function parseEvidencePackage(value: unknown): EvidencePackage {
     || value.interpretation.source_authority_assessment !== "not_provided"
   ) {
     throw new TwiApiError("invalid_response", "The evidence package does not match the supported contract.");
+  }
+  let decoded: string;
+  try {
+    decoded = atob(value.content_base64);
+  } catch {
+    throw new TwiApiError("invalid_response", "The evidence content is not valid base64.");
+  }
+  if (decoded.length !== value.byte_size) {
+    throw new TwiApiError("invalid_response", "The evidence content length does not match its package metadata.");
+  }
+  if (!globalThis.crypto?.subtle) {
+    throw new TwiApiError("configuration_error", "Web Crypto is required to verify captured evidence integrity.");
+  }
+  const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+  let digest: ArrayBuffer;
+  try {
+    digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  } catch {
+    throw new TwiApiError("invalid_response", "The evidence content digest could not be computed.");
+  }
+  const actualDigest = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  if (actualDigest !== value.content_sha256) {
+    throw new TwiApiError("invalid_response", "The evidence content digest does not match its package metadata.");
   }
   return value as unknown as EvidencePackage;
 }
@@ -248,7 +271,7 @@ export class TwiApiClient {
 
   async exportEvidence(jobId: string): Promise<EvidencePackage> {
     const value = await this.request(`/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`, { method: "GET" });
-    return parseEvidencePackage(value);
+    return await parseEvidencePackage(value);
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
