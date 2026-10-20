@@ -98,10 +98,21 @@
             <dl id="job-metadata" class="job-metadata"></dl>
             <div id="job-result-wrap" hidden><h3>Service result</h3><p class="field-help">This is the response returned by TWI. Interpret it alongside source attribution and provenance; it is not a truth guarantee.</p><div id="job-result" class="result-content"></div></div>
             <button id="refresh-job" class="button button-secondary" type="button" hidden>Refresh job status</button>
+            <button id="cancel-job" class="button button-secondary" type="button" hidden disabled>Request cancellation</button>
           </section>
           <section class="section-heading lower-heading" id="runs">
             <div><p class="eyebrow">WORKSPACE MAP</p><h2>Designed around the evidence lifecycle</h2></div>
             <span class="section-index">02 / NAVIGATION</span>
+          </section>
+          <section class="panel run-lookup-panel" aria-labelledby="run-lookup-title">
+            <div class="panel-topline"><span class="panel-kicker">RUN INSPECTION</span><span class="quiet-badge">Tenant-scoped</span></div>
+            <h3 id="run-lookup-title">Inspect an existing run</h3>
+            <p>Enter a job ID to retrieve its current service-reported state. Access remains subject to Platform scopes and TWI tenant/subject authorization.</p>
+            <form id="run-lookup-form" novalidate>
+              <label for="run-id">Job ID</label>
+              <input id="run-id" name="job_id" type="text" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Paste a TWI job ID" required disabled>
+              <button id="lookup-run" class="button button-secondary" type="submit" disabled>Load run details</button>
+            </form>
           </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
