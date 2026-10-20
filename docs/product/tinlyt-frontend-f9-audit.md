@@ -73,10 +73,6 @@ The only verified customer-facing administrative/usage capability in this phase 
 
 **Accepted after follow-up.** Response dimension and period are bound to the request; event count is bounded by the requested page limit; quota and plan metadata must be mutually consistent. Exact-head and post-merge workflows passed for both the original F9 implementation and the follow-up remediation. Proceed to F10.
 
-## F9 exit decision
-
-**Accepted for repository implementation.** The exact PR head and post-merge main commit passed all required Frontend and repository workflows. No remaining F9 repository blocker was found. Tenant administration beyond the existing usage endpoint remains intentionally unimplemented because no corresponding API contract was verified.
-
 ## Acceptance gates
 
 1. Exact-head Frontend workflow passes locked install, lint, syntax check, TypeScript, dependency audit, static security, tests, and build.
