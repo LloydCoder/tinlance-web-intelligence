@@ -607,6 +607,7 @@ export class TwiApiClient {
       || !(value.plan_id === null || (typeof value.plan_id === "string" && /^[A-Za-z0-9._:-]{1,80}$/.test(value.plan_id)))
       || !(value.plan_version === null || (typeof value.plan_version === "number" && Number.isInteger(value.plan_version) && value.plan_version >= 1))
       || (value.plan_id === null) !== (value.plan_version === null)
+      || (value.quota_limit === null) !== (value.plan_id === null)
       || (value.quota_limit === null) !== (value.remaining === null)
       || (value.quota_limit !== null && value.remaining !== Math.max(0, value.quota_limit - value.used))
       || !Array.isArray(value.events)
