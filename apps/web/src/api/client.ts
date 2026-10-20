@@ -504,7 +504,7 @@ export class TwiApiClient {
       if (!response.ok) throw errorForStatus(response.status, requestId);
       if (response.status === 204) return null;
       const contentType = response.headers.get("content-type") ?? "";
-      const mediaType = contentType.split(";", 1)[0].trim().toLowerCase();
+      const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
       if (expectedMediaType && mediaType !== expectedMediaType.toLowerCase()) {
         throw new TwiApiError("invalid_response", "The API returned an unexpected evidence media type.", response.status, requestId);
       }
