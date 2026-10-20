@@ -78,6 +78,12 @@ Each phase is accepted only after its own criteria and forensic review pass. A s
 - **F0 — accepted:** repository inventory and API/authority/CI gap audit documented in `docs/product/tinlyt-frontend-f0-audit.md`. Main CI passed on `195bcf970e86537b2d9cdb7d1b96576bd7fb1476` (workflow run #39374414981).
 - **F1 — merged:** PR #68 (`feat(frontend): establish Tinlyt F1 web foundation`), merge commit `020223f79b262ec10419a8683d0cde405891b292`.
 - **F2 — merged with audit remediation:** PR #69, merge commit `7ac2e61118fcf55a37082532d64ccf5e97c7e09b`; PR #70 post-merge remediation, merge commit `6675f66107e7ec90688ef208505c65aee4858cd9`. The main-branch Frontend and repository CI checks on that commit passed (workflow runs #39379087145 and #39379087133). Production identity configuration and a live end-to-end identity/API test remain deployment gates.
-- **F3 — implementation in progress:** authenticated submission and job status polling are being added on `feat/tinlyt-f3-investigations`. Do not mark F3 accepted until exact PR-head frontend and repository CI pass, changes are audited, and post-merge main checks pass.
+- **F3 — accepted:** PR #71 merged as `8bcbb893bf63c3e189959d214b7ac009228e8143`. Exact PR-head frontend quality gates and repository CI passed on `932e2437771d0c78c379ad13bc87cf3376c84892` (Frontend run #39382383072; CI run #39382383105). Post-merge main checks passed on `8bcbb893bf63c3e189959d214b7ac009228e8143` (Frontend run #39382794389; CI run #39382794200). Forensic closeout: `docs/product/tinlyt-frontend-f3-audit.md`.
 
 This ledger records repository implementation evidence only. It does not claim a live deployment, production identity readiness, private-beta readiness, or GA readiness.
+
+
+## Security research references
+
+- IETF [RFC 10017 — OAuth 2.0 for Browser-Based Applications](https://www.rfc-editor.org/rfc/rfc10017.html) (August 2026): public browser clients use Authorization Code + PKCE and protect the redirect flow against CSRF. Tinlyt continues to use the existing approved Platform identity integration; no parallel identity plane is introduced.
+- OWASP [DOM-based XSS Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html): untrusted content is inserted as text and DOM nodes are created explicitly; dynamic external links are restricted to HTTP(S), reject embedded credentials, and use `noopener noreferrer` plus `no-referrer`.
