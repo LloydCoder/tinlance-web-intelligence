@@ -9,11 +9,11 @@ async function collect(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) await collect(full);
-    else if (entry.isFile() && /\.(js|css|html)$/.test(entry.name)) files.push(full);
+    else if (entry.isFile() && /\.(js|ts|css|html)$/.test(entry.name)) files.push(full);
   }
 }
 await collect(sourceRoot);
-files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'));
+files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'), path.join(root, 'runtime-config.js'));
 const failures = [];
 for (const file of files) {
   const text = await readFile(file, 'utf8');

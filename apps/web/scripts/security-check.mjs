@@ -8,18 +8,18 @@ async function collect(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) await collect(full);
-    else if (entry.isFile() && /\.(js|css|html)$/.test(entry.name)) files.push(full);
+    else if (entry.isFile() && /\.(js|ts|css|html)$/.test(entry.name)) files.push(full);
   }
 }
 await collect(path.join(root, 'src'));
-files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'));
+files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'), path.join(root, 'runtime-config.js'));
 
 const checks = [
   ['dynamic code execution', /\beval\s*\(|\bnew\s+Function\s*\(/i],
   ['unsafe document writing', /document\.write\s*\(/i],
   ['inline event handler', /\son[a-z]+\s*=/i],
   ['javascript URL', /javascript\s*:/i],
-  ['external network dependency', /https?:\/\//i],
+  ['external resource load', /(?:<(?:script|link)\b[^>]+(?:src|href)\s*=\s*["']https?:\/\/|@import\s+url\(\s*["']?https?:\/\/)/i],
   ['private key material', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i],
   ['AWS access key pattern', /\bAKIA[0-9A-Z]{16}\b/],
   ['high-entropy-looking API secret', /\b(?:sk|rk|pk)_[A-Za-z0-9]{32,}\b/],

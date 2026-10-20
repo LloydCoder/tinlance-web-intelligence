@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const html = await readFile(path.join(root, 'index.html'), 'utf8');
 const css = await readFile(path.join(root, 'styles.css'), 'utf8');
 const js = await readFile(path.join(root, 'src/main.js'), 'utf8');
+const runtimeConfig = await readFile(path.join(root, 'runtime-config.js'), 'utf8');
 
 test('document declares language, viewport, title and skip navigation', () => {
   assert.match(html, /<html lang="en">/);
@@ -43,4 +44,14 @@ test('styles include responsive layout, visible focus and reduced motion', () =>
 test('navigation behavior changes only local presentation', () => {
   assert.match(js, /aria-current/);
   assert.doesNotMatch(js, /fetch\s*\(/);
+});
+
+
+test('runtime configuration is loaded before the application and contains no credentials', () => {
+  assert.ok(html.indexOf('/runtime-config.js') < html.indexOf('/src/main.js'));
+  assert.match(runtimeConfig, /authorizationEndpoint:\s*""/);
+  assert.match(runtimeConfig, /tokenEndpoint:\s*""/);
+  assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token/i);
+  assert.match(js, /getRuntime/);
+  assert.match(html, /id="sign-in"/);
 });

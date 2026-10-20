@@ -9,9 +9,14 @@
   "scripts": {
     "lint": "node scripts/lint.mjs",
     "syntax-check": "node scripts/syntax-check.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "security": "node scripts/security-check.mjs",
-    "test": "node --test",
+    "test": "node scripts/test.mjs",
     "build": "node scripts/build.mjs",
-    "check": "npm run lint && npm run syntax-check && npm run security && npm test && npm run build"
+    "check": "npm run lint && npm run syntax-check && npm run typecheck && npm run security && npm test && npm run build"
+  },
+  "type": "module",
+  "devDependencies": {
+    "typescript": "6.0.3"
   }
 }

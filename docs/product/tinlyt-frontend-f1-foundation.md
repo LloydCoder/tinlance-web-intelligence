@@ -32,6 +32,7 @@ Run from `apps/web/`:
 ```sh
 npm run lint
 npm run syntax-check
+npm run typecheck
 npm run security
 npm test
 npm run build

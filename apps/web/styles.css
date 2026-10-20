@@ -97,6 +97,7 @@ textarea::placeholder { color: var(--color-subtle); }
 .field-help { margin: .45rem 0 1rem !important; color: var(--color-subtle) !important; font-size: .7rem !important; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: .7rem; min-height: 42px; padding: .7rem 1rem; border: 1px solid transparent; border-radius: var(--radius-sm); font-weight: 800; font-size: .78rem; }
 .button-primary { background: var(--color-accent); color: var(--color-accent-ink); }
+.topbar-sign-in { min-height: 34px; padding: .45rem .7rem; font-size: .7rem; }
 .button-primary:disabled { border-color: #6e514d; background: #65423e; color: #f0c8c1; opacity: .85; }
 .principle-icon { color: var(--color-accent); font-size: 1.25rem; }
 .principle-list { display: grid; gap: 0; margin: .5rem 0 0; padding: 0; list-style: none; }
