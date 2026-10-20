@@ -153,3 +153,20 @@ test('rejects an OAuth response issuer mismatch before token exchange', async ()
   );
   assert.equal(called, false);
 });
+
+
+test('rejects access-token lifetimes above one hour', async () => {
+  const { provider, storage } = makeProvider({
+    fetchImpl: async () => new Response(JSON.stringify({
+      access_token: 'long-lived-token',
+      token_type: 'Bearer',
+      expires_in: 3601
+    }), { status: 200, headers: { 'content-type': 'application/json' } })
+  });
+  await provider.beginLogin();
+  const transaction = JSON.parse(storage.getItem('tinlyt.oauth.pkce.transaction.v1'));
+  await assert.rejects(
+    provider.handleCallback(`https://tinlyt.example.com/auth/callback?code=auth-code&state=${transaction.state}`),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
