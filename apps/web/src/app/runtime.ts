@@ -74,7 +74,7 @@ export function createRuntime(config: unknown): TinlytRuntime {
     });
     const apiClient = new TwiApiClient({
       baseUrl: config.apiBaseUrl,
-      allowedOrigins: config.apiAllowedOrigins,
+      allowedOrigins: config.apiAllowedOrigins ?? [],
       tokenProvider,
     });
     return {
