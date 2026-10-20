@@ -164,16 +164,16 @@
             <p>Monitors store a tenant- and subject-scoped target and compare captured text digests. This interface starts runs only when you ask; recurrence belongs to Agent OS. TWI does not return the target URL in monitor responses.</p>
             <form id="monitor-create-form" novalidate>
               <label for="monitor-target-url">Target URL</label>
-              <input id="monitor-target-url" name="target_url" type="url" maxlength="4096" required autocomplete="url" placeholder="https://example.com/page">
+              <input id="monitor-target-url" name="target_url" type="url" maxlength="4096" required disabled autocomplete="url" placeholder="https://example.com/page">
               <p class="field-help">Use a public HTTP(S) URL. The server enforces the safe acquisition policy. Do not include credentials or secrets in URLs; query values are not echoed by the API.</p>
               <label for="monitor-max-bytes">Maximum response bytes (optional)</label>
-              <input id="monitor-max-bytes" name="max_bytes" type="number" min="1" step="1" inputmode="numeric" placeholder="Use service default">
+              <input id="monitor-max-bytes" name="max_bytes" type="number" min="1" step="1" inputmode="numeric" disabled placeholder="Use service default">
               <button id="create-monitor" class="button button-primary" type="submit" disabled>Create monitor</button>
             </form>
             <div class="monitor-lookup-divider" aria-hidden="true"></div>
             <form id="monitor-lookup-form" novalidate>
               <label for="monitor-id">Existing monitor ID</label>
-              <input id="monitor-id" name="monitor_id" type="text" maxlength="128" pattern="[A-Za-z0-9._:-]{1,128}" required autocomplete="off" placeholder="Enter a monitor ID">
+              <input id="monitor-id" name="monitor_id" type="text" maxlength="128" pattern="[A-Za-z0-9._:-]{1,128}" required disabled autocomplete="off" placeholder="Enter a monitor ID">
               <button id="lookup-monitor" class="button button-secondary" type="submit" disabled>Load monitor</button>
             </form>
             <p class="field-help">There is no monitor-list endpoint in the current API. Load a monitor by its ID; this page does not invent or persist a list of recent monitors.</p>
