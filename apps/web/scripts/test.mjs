@@ -20,9 +20,7 @@ if (compile.status !== 0) {
   process.exit(compile.status ?? 1);
 }
 const entries = await readdir(path.join(root, 'tests'));
-const tests = entries
-  .filter((entry) => entry.endsWith('.test.mjs'))
-  .map((entry) => path.join(root, 'tests', entry));
+const tests = entries.filter((entry) => entry.endsWith('.test.mjs')).map((entry) => path.join(root, 'tests', entry));
 const result = spawnSync(process.execPath, ['--test', ...tests], { stdio: 'inherit', cwd: root });
 await rm(output, { recursive: true, force: true });
 process.exit(result.status ?? 1);
