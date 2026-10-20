@@ -5,7 +5,7 @@
 
 ## Delivered in this phase
 
-- Strict TypeScript compilation for the API contract layer.
+- Strict TypeScript 6.0.3 compilation for the API contract layer. TypeScript 7.0.2 is the latest native-port release, but the frontend pins the stable 6.0 line until compatibility is separately validated against the repository's build and test toolchain ([TypeScript 6.0 announcement](https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/), [TypeScript 7.0 announcement](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)).
 - Typed operations for job creation, job read, cancellation, evidence export, and claim verification.
 - Runtime validation for job requests and responses; the browser client ignores internal tenant, subject, and idempotency fields in job responses.
 - Idempotency key validation/generation for job creation, finite request timeout, redirect rejection, no credential cookies, no implicit retries, and no-store request behavior.
