@@ -222,10 +222,16 @@ function parseMonitorRun(value: unknown): MonitorRun {
         result.previous_digest !== null || result.changed !== null || result.changed_units !== 0
       ))
       || (result.outcome === "changed" && (
-        result.previous_digest === null || result.changed !== true || result.changed_units !== 1
+        result.previous_digest === null
+        || result.previous_digest === result.current_digest
+        || result.changed !== true
+        || result.changed_units !== 1
       ))
       || (result.outcome === "unchanged" && (
-        result.previous_digest === null || result.changed !== false || result.changed_units !== 0
+        result.previous_digest === null
+        || result.previous_digest !== result.current_digest
+        || result.changed !== false
+        || result.changed_units !== 0
       ))
     ) {
       throw new TwiApiError("invalid_response", "The monitor run outcome conflicts with its digest comparison fields.");
