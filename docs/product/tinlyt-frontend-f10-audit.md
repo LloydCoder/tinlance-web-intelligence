@@ -1,7 +1,7 @@
 # Tinlyt Frontend F10 — Accessibility, Security and Resilience Forensic Audit
 
 **Phase:** F10 — Accessibility, security and resilience
-**Status:** Follow-up implementation submitted; exact-head and post-merge Frontend/repository CI are required before acceptance.
+**Status:** Accepted after exact-head and post-merge Frontend/repository CI passed.
 
 ## Existing implementation reviewed
 
@@ -36,6 +36,13 @@
 3. Review changed files and test output, including any contrast/reflow failures; remediate rather than suppress failures.
 4. After merge, Frontend and full repository CI pass on the exact main commit.
 5. Keep manual screen-reader testing, representative assistive technology/browser combinations, production security headers, live identity configuration, and deployment certification as explicit residual gates.
+
+## Final verification evidence
+
+- Implementation PR #91 merged at `ffa32b295c52287c0929857181c68ad28fe9814c` on 2026-10-20.
+- Exact PR-head Frontend workflow #39404450394 and full repository CI #39404450396 passed.
+- Post-merge main Frontend workflow #39404858534 and full repository CI #39404858483 passed on the same merge commit.
+- The merged Frontend run executed pinned Playwright/Chromium checks against the built static artifact; full repository CI passed Python 3.12, Python 3.13, browser-container isolation and reproducible artifact validation.
 
 ## Non-claims
 
