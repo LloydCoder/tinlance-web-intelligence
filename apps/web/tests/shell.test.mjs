@@ -91,6 +91,9 @@ test('run inspection and cooperative cancellation remain tenant-scoped and expli
   assert.match(js, /window\.confirm/);
   assert.match(js, /Cancellation is not complete until the service reports a terminal cancelled state/);
   assert.match(js, /if \(polling\) return/);
+  assert.match(js, /if \(cancelling\) return latestJob/);
+  assert.match(js, /refreshButton\.disabled = !enabled \|\| polling \|\| cancelling/);
+  assert.match(js, /refreshButton\.disabled = !isAuthorized \|\| polling/);
   assert.match(js, /job\.cancel_requested/);
   assert.match(html, /Tenant-scoped/);
 });
