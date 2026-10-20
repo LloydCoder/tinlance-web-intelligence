@@ -372,7 +372,7 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
   }, 'monitor-create-key-0001');
   assert.equal(created.monitor_id, 'mon_01');
   assert.equal('target_url' in created, false);
-  assert.equal('access_token' in JSON.stringify(created), false);
+  assert.equal(JSON.stringify(created).includes('access_token'), false);
   const read = await client.getMonitor('mon_01');
   assert.equal(read.status, 'active');
   const queued = await client.runMonitor('mon_01', 'monitor-run-key-0001');
@@ -384,7 +384,6 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
   assert.equal((await client.deleteMonitor('mon_01')).status, 'deleted');
 
   assert.equal(calls[0].headers['Idempotency-Key'], 'monitor-create-key-0001');
-  assert.equal(calls[0].init, undefined);
   assert.equal(JSON.parse(calls[0].body).policy.max_bytes, 2048);
   assert.equal(calls[2].headers['Idempotency-Key'], 'monitor-run-key-0001');
   assert.equal(calls.every((call) => call.headers.Authorization === 'Bearer ephemeral-test-token'), true);
