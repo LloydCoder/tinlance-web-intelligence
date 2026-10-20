@@ -262,7 +262,7 @@ function validateMonitorCreateRequest(request: MonitorCreateRequest): void {
       || Object.keys(request.policy).some((key) => key !== "max_bytes")
       || (request.policy.max_bytes !== undefined && (
         typeof request.policy.max_bytes !== "number"
-        || !Number.isInteger(request.policy.max_bytes)
+        || !Number.isSafeInteger(request.policy.max_bytes)
         || request.policy.max_bytes < 1
       ))
     ) {
