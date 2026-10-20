@@ -6,6 +6,7 @@ const validConfig = {
   apiBaseUrl: '/api/twi',
   apiAllowedOrigins: [],
   oauth: {
+    issuer: 'https://identity.example.com',
     authorizationEndpoint: 'https://identity.example.com/authorize',
     tokenEndpoint: 'https://identity.example.com/token',
     clientId: 'tinlyt-public-client',
