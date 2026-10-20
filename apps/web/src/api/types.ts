@@ -76,8 +76,36 @@ export interface VerifyResearchRequest {
   claims: ClaimRequest[];
 }
 
+export type CitationStatus = "all_citations_match_captured_text" | "citation_mismatch" | "partially_matched_citations";
+
+export interface VerifiedCitation {
+  job_id: string;
+  quote: string;
+  quote_match: boolean;
+  match_status: "matched" | "quote_not_found";
+  source: {
+    url: string;
+    retrieved_at: string;
+    media_type: string;
+    content_sha256: string;
+  };
+}
+
+export interface VerifiedClaim {
+  claim_id: string;
+  statement: string;
+  citation_status: CitationStatus;
+  citations: VerifiedCitation[];
+}
+
 export interface VerifyResearchResponse {
-  [key: string]: unknown;
+  verification_id: string;
+  verifier_version: string;
+  verified_at: string;
+  report_sha256: string;
+  status: "all_citations_match_captured_text" | "citation_mismatch";
+  factual_truth_assessed: false;
+  claims: VerifiedClaim[];
 }
 
 export interface AccessTokenProvider {
