@@ -131,7 +131,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     if (oauthError) {
       throw new TwiApiError("authentication_required", "The identity provider rejected authorization.");
     }
-    if (!code || !state || !transaction || state !== transaction.state) {
+    if (!code || code.length > 4096 || !state || state.length > 256 || !transaction || state !== transaction.state) {
       throw new TwiApiError("authentication_required", "The OAuth callback state is missing or invalid.");
     }
     if (this.now() - transaction.createdAt > TRANSACTION_TTL_MS || this.now() < transaction.createdAt) {
@@ -185,6 +185,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       !this.isRecord(tokenResponse)
       || typeof tokenResponse.access_token !== "string"
       || !tokenResponse.access_token
+      || tokenResponse.access_token.length > 16_384
       || /\s/.test(tokenResponse.access_token)
       || typeof tokenResponse.token_type !== "string"
       || tokenResponse.token_type.toLowerCase() !== "bearer"
