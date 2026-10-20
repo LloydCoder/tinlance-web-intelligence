@@ -516,3 +516,44 @@ test('monitor run client validates result outcome and baseline digest fields', a
   }), { status: 200, headers: { 'content-type': 'application/json' } }));
   assert.equal((await staleCapture.getMonitorRun('mon_01', 'job_monitor_01')).result.outcome, 'stale_capture');
 });
+
+
+test('usage client validates tenant-scoped usage response and preserves pagination cursor', async () => {
+  const calls = [];
+  const period = '2026-10-01T00:00:00Z';
+  const response = {
+    schema_version: 1, dimension: 'requests_month', period_start: period,
+    used: 4, quota_limit: 100, remaining: 96, plan_id: 'basic', plan_version: 1,
+    events: [{ event_id: 'evt-01', feature: 'search', dimension: 'requests_month', period_start: period, quantity: 1, occurred_at: '2026-10-19T10:00:00Z', schema_version: 1 }],
+    returned: 1, has_more: true, next_cursor: 'opaque-cursor'
+  };
+  const client = makeClient(async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify(response), { status: 200, headers: { 'content-type': 'application/json' } });
+  });
+  const usage = await client.getUsage('requests_month', period, 25);
+  assert.equal(usage.used, 4);
+  assert.equal(usage.remaining, 96);
+  assert.equal(usage.events[0].event_id, 'evt-01');
+  assert.equal(usage.next_cursor, 'opaque-cursor');
+  assert.match(calls[0], /dimension=requests_month/);
+  assert.match(calls[0], /period_start=2026-10-01T00%3A00%3A00Z/);
+  const next = await client.getUsage('requests_month', period, 25, usage.next_cursor);
+  assert.equal(next.next_cursor, 'opaque-cursor');
+  assert.match(calls[1], /cursor=opaque-cursor/);
+});
+
+test('usage client rejects invalid query values and inconsistent server payloads', async () => {
+  let called = false;
+  const client = makeClient(async () => { called = true; return new Response('{}'); });
+  await assert.rejects(client.getUsage('bad dimension', '2026-10-01T00:00:00Z'), /usage dimension is invalid/i);
+  await assert.rejects(client.getUsage('requests_month', '2026-10-01'), /timezone-aware/i);
+  await assert.rejects(client.getUsage('requests_month', '2026-10-01T00:00:00Z', 501), /page size/i);
+  assert.equal(called, false);
+  const malformed = makeClient(async () => new Response(JSON.stringify({
+    schema_version: 1, dimension: 'requests_month', period_start: '2026-10-01T00:00:00Z',
+    used: 1, quota_limit: 5, remaining: 3, plan_id: 'basic', plan_version: 1,
+    events: [], returned: 0, has_more: false, next_cursor: null
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(malformed.getUsage('requests_month', '2026-10-01T00:00:00Z'), /quota fields are internally inconsistent/i);
+});
