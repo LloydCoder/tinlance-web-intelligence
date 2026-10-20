@@ -153,7 +153,29 @@ def main() -> None:
                 page.set_viewport_size({"width": 375, "height": 812})
                 page.reload(wait_until="networkidle")
                 overflow = page.evaluate(
-                    "() => ({ document: document.documentElement.scrollWidth, viewport: window.innerWidth })"
+                    """() => {
+                      const offenders = [...document.querySelectorAll('body *')].map(el => {
+                        const rect = el.getBoundingClientRect();
+                        const style = getComputedStyle(el);
+                        return {
+                          tag: el.tagName,
+                          id: el.id,
+                          className: typeof el.className === 'string' ? el.className : '',
+                          left: Math.round(rect.left),
+                          right: Math.round(rect.right),
+                          width: Math.round(rect.width),
+                          overflowX: style.overflowX,
+                          parentOverflowX: getComputedStyle(el.parentElement || document.body).overflowX
+                        };
+                      }).filter(el => el.width > 0 && el.right > window.innerWidth + 1
+                        && !['auto', 'scroll', 'hidden', 'clip'].includes(el.parentOverflowX))
+                        .sort((a, b) => b.right - a.right).slice(0, 8);
+                      return {
+                        document: document.documentElement.scrollWidth,
+                        viewport: window.innerWidth,
+                        offenders
+                      };
+                    }"""
                 )
                 assert overflow["document"] <= overflow["viewport"], overflow
 
