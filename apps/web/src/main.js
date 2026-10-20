@@ -68,6 +68,9 @@ try {
 let isAuthorized = false;
 let activeJobId = null;
 let submitting = false;
+let polling = false;
+let cancelling = false;
+let latestJob = null;
 
 function setLiveControlsEnabled(enabled) {
   for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton]) {
@@ -210,6 +213,7 @@ function renderJobResult(job) {
 }
 
 function showJob(job, message) {
+  latestJob = job;
   if (!statusPanel) return;
   statusPanel.hidden = false;
   if (statusBadge) statusBadge.textContent = job.status;
@@ -234,7 +238,7 @@ function showJob(job, message) {
   if (cancelJobButton) {
     const cancellable = isAuthorized && Boolean(activeJobId) && !isTerminalJobStatus(job.status);
     cancelJobButton.hidden = !cancellable;
-    cancelJobButton.disabled = !cancellable || job.cancel_requested;
+    cancelJobButton.disabled = !cancellable || job.cancel_requested || cancelling;
     cancelJobButton.textContent = job.cancel_requested ? 'Cancellation requested' : 'Request cancellation';
   }
   if (metadataList) {
@@ -280,16 +284,22 @@ async function refreshJob(showProgress = true) {
 }
 
 async function pollJob(initialJob) {
+  if (polling) return;
+  polling = true;
   let job = initialJob;
-  for (let attempt = 0; attempt < 20 && !isTerminalJobStatus(job.status); attempt += 1) {
-    await wait(1500);
-    const updated = await refreshJob(false);
-    if (!updated) return;
-    job = updated;
-  }
-  if (!isTerminalJobStatus(job.status) && statusMessage) {
-    statusMessage.textContent = 'The job is still active. Refresh status to request the latest state; no completion outcome is assumed.';
-    if (refreshButton) refreshButton.hidden = false;
+  try {
+    for (let attempt = 0; attempt < 20 && !isTerminalJobStatus(job.status); attempt += 1) {
+      await wait(1500);
+      const updated = await refreshJob(false);
+      if (!updated) return;
+      job = updated;
+    }
+    if (!isTerminalJobStatus(job.status) && statusMessage) {
+      statusMessage.textContent = 'The job is still active. Refresh status to request the latest state; no completion outcome is assumed.';
+      if (refreshButton) refreshButton.hidden = false;
+    }
+  } finally {
+    polling = false;
   }
 }
 
@@ -383,9 +393,9 @@ runLookupForm?.addEventListener('submit', async (event) => {
 });
 
 cancelJobButton?.addEventListener('click', async () => {
-  if (!activeJobId || !isAuthorized || submitting || runtime.state !== 'ready') return;
+  if (!activeJobId || !isAuthorized || cancelling || runtime.state !== 'ready') return;
   if (!window.confirm('Request cancellation for this TWI job? A running acquisition may finish its bounded operation before TWI confirms cancellation.')) return;
-  submitting = true;
+  cancelling = true;
   cancelJobButton.disabled = true;
   if (submitButton) submitButton.disabled = true;
   if (lookupButton) lookupButton.disabled = true;
@@ -402,9 +412,15 @@ cancelJobButton?.addEventListener('click', async () => {
       : 'Cancellation could not be requested. The service-reported job state has not been changed in the interface.';
     if (cancelJobButton) cancelJobButton.disabled = false;
   } finally {
-    submitting = false;
-    if (submitButton) submitButton.disabled = !isAuthorized;
-    if (lookupButton) lookupButton.disabled = !isAuthorized;
+    cancelling = false;
+    if (!submitting) {
+      if (submitButton) submitButton.disabled = !isAuthorized;
+      if (lookupButton) lookupButton.disabled = !isAuthorized;
+    }
+    if (cancelJobButton && latestJob && activeJobId && isAuthorized && !isTerminalJobStatus(latestJob.status)) {
+      cancelJobButton.hidden = false;
+      cancelJobButton.disabled = latestJob.cancel_requested;
+    }
   }
 });
 
