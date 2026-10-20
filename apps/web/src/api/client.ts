@@ -416,10 +416,22 @@ export class TwiApiClient {
 
   private async request(path: string, init: RequestInit): Promise<unknown> {
     let token: string;
+    let tokenTimeout: ReturnType<typeof globalThis.setTimeout> | undefined;
     try {
-      token = await this.tokenProvider.getAccessToken();
-    } catch {
+      token = await Promise.race([
+        this.tokenProvider.getAccessToken(),
+        new Promise<string>((_resolve, reject) => {
+          tokenTimeout = globalThis.setTimeout(
+            () => reject(new TwiApiError("request_timeout", "The Platform identity provider timed out.")),
+            this.timeoutMs,
+          );
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof TwiApiError) throw error;
       throw new TwiApiError("authentication_required", "The approved Platform identity provider could not supply an access token.");
+    } finally {
+      if (tokenTimeout !== undefined) globalThis.clearTimeout(tokenTimeout);
     }
     if (!token || token !== token.trim() || /\s/.test(token)) {
       throw new TwiApiError("authentication_required", "The approved Platform identity provider returned an invalid access token.");
