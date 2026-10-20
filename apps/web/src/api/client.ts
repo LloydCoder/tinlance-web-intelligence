@@ -134,7 +134,7 @@ function validateCreateRequest(request: CreateJobRequest): void {
       typeof payload.query !== "string"
       || payload.query.trim().length < 1
       || payload.query.length > 400
-      || (payload.limit !== undefined && (!Number.isInteger(payload.limit) || Number(payload.limit) < 1 || Number(payload.limit) > 20))
+      || (payload.limit !== undefined && (typeof payload.limit !== "number" || !Number.isInteger(payload.limit) || payload.limit < 1 || payload.limit > 20))
       || Object.keys(payload).some((key) => !["query", "limit"].includes(key))
     ) {
       throw new TwiApiError("validation_error", "The search request does not match the supported contract.");
@@ -157,7 +157,7 @@ function validateCreateRequest(request: CreateJobRequest): void {
     if (
       typeof payload.url !== "string"
       || (payload.wait_until !== undefined && !["domcontentloaded", "load"].includes(String(payload.wait_until)))
-      || (payload.timeout_ms !== undefined && (!Number.isInteger(payload.timeout_ms) || Number(payload.timeout_ms) < 1000 || Number(payload.timeout_ms) > 30000))
+      || (payload.timeout_ms !== undefined && (typeof payload.timeout_ms !== "number" || !Number.isInteger(payload.timeout_ms) || payload.timeout_ms < 1000 || payload.timeout_ms > 30000))
       || (payload.include_screenshot !== undefined && typeof payload.include_screenshot !== "boolean")
       || Object.keys(payload).some((key) => !["url", "wait_until", "timeout_ms", "include_screenshot"].includes(key))
     ) {
