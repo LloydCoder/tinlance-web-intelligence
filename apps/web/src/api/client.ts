@@ -107,18 +107,41 @@ function parseEvidencePackage(value: unknown): EvidencePackage {
     || value.format !== "application/vnd.tinlance.twi-evidence+json"
     || value.schema_version !== "1.0.0"
     || typeof value.content_base64 !== "string"
+    || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value.content_base64)
     || typeof value.content_type !== "string"
+    || !value.content_type
     || typeof value.content_sha256 !== "string"
     || !/^[0-9a-f]{64}$/.test(value.content_sha256)
     || typeof value.export_id !== "string"
     || !/^sha256:[0-9a-f]{64}$/.test(value.export_id)
     || typeof value.artifact_id !== "string"
-    || !/^sha256:[0-9a-f]{64}$/.test(value.artifact_id)
+    || value.artifact_id !== `sha256:${value.content_sha256}`
     || typeof value.byte_size !== "number"
     || !Number.isInteger(value.byte_size)
     || value.byte_size < 0
     || value.byte_size > 20_000_000
     || !isRecord(value.provenance)
+    || value.provenance.schema_version !== "1.0.0"
+    || typeof value.provenance.requested_url_sha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(value.provenance.requested_url_sha256)
+    || typeof value.provenance.final_url_sha256 !== "string"
+    || !/^[0-9a-f]{64}$/.test(value.provenance.final_url_sha256)
+    || typeof value.provenance.status_code !== "number"
+    || !Number.isInteger(value.provenance.status_code)
+    || value.provenance.status_code < 200
+    || value.provenance.status_code > 599
+    || value.provenance.content_type !== value.content_type
+    || value.provenance.content_sha256 !== value.content_sha256
+    || value.provenance.byte_size !== value.byte_size
+    || typeof value.provenance.retrieved_at !== "string"
+    || !Number.isFinite(Date.parse(value.provenance.retrieved_at))
+    || typeof value.provenance.redirect_count !== "number"
+    || !Number.isInteger(value.provenance.redirect_count)
+    || value.provenance.redirect_count < 0
+    || value.provenance.redirect_count > 100
+    || typeof value.provenance.extractor_version !== "string"
+    || !value.provenance.extractor_version
+    || value.provenance.extractor_version.length > 64
     || typeof value.source_revision !== "string"
     || !/^[0-9a-f]{40}$/.test(value.source_revision)
     || !isRecord(value.interpretation)
