@@ -51,12 +51,21 @@ test('submits a strict job with bearer token, idempotency and safe fetch options
   assert.equal('idempotency_key' in result, false);
 });
 
-test('requires an injected Platform token provider and rejects invalid base URLs', () => {
+test('requires an injected Platform token provider and restricts cross-origin API URLs', () => {
   assert.throws(() => new TwiApiClient({ baseUrl: '/api/twi' }), TwiApiError);
   assert.throws(() => new TwiApiClient({
     baseUrl: 'http://api.example.com',
     tokenProvider: { async getAccessToken() { return 'token'; } }
   }), TwiApiError);
+  assert.throws(() => new TwiApiClient({
+    baseUrl: 'https://api.example.com',
+    tokenProvider: { async getAccessToken() { return 'token'; } }
+  }), TwiApiError);
+  assert.doesNotThrow(() => new TwiApiClient({
+    baseUrl: 'https://api.example.com',
+    allowedOrigins: ['https://api.example.com'],
+    tokenProvider: { async getAccessToken() { return 'token'; } }
+  }));
 });
 
 test('rejects malformed search payloads before network access', async () => {
@@ -115,4 +124,76 @@ test('times out bounded requests and does not retry writes implicitly', async ()
     (error) => error instanceof TwiApiError && error.code === 'request_timeout'
   );
   assert.equal(calls, 1);
+});
+
+
+test('exports canonical evidence packages using the vendor JSON media type', async () => {
+  const packageBody = {
+    format: 'application/vnd.tinlance.twi-evidence+json',
+    schema_version: '1.0.0',
+    export_id: `sha256:${'a'.repeat(64)}`,
+    artifact_id: `sha256:${'a'.repeat(64)}`,
+    content_sha256: 'a'.repeat(64),
+    content_type: 'text/html',
+    byte_size: 5,
+    source_revision: 'b'.repeat(40),
+    provenance: { schema_version: '1.0.0' },
+    content_base64: 'aGVsbG8=',
+    interpretation: {
+      provenance_kind: 'acquisition_observation',
+      truth_assessment: 'not_provided',
+      source_authority_assessment: 'not_provided'
+    }
+  };
+  let captured;
+  const client = makeClient(async (url, init) => {
+    captured = { url: String(url), init };
+    return new Response(JSON.stringify(packageBody), {
+      status: 200,
+      headers: { 'content-type': 'application/vnd.tinlance.twi-evidence+json' }
+    });
+  });
+  const result = await client.exportEvidence('job_01');
+  assert.equal(result.schema_version, '1.0.0');
+  assert.equal(result.interpretation.truth_assessment, 'not_provided');
+  assert.match(captured.url, /\/v1\/jobs\/job_01\/evidence$/);
+});
+
+test('validates verification responses without claiming factual truth', async () => {
+  const verification = {
+    verification_id: 'verify-01',
+    verifier_version: 'twi-citation-verifier/1.0.0',
+    verified_at: '2026-10-20T00:00:00Z',
+    report_sha256: 'c'.repeat(64),
+    status: 'citation_mismatch',
+    factual_truth_assessed: false,
+    claims: []
+  };
+  const client = makeClient(async () => new Response(JSON.stringify(verification), {
+    status: 200,
+    headers: { 'content-type': 'application/json' }
+  }));
+  const result = await client.verifyResearch({
+    claims: [{ claim_id: 'claim-1', statement: 'A claim to check', citations: [{ job_id: 'job_01', quote: 'quoted text longer than eight' }] }]
+  });
+  assert.equal(result.factual_truth_assessed, false);
+  assert.equal(result.status, 'citation_mismatch');
+});
+
+test('rejects verification output that overstates factual truth', async () => {
+  const client = makeClient(async () => new Response(JSON.stringify({
+    verification_id: 'verify-01',
+    verifier_version: 'v1',
+    verified_at: '2026-10-20T00:00:00Z',
+    report_sha256: 'c'.repeat(64),
+    status: 'all_citations_match_captured_text',
+    factual_truth_assessed: true,
+    claims: []
+  }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  await assert.rejects(
+    client.verifyResearch({
+      claims: [{ claim_id: 'claim-1', statement: 'A claim to check', citations: [{ job_id: 'job_01', quote: 'quoted text longer than eight' }] }]
+    }),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
 });
