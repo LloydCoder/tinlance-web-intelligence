@@ -61,7 +61,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | F1 | Design system, frontend workspace, app shell and frontend CI | Reproducible locked install, lint, JavaScript syntax validation, static security checks, tests/build, accessible responsive primitives. TypeScript typechecking is required once a TypeScript application is adopted; the current JavaScript syntax check must not be described as a typecheck. |
 | F2 | Auth integration and typed API client | Approved identity integration; no browser-held privileged secrets; typed errors, idempotency and cancellation behavior tested. |
 | F3 | Investigation submission and result experience | Authenticated search/fetch/browser submission; bounded live job polling; validated job-state display; safe result rendering; partial, blocked, empty and failure states; exact-commit CI and post-merge forensic review. |
-| F4 | Run detail and lifecycle | Accurate server states, safe polling/cancel behavior, accessible logs where provided. |
+| F4 | Run detail and lifecycle | Tenant-scoped job lookup; server-returned state and cancellation-request visibility; explicit cancellation confirmation; bounded polling/manual refresh; honest denied/failed/terminal states; no fabricated logs; exact-commit CI and forensic review. |
 | F5 | Evidence inspection and export | Provenance visible; authorized export only; invalid, unavailable and out-of-scope cases tested. |
 | F6 | Claim verification | Uses captured citations and real verification response; no fabricated confidence or truth guarantee. |
 | F7 | Collections and monitors | Monitors follow existing API; persistent collections remain gated on a real persistence contract. |
