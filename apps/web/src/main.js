@@ -480,14 +480,32 @@ function renderVerificationResponse(response) {
         job.textContent = `Captured fetch job: ${citation.job_id}`;
         const source = document.createElement('p');
         source.append(document.createTextNode('Source: '));
-        const sourceUrl = new URL(citation.source.url);
-        if (['http:', 'https:'].includes(sourceUrl.protocol) && !sourceUrl.username && !sourceUrl.password) {
-          const link = document.createElement('a');
-          link.href = sourceUrl.href;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.textContent = sourceUrl.href;
-          source.append(link);
+        let sourceUrl;
+        try {
+          sourceUrl = new URL(citation.source.url);
+        } catch {
+          sourceUrl = null;
+        }
+        if (
+          sourceUrl
+          && ['http:', 'https:'].includes(sourceUrl.protocol)
+          && !sourceUrl.username
+          && !sourceUrl.password
+        ) {
+          const hasPrivateUrlTail = Boolean(sourceUrl.search || sourceUrl.hash);
+          const safeDisplayUrl = sourceUrl.origin + sourceUrl.pathname;
+          if (hasPrivateUrlTail) {
+            source.append(document.createTextNode(
+              safeDisplayUrl + ' (query and fragment omitted for privacy; direct link unavailable)'
+            ));
+          } else {
+            const link = document.createElement('a');
+            link.href = sourceUrl.href;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = safeDisplayUrl;
+            source.append(link);
+          }
         } else {
           source.append(document.createTextNode('Unavailable: source URL did not pass safe-link validation.'));
         }
