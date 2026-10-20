@@ -227,14 +227,63 @@ export class TwiApiClient {
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
-    if (!isRecord(request) || !Array.isArray(request.claims) || request.claims.length < 1 || request.claims.length > 20) {
+    if (!request || !Array.isArray(request.claims) || request.claims.length < 1 || request.claims.length > 20) {
       throw new TwiApiError("validation_error", "The verification request must contain between 1 and 20 claims.");
     }
-    return this.request("/v1/research/verify", {
+    const ids = new Set<string>();
+    for (const claim of request.claims) {
+      if (
+        !claim
+        || !/^[A-Za-z0-9._:-]{1,64}$/.test(claim.claim_id)
+        || ids.has(claim.claim_id)
+        || typeof claim.statement !== "string"
+        || claim.statement.trim().length < 1
+        || claim.statement.length > 500
+        || !Array.isArray(claim.citations)
+        || claim.citations.length < 1
+        || claim.citations.length > 4
+      ) {
+        throw new TwiApiError("validation_error", "A claim does not match the supported verification contract.");
+      }
+      ids.add(claim.claim_id);
+      for (const citation of claim.citations) {
+        if (
+          !citation
+          || !this.isValidJobId(citation.job_id)
+          || typeof citation.quote !== "string"
+          || citation.quote.length < 8
+          || citation.quote.length > 350
+        ) {
+          throw new TwiApiError("validation_error", "A citation does not match the supported verification contract.");
+        }
+      }
+    }
+    return this.parseVerificationResponse(await this.request("/v1/research/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
-    }) as Promise<VerifyResearchResponse>;
+    }));
+  }
+
+  private parseVerificationResponse(value: unknown): VerifyResearchResponse {
+    if (
+      !isRecord(value)
+      || typeof value.verification_id !== "string"
+      || typeof value.verifier_version !== "string"
+      || typeof value.verified_at !== "string"
+      || typeof value.report_sha256 !== "string"
+      || !/^[0-9a-f]{64}$/.test(value.report_sha256)
+      || !["all_citations_match_captured_text", "citation_mismatch"].includes(String(value.status))
+      || value.factual_truth_assessed !== false
+      || !Array.isArray(value.claims)
+    ) {
+      throw new TwiApiError("invalid_response", "The API returned an invalid verification response.");
+    }
+    return value as unknown as VerifyResearchResponse;
+  }
+
+  private isValidJobId(value: string): boolean {
+    return typeof value === "string" && value.length > 0 && value.length <= 64 && /^[A-Za-z0-9._:-]+$/.test(value);
   }
 
   private validateId(value: string): string {
