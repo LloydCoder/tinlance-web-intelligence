@@ -44,6 +44,7 @@ const cancelJobButton = document.querySelector('#cancel-job');
 const exportEvidenceButton = document.querySelector('#export-evidence');
 const evidencePanel = document.querySelector('#evidence');
 const evidenceStatus = document.querySelector('#evidence-status');
+const evidenceIntegrityBadge = document.querySelector('#evidence-integrity-badge');
 const evidenceMetadata = document.querySelector('#evidence-metadata');
 const downloadEvidenceButton = document.querySelector('#download-evidence');
 const runLookupForm = document.querySelector('#run-lookup-form');
@@ -250,6 +251,7 @@ function clearEvidenceView() {
       : 'Evidence export is disabled because the approved identity configuration is not ready.'
     : 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
   if (evidenceMetadata) evidenceMetadata.replaceChildren();
+  if (evidenceIntegrityBadge) evidenceIntegrityBadge.textContent = 'Awaiting package';
   if (downloadEvidenceButton) downloadEvidenceButton.disabled = true;
 }
 
@@ -257,6 +259,7 @@ function renderEvidencePackage(jobId, evidence, bytes) {
   currentEvidenceBytes = bytes;
   currentEvidenceJobId = jobId;
   if (evidencePanel) evidencePanel.hidden = false;
+  if (evidenceIntegrityBadge) evidenceIntegrityBadge.textContent = 'Digest verified';
   if (evidenceStatus) {
     evidenceStatus.textContent = 'Package schema, captured byte size, and content SHA-256 validated. This detects content modification; it is not a digital signature or a truth verdict.';
   }
