@@ -195,6 +195,20 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   );
 });
 
+test('bounds raw evidence package bytes before JSON parsing', async () => {
+  const client = makeClient(async () => new Response('oversized', {
+    status: 200,
+    headers: {
+      'content-type': 'application/vnd.tinlance.twi-evidence+json',
+      'content-length': '30000001'
+    }
+  }));
+  await assert.rejects(
+    client.exportEvidencePackage('job_01'),
+    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+  );
+});
+
 test('validates verification responses without claiming factual truth', async () => {
   const verification = {
     verification_id: 'verify-01',
