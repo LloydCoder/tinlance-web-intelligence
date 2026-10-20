@@ -58,3 +58,6 @@ jobs:
       - name: Build
         working-directory: apps/web
         run: npm run build
+      - name: Production artifact HTTP smoke check
+        working-directory: apps/web
+        run: npm run release-check
