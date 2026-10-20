@@ -171,9 +171,11 @@ test('monitor interface exposes only the documented explicit lifecycle and never
   assert.match(html, /id="resume-monitor"[^>]*disabled/);
   assert.match(html, /id="delete-monitor"[^>]*disabled/);
   assert.match(html, /id="monitor-status" role="status" aria-live="polite"/);
+  assert.match(js, /pendingMonitorCreateKey \?\?= createMonitorIdempotencyKey\(\)/);
+  assert.match(js, /runtime\.apiClient\.createMonitor\(request, pendingMonitorCreateKey\)/);
   assert.match(js, /runtime\.apiClient\.createMonitor\(request\)/);
   assert.match(js, /runtime\.apiClient\.getMonitor\(requestedId\)/);
-  assert.match(js, /runtime\.apiClient\.runMonitor\(monitorId\)/);
+  assert.match(js, /runtime\.apiClient\.runMonitor\(monitorId, pendingMonitorRunKey\)/);
   assert.match(js, /runtime\.apiClient\.getMonitorRun\(monitorId, runId\)/);
   assert.match(js, /monitorRunLookupForm\?\.addEventListener\('submit'/);
   assert.match(js, /runtime\.apiClient\.getMonitorRun\(monitorId, requestedRunId\)/);
