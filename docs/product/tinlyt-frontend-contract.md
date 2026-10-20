@@ -28,7 +28,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | Workspace / investigation dashboard | Job and research APIs | No fabricated recent investigations or metrics in live mode. |
 | New investigation | Job and browser request schemas | Expose only fields supported by the selected operation. |
 | Investigation results | Job result and acquisition provenance | Link each finding to underlying observation/source; explain missing or incomplete evidence. |
-| Evidence detail | `GET /v1/jobs/{job_id}/evidence` and `schemas/twi-evidence-package-v1.schema.json` | Export is permission/job-state dependent; package is not a truth verdict or digital signature. |
+| Evidence detail | `GET /v1/jobs/{job_id}/evidence` and `schemas/twi-evidence-package-v1.schema.json` | Show versioned acquisition provenance; preserve exact response bytes for explicit download; package is not a truth verdict or digital signature. |
 | Run detail | Durable job lifecycle and operation responses | Render only server-provided state, timings, logs and usage; omit unknown fields. |
 | Collections and export | Evidence export; monitor APIs | Do not imply persisted research collections until an explicit contract exists. |
 | API documentation / developer settings | Versioned schemas and API docs | Do not invent credential creation, rotation, quotas or integrations. |
@@ -39,7 +39,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 
 - **Jobs:** `POST /v1/jobs` supports `search`, `fetch`, and `browser`; requests are strict and idempotency is required. Read/cancel behavior must follow route implementation and authorization scopes.
 - **Verification:** `POST /v1/research/verify` requires `twi:research:verify` and verifies bounded claims against captured source evidence. It must not be presented as an unqualified truth oracle.
-- **Evidence export:** `GET /v1/jobs/{job_id}/evidence` requires a verified Platform principal with `twi:evidence:export` and a successful fetch job in that principal's tenant and subject scope. It returns a deterministic JSON package with captured bytes and versioned acquisition provenance. Integrity is not a digital signature and does not establish upstream truth.
+- **Evidence export:** `GET /v1/jobs/{job_id}/evidence` requires a verified Platform principal with `twi:evidence:export` and a successful fetch job in that principal's tenant and subject scope. It returns a deterministic JSON package with captured bytes and versioned acquisition provenance. The client must validate the vendor media type, bounded-read and preserve the exact response bytes, validate the package schema/byte size/SHA-256, and download those same bytes only after explicit user action. Display requested/final URL hashes rather than inventing or exposing raw URLs absent from the contract. Integrity is not a digital signature and does not establish upstream truth.
 - **Monitors:** `docs/api/monitors-v1.md` documents tenant/subject-scoped operations. The API stores definitions and enqueues explicit runs; Agent OS owns recurrence.
 - **Authority:** Agent Platform owns identity, authorization, policy, approvals, secrets, budgets, audit and governed execution. Agent OS owns orchestration and lifecycle. TWI owns acquisition/evidence capture. World Intelligence owns canonical world state and cross-source temporal intelligence. TSIC owns cross-repository conformance.
 
@@ -62,7 +62,7 @@ This is the implementation contract for the customer-facing Tinlyt experience. I
 | F2 | Auth integration and typed API client | Approved identity integration; no browser-held privileged secrets; typed errors, idempotency and cancellation behavior tested. |
 | F3 | Investigation submission and result experience | Authenticated search/fetch/browser submission; bounded live job polling; validated job-state display; safe result rendering; partial, blocked, empty and failure states; exact-commit CI and post-merge forensic review. |
 | F4 | Run detail and lifecycle | Tenant-scoped job lookup; server-returned state and cancellation-request visibility; explicit cancellation confirmation; bounded polling/manual refresh; honest denied/failed/terminal states; no fabricated logs; exact-commit CI and forensic review. |
-| F5 | Evidence inspection and export | Provenance visible; authorized export only; invalid, unavailable and out-of-scope cases tested. |
+| F5 | Evidence inspection and export | Provenance and interpretation visible; strict vendor media type; bounded exact-byte preservation/download; schema/size/SHA-256 validation; unauthorized, unavailable, malformed, tampered and out-of-scope cases tested; no source-truth or signature claim. |
 | F6 | Claim verification | Uses captured citations and real verification response; no fabricated confidence or truth guarantee. |
 | F7 | Collections and monitors | Monitors follow existing API; persistent collections remain gated on a real persistence contract. |
 | F8 | Developer experience | API docs/examples generated or checked against canonical schemas; no invented credential controls. |
