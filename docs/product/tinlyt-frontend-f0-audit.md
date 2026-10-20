@@ -1,6 +1,6 @@
 # Tinlyt Frontend F0 — Repository Forensic Inventory
 
-**Status:** F0 audit artifact prepared; acceptance requires CI on the resulting PR head.  
+**Status:** F0 accepted as repository inventory; exact post-merge CI passed on main commit `195bcf970e86537b2d9cdb7d1b96576bd7fb1476` (workflow run #39374414981). PR #67 was closed without merge; its documentation-only closeout was not required to establish the source audit.  
 **Repository:** `LloydCoder/tinlance-web-intelligence`  
 **Product:** Tinlyt  
 **Engineering identity:** Tinlance Web Intelligence (TWI)  
@@ -46,8 +46,8 @@ The inspected repository is a Python-first TWI service repository. The current `
 - [x] Jobs, evidence, verification, monitor, and authority boundaries mapped to source/docs.
 - [x] Existing CI checks and frontend coverage gap recorded.
 - [x] Blockers and F1 implementation constraints documented.
-- [ ] CI on the exact commit containing this report passes.
-- [ ] Post-commit review confirms the report matches the changed repository state.
+- [x] CI on the exact commit containing this report passed: workflow run #39374414981 on `195bcf970e86537b2d9cdb7d1b96576bd7fb1476`.
+- [x] Post-commit review confirmed the report matches the inspected repository state; later phases introduced the frontend workspace under `apps/web/` without repurposing existing Python services.
 
 ## Recommended F1 entry criteria
 

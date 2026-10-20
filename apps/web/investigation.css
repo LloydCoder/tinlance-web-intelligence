@@ -1,0 +1,33 @@
+#investigation-form { display: grid; gap: .65rem; }
+#investigation-form label { margin-top: .25rem; color: var(--color-muted); font-size: .78rem; font-weight: 650; }
+#investigation-form input, #investigation-form select, #investigation-form textarea { width: 100%; min-width: 0; padding: .8rem .9rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-canvas); color: var(--color-text); }
+#investigation-form select { min-height: 44px; }
+#investigation-form input:focus-visible, #investigation-form select:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#investigation-form [hidden], #investigation-status[hidden], #url-fields[hidden], #search-fields[hidden], #job-result-wrap[hidden], #refresh-job[hidden] { display: none !important; }
+.field-meta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; color: var(--color-subtle); font-size: .72rem; }
+.field-meta label { margin: 0 !important; }
+.field-meta select { width: auto !important; min-width: 5rem !important; padding: .35rem .5rem !important; }
+.field-help { color: var(--color-subtle); font-size: .75rem; line-height: 1.55; }
+#investigation-form .button { justify-self: start; margin-top: .4rem; }
+.result-panel { margin-top: 1.25rem; }
+.result-panel h2 { margin-bottom: .4rem; font-size: 1.2rem; }
+.result-panel h3 { margin: 1.25rem 0 .5rem; font-size: .95rem; }
+.job-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1.25rem; margin: 1rem 0; }
+.job-metadata dt { color: var(--color-subtle); font-size: .68rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .05em; }
+.job-metadata dd { margin: .2rem 0 0; overflow-wrap: anywhere; color: var(--color-text); font-size: .8rem; }
+.result-content { max-height: 36rem; overflow: auto; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #090c11; color: #d9e3ef; }
+.result-json { max-height: 28rem; overflow: auto; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: #090c11; color: #d9e3ef; font: .75rem/1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.button-secondary { padding: .65rem .9rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface-raised); color: var(--color-text); cursor: pointer; }
+.button-secondary:hover { border-color: var(--color-accent); }
+@media (max-width: 600px) { .job-metadata { grid-template-columns: minmax(0, 1fr); } .field-meta { align-items: flex-start; flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { #investigation-form *, .result-panel * { scroll-behavior: auto !important; transition: none !important; } }
+
+.source-result { display: grid; gap: .45rem; padding: .9rem 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
+.source-result:last-of-type { border-bottom: 0; }
+.source-result-title { margin: 0; color: var(--color-text); font-size: .9rem; line-height: 1.4; }
+.source-result a, .result-content > a { color: #9ed8ff; text-decoration: underline; text-underline-offset: .15em; overflow-wrap: anywhere; }
+.source-result a:focus-visible, .result-content > a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.source-rank, .source-provider, .result-provider { color: var(--color-subtle); font: .68rem/1.5 var(--font-mono); }
+.source-snippet { margin: 0; color: var(--color-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.result-summary { margin-bottom: .3rem; color: var(--color-text); font-weight: 700; }
+.result-empty { color: var(--color-muted); }
