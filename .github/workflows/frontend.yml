@@ -63,4 +63,4 @@ jobs:
       - name: Install Chromium for accessibility and responsive tests
         run: python -m playwright install --with-deps chromium
       - name: Browser accessibility, keyboard, contrast and responsive tests
-        run: python apps/web/tests/browser_accessibility.py
+        run: python tests/frontend_browser_accessibility.py
