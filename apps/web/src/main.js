@@ -191,9 +191,11 @@ async function loadUsage(query, append = false) {
       ? error.message
       : 'Usage could not be loaded. No usage values have been inferred or fabricated.';
   } finally {
-    usageLoading = false;
-    if (isAuthorized && loadUsageButton) loadUsageButton.disabled = false;
-    if (loadNextUsagePageButton) loadNextUsagePageButton.disabled = !isAuthorized || !latestUsageCursor;
+    if (authSessionEpoch === requestSessionEpoch) {
+      usageLoading = false;
+      if (isAuthorized && loadUsageButton) loadUsageButton.disabled = false;
+      if (loadNextUsagePageButton) loadNextUsagePageButton.disabled = !isAuthorized || !latestUsageCursor;
+    }
   }
 }
 function showMode(title, description) {
