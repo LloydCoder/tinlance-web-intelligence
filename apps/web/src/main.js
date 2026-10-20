@@ -81,6 +81,7 @@ function setLiveControlsEnabled(enabled) {
     signInButton.textContent = enabled ? 'Clear session' : 'Sign in';
     signInButton.setAttribute('aria-label', enabled ? 'Clear the local Tinlyt session' : 'Sign in to Tinlyt');
   }
+  if (refreshButton) refreshButton.disabled = !enabled;
   if (!enabled && cancelJobButton) {
     cancelJobButton.hidden = true;
     cancelJobButton.disabled = true;
