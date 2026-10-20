@@ -212,6 +212,7 @@
               <li><code>GET /v1/jobs/{job_id}/evidence</code> — export a successful in-scope fetch job with <code>twi:evidence:export</code>.</li>
               <li><code>POST /v1/research/verify</code> — compare bounded citations against captured text with <code>twi:research:verify</code>.</li>
               <li><code>/v1/monitors</code> — create/read monitors and explicitly enqueue, inspect, pause, resume, or delete using documented monitor scopes.</li>
+              <li><code>GET /v1/usage</code> — read bounded tenant-scoped usage facts with <code>twi:usage:read</code> or <code>twi:usage:read:any</code>.</li>
             </ul></div>
             <div class="developer-example"><div class="panel-topline"><h3>Create a search job</h3><button class="button button-secondary copy-example" type="button" data-copy-target="developer-search-example">Copy example</button></div>
               <pre><code id="developer-search-example">curl --fail-with-body --request POST "$TWI_API_BASE_URL/v1/jobs" \
