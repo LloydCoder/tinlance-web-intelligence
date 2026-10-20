@@ -38,7 +38,7 @@
 
 | Gate | State | Evidence / reason |
 |---|---|---|
-| CODE_READY | PASS (repository CI scope) | Current main Frontend and CI runs passed; this does not mean production integration is complete |
+| CODE_READY | BLOCKED (production backend scope) | Current main Frontend and CI runs passed, but the production entitlement adapter/contract and deployment runtime configuration are not available; repository CI success alone is insufficient for a deployable production backend |
 | INFRA_READY | BLOCKED | No dedicated Tinlyt database or backend service topology |
 | IDENTITY_READY | BLOCKED | No production Platform runtime settings or authenticated live journey |
 | DATA_READY | BLOCKED | No Tinlyt database, migrations, backup, or restore evidence |
