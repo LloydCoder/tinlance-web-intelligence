@@ -50,6 +50,17 @@ const downloadEvidenceButton = document.querySelector('#download-evidence');
 const runLookupForm = document.querySelector('#run-lookup-form');
 const runIdField = document.querySelector('#run-id');
 const lookupButton = document.querySelector('#lookup-run');
+const verificationForm = document.querySelector('#verification-form');
+const claimIdField = document.querySelector('#claim-id');
+const claimStatementField = document.querySelector('#claim-statement');
+const verificationCitations = document.querySelector('#verification-citations');
+const citationCount = document.querySelector('#citation-count');
+const addCitationButton = document.querySelector('#add-citation');
+const verifyClaimButton = document.querySelector('#verify-claim');
+const verificationStatus = document.querySelector('#verification-status');
+const verificationResult = document.querySelector('#verification-result');
+const verificationMetadata = document.querySelector('#verification-metadata');
+const verifiedClaims = document.querySelector('#verified-claims');
 
 function showMode(title, description) {
   if (modeTitle) modeTitle.textContent = title;
@@ -81,10 +92,12 @@ let latestJob = null;
 let exportingEvidence = false;
 let currentEvidenceBytes = null;
 let currentEvidenceJobId = null;
+let verifying = false;
+let citationRowSequence = 1;
 
 function setLiveControlsEnabled(enabled) {
   authSessionEpoch += 1;
-  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton]) {
+  for (const control of [kindSelect, questionField, limitField, urlField, submitButton, runIdField, lookupButton, verifyClaimButton]) {
     if (control) control.disabled = !enabled;
   }
   if (signInButton && runtime.state === 'ready') {
@@ -110,6 +123,7 @@ function setLiveControlsEnabled(enabled) {
       exportEvidenceButton.disabled = true;
     }
     clearEvidenceView();
+    clearVerificationView();
   }
   if (connectionBadge) connectionBadge.textContent = enabled ? 'Authenticated' : 'Not connected';
   if (systemState) systemState.textContent = enabled ? 'Identity ready' : 'API disconnected';
@@ -120,6 +134,10 @@ function setLiveControlsEnabled(enabled) {
   if (enabled && !currentEvidenceJobId && evidenceStatus) {
     evidenceStatus.textContent = 'Submit or load a successful fetch job, then choose “Inspect and export evidence” to retrieve its package.';
   }
+  if (enabled && verificationStatus && (!verificationResult || verificationResult.hidden)) {
+    verificationStatus.textContent = 'Enter a claim and exact citations from captured text, then submit to compare the quotes with TWI evidence.';
+  }
+  updateVerificationControls();
 }
 
 function updateKindFields() {
