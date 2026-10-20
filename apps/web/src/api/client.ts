@@ -479,43 +479,68 @@ export class TwiApiClient {
   }
 
   async getMonitor(monitorId: string): Promise<Monitor> {
-    return parseMonitor(await this.request(`/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}`, { method: "GET" }));
+    const requestedId = this.validateId(monitorId);
+    const monitor = parseMonitor(await this.request(`/v1/monitors/${encodeURIComponent(requestedId)}`, { method: "GET" }));
+    if (monitor.monitor_id !== requestedId) {
+      throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
+    }
+    return monitor;
   }
 
   async runMonitor(monitorId: string, idempotencyKey?: string): Promise<MonitorRun> {
+    const requestedId = this.validateId(monitorId);
     const key = validIdempotencyKey(idempotencyKey ?? this.idempotencyKeyFactory());
-    return parseMonitorRun(await this.request(
-      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/runs`,
+    const run = parseMonitorRun(await this.request(
+      `/v1/monitors/${encodeURIComponent(requestedId)}/runs`,
       { method: "POST", headers: { "Idempotency-Key": key } },
     ));
+    if (run.payload.monitor_id !== requestedId) {
+      throw new TwiApiError("invalid_response", "The API returned a run for a different monitor.");
+    }
+    return run;
   }
 
   async getMonitorRun(monitorId: string, jobId: string): Promise<MonitorRun> {
-    return parseMonitorRun(await this.request(
-      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/runs/${encodeURIComponent(this.validateId(jobId))}`,
+    const requestedMonitorId = this.validateId(monitorId);
+    const requestedJobId = this.validateId(jobId);
+    const run = parseMonitorRun(await this.request(
+      `/v1/monitors/${encodeURIComponent(requestedMonitorId)}/runs/${encodeURIComponent(requestedJobId)}`,
       { method: "GET" },
     ));
+    if (run.payload.monitor_id !== requestedMonitorId || run.job_id !== requestedJobId) {
+      throw new TwiApiError("invalid_response", "The API returned a different monitor run than the requested resource.");
+    }
+    return run;
   }
 
   async pauseMonitor(monitorId: string): Promise<Monitor> {
-    return parseMonitor(await this.request(
-      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/pause`,
+    const requestedId = this.validateId(monitorId);
+    const monitor = parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(requestedId)}/pause`,
       { method: "POST" },
     ));
+    if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
+    return monitor;
   }
 
   async resumeMonitor(monitorId: string): Promise<Monitor> {
-    return parseMonitor(await this.request(
-      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}/resume`,
+    const requestedId = this.validateId(monitorId);
+    const monitor = parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(requestedId)}/resume`,
       { method: "POST" },
     ));
+    if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
+    return monitor;
   }
 
   async deleteMonitor(monitorId: string): Promise<Monitor> {
-    return parseMonitor(await this.request(
-      `/v1/monitors/${encodeURIComponent(this.validateId(monitorId))}`,
+    const requestedId = this.validateId(monitorId);
+    const monitor = parseMonitor(await this.request(
+      `/v1/monitors/${encodeURIComponent(requestedId)}`,
       { method: "DELETE" },
     ));
+    if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
+    return monitor;
   }
 
   async verifyResearch(request: VerifyResearchRequest): Promise<VerifyResearchResponse> {
