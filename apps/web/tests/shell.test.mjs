@@ -156,6 +156,9 @@ test('claim verification controls are wired to the scoped API and render citatio
 test('monitor interface exposes only the documented explicit lifecycle and never fabricates a monitor list', () => {
   assert.match(html, /id="monitors" class="panel monitor-panel"/);
   assert.match(html, /id="monitor-create-form"/);
+  assert.match(html, /id="monitor-target-url"[^>]*disabled/);
+  assert.match(html, /id="monitor-max-bytes"[^>]*disabled/);
+  assert.match(html, /id="monitor-id"[^>]*disabled/);
   assert.match(html, /id="monitor-lookup-form"/);
   assert.match(html, /There is no monitor-list endpoint in the current API/);
   assert.match(html, /recurrence belongs to Agent OS/);
