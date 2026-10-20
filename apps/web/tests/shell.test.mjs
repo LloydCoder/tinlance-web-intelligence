@@ -7,13 +7,14 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const html = await readFile(path.join(root, 'index.html'), 'utf8');
 const css = await readFile(path.join(root, 'styles.css'), 'utf8');
+const investigationCss = await readFile(path.join(root, 'investigation.css'), 'utf8');
 const js = await readFile(path.join(root, 'src/main.js'), 'utf8');
 const runtimeConfig = await readFile(path.join(root, 'runtime-config.js'), 'utf8');
 
 test('document declares language, viewport, title and skip navigation', () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /name="viewport"/);
-  assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/);
+  assert.match(html, /<title>Tinlyt — Web Intelligence<\\/title>/);
   assert.match(html, /class="skip-link" href="#main"/);
 });
 
@@ -23,42 +24,46 @@ test('primary navigation and main landmark are labelled', () => {
   assert.match(html, /aria-current="page"/);
 });
 
-test('unconnected actions remain disabled and visibly disclosed', () => {
-  assert.match(html, /Live API integration is not configured/);
-  assert.match(html, /<textarea[^>]* disabled/);
-  assert.match(html, /<button class="button button-primary" type="button" disabled>/);
-  assert.match(html, /No investigation has been submitted/);
+test('live investigation controls are disabled until authentication completes', () => {
+  assert.match(html, /id="investigation-form"/);
+  assert.match(html, /id="submit-investigation"[^>]*disabled/);
+  assert.match(html, /id="job-kind"[^>]*disabled/);
+  assert.match(html, /id="sign-in"/);
+  assert.match(js, /setLiveControlsEnabled\(true\)/);
+  assert.match(js, /runtime\\.apiClient\\.createJob\(request\)/);
 });
 
-test('product language does not claim retrieval proves truth', () => {
-  assert.match(html, /retrieval is not proof of truth/);
-  assert.match(html, /API integration pending/);
+test('job response uses text rendering and announces status accessibly', () => {
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /id="job-result" class="result-json"/);
+  assert.match(js, /resultPre\\.textContent/);
+  assert.doesNotMatch(js, /innerHTML\\s*=\\s*serialized/);
 });
 
-test('styles include responsive layout, visible focus and reduced motion', () => {
+test('UI states retrieval is not a truth guarantee and does not show fixture metrics', () => {
+  assert.match(html, /not an independent verdict about factual truth/);
+  assert.match(html, /No fixture data is presented as live activity/);
+  assert.match(js, /no completion outcome is assumed/);
+});
+
+test('styles retain visible focus, responsive behavior and reduced motion', () => {
   assert.match(css, /:focus-visible/);
-  assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /@media \\(max-width: 760px\\)/);
+  assert.match(css, /@media \\(prefers-reduced-motion: reduce\\)/);
+  assert.match(investigationCss, /@media \\(max-width: 600px\\)/);
+  assert.match(investigationCss, /:focus-visible/);
 });
 
-test('navigation behavior changes only local presentation', () => {
-  assert.match(js, /aria-current/);
-  assert.doesNotMatch(js, /fetch\s*\(/);
-});
-
-
-test('runtime configuration is loaded before the application and contains no credentials', () => {
+test('runtime configuration is loaded before application and contains no credentials', () => {
   assert.ok(html.indexOf('/runtime-config.js') < html.indexOf('/src/main.js'));
-  assert.match(runtimeConfig, /authorizationEndpoint:\s*""/);
-  assert.match(runtimeConfig, /tokenEndpoint:\s*""/);
+  assert.match(runtimeConfig, /authorizationEndpoint:\\s*""/);
+  assert.match(runtimeConfig, /tokenEndpoint:\\s*""/);
   assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token/i);
   assert.match(js, /getRuntime/);
-  assert.match(html, /id="sign-in"/);
 });
 
-
-test('runtime readiness messaging never claims unverified API connectivity', () => {
-  assert.match(js, /Identity configuration ready/);
-  assert.match(js, /live operation flows remain in foundation mode/);
-  assert.match(js, /No investigation has been submitted/);
+test('API result is bounded before display and polling is bounded', () => {
+  assert.match(js, /const limit = 20_000/);
+  assert.match(js, /attempt < 20/);
+  assert.match(js, /redirect|truth/i);
 });
