@@ -106,8 +106,6 @@ function parseEvidencePackage(value: unknown): EvidencePackage {
     !isRecord(value)
     || value.format !== "application/vnd.tinlance.twi-evidence+json"
     || value.schema_version !== "1.0.0"
-    || typeof value.export_id !== "string"
-    || typeof value.artifact_id !== "string"
     || typeof value.content_base64 !== "string"
     || typeof value.content_type !== "string"
     || typeof value.content_sha256 !== "string"
