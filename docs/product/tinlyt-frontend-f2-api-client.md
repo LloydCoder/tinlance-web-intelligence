@@ -12,7 +12,7 @@
 - Sanitized typed errors for authentication, permission, not-found, conflict, validation, rate limit, timeout, network, server and invalid-response conditions.
 - Canonical evidence package validation against the schema in schemas/twi-evidence-package-v1.schema.json, including the vendor media type and interpretation.truth_assessment = not_provided.
 - A secret-free runtime configuration template and sign-in control wired to the OAuth adapter. The sign-in control remains disabled when required deployment settings are absent; successful authorization does not enable investigation/evidence workflows.
-- OAuth 2.0 Authorization Code + PKCE (S256) adapter for a public browser client. It requires explicitly trusted HTTPS issuer endpoints, exact redirect URI configuration, state validation, a short-lived PKCE transaction in sessionStorage, and an audience/resource value for TWI.
+- OAuth 2.0 Authorization Code + PKCE (S256) adapter for a public browser client. It requires explicitly trusted HTTPS issuer endpoints, exact issuer and redirect URI validation, state and response-issuer validation, a short-lived PKCE transaction in sessionStorage, and an audience/resource value for TWI.
 - Access tokens remain in memory only; refresh tokens are ignored. The adapter does not embed a client secret or trust a JWT decoded in the browser. TWI remains responsible for cryptographic issuer/audience/signature/expiry/tenant/subject/scope validation.
 - CI runs locked npm ci, JavaScript syntax checks, TypeScript typecheck, static security checks, npm audit, tests and a production build.
 
