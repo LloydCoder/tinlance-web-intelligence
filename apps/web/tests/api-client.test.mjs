@@ -179,6 +179,9 @@ test('validates verification responses without claiming factual truth', async ()
     report_sha256: 'c'.repeat(64),
     status: 'citation_mismatch',
     factual_truth_assessed: false,
+    source_count: 1,
+    claim_count: 1,
+    citation_count: 1,
     claims: [{
       claim_id: 'claim-1',
       statement: 'A claim to check',
