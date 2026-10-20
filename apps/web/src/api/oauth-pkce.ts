@@ -67,6 +67,9 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     }
     this.authorizationEndpoint = this.parseTrustedEndpoint(config.authorizationEndpoint, config.trustedIssuerOrigins);
     this.tokenEndpoint = this.parseTrustedEndpoint(config.tokenEndpoint, config.trustedIssuerOrigins);
+    if (this.authorizationEndpoint.origin !== this.tokenEndpoint.origin) {
+      throw new TwiApiError("configuration_error", "Authorization and token endpoints must share the configured issuer origin.");
+    }
     this.redirectUri = this.parseRedirectUri(config.redirectUri);
     this.clientId = config.clientId;
     this.scope = config.scope;
@@ -92,6 +95,8 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
   }
 
   async beginLogin(): Promise<void> {
+    this.accessToken = null;
+    this.expiresAt = 0;
     const state = this.randomBase64Url(32);
     const verifier = this.randomBase64Url(48);
     const challenge = await this.sha256Base64Url(verifier);
@@ -232,6 +237,7 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       || url.username
       || url.password
       || url.hash
+      || url.search
       || !trustedOrigins.some((origin) => {
         try {
           const parsed = new URL(origin);
@@ -252,8 +258,10 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       throw new TwiApiError("configuration_error", "The OAuth redirect URI must be absolute.");
     }
     const localDevelopment = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    const currentOrigin = typeof window === "undefined" ? url.origin : window.location.origin;
     if (
-      (url.protocol !== "https:" && !localDevelopment)
+      url.origin !== currentOrigin
+      || (url.protocol !== "https:" && !localDevelopment)
       || url.username
       || url.password
       || url.search
