@@ -26,6 +26,7 @@
           <a class="nav-link" href="#investigations"><span aria-hidden="true">⌕</span> Investigations</a>
           <a class="nav-link" href="#runs"><span aria-hidden="true">↗</span> Runs</a>
           <a class="nav-link" href="#evidence"><span aria-hidden="true">▤</span> Evidence</a>
+          <a class="nav-link" href="#verification"><span aria-hidden="true">✓</span> Verify</a>
           <a class="nav-link" href="#monitors"><span aria-hidden="true">◷</span> Monitors</a>
         </nav>
         <div class="sidebar-footer">
@@ -122,6 +123,40 @@
             <p class="field-help">The package records an acquisition observation. Content integrity validation does not establish source truth or source authority. Raw source URLs are not included in the package metadata.</p>
             <dl id="evidence-metadata" class="evidence-metadata"></dl>
             <button id="download-evidence" class="button button-secondary" type="button" disabled>Download exact evidence package</button>
+          </section>
+          <section id="verification" class="panel verification-panel" aria-labelledby="verification-title">
+            <div class="panel-topline"><span class="panel-kicker">CLAIM VERIFICATION</span><span class="quiet-badge">Citation matching</span></div>
+            <h2 id="verification-title">Check a claim against captured text</h2>
+            <p>Submit one claim and one to four citations. Each quote is compared with captured text from a successful fetch or browser job. A quote match is not a factual-truth verdict.</p>
+            <form id="verification-form" novalidate>
+              <label for="claim-id">Claim identifier</label>
+              <input id="claim-id" name="claim_id" type="text" value="claim-1" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off">
+              <label for="claim-statement">Claim to inspect</label>
+              <textarea id="claim-statement" name="statement" rows="3" minlength="1" maxlength="500" required placeholder="State the claim exactly as you want to check it."></textarea>
+              <div class="panel-topline citation-heading"><h3>Citations</h3><span id="citation-count" class="quiet-badge">1 / 4</span></div>
+              <p class="field-help">Use an exact quote from captured text (8–350 characters) and the job ID of the successful fetch or browser job that captured it. The API enforces tenant and subject scope.</p>
+              <div id="verification-citations">
+                <fieldset class="citation-row" data-citation-row>
+                  <legend>Citation 1</legend>
+                  <label for="citation-job-1">Captured source job ID</label>
+                  <input id="citation-job-1" name="citation_job_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off" placeholder="TWI job ID">
+                  <label for="citation-quote-1">Exact quote from captured text</label>
+                  <textarea id="citation-quote-1" name="citation_quote" rows="3" minlength="8" maxlength="350" required placeholder="Paste the exact source passage to check."></textarea>
+                  <button class="button button-secondary remove-citation" type="button" hidden disabled>Remove citation</button>
+                </fieldset>
+              </div>
+              <div class="verification-actions">
+                <button id="add-citation" class="button button-secondary" type="button">Add citation</button>
+                <button id="verify-claim" class="button button-primary" type="submit" disabled>Verify citations</button>
+              </div>
+            </form>
+            <p id="verification-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider to verify claims against accessible captured evidence.</p>
+            <section id="verification-result" class="verification-result" aria-labelledby="verification-result-title" hidden>
+              <h3 id="verification-result-title">Verification report</h3>
+              <p class="field-help">This report records citation matching against captured text. It does not determine whether a claim is factually true.</p>
+              <dl id="verification-metadata" class="evidence-metadata"></dl>
+              <div id="verified-claims" class="verified-claims"></div>
+            </section>
           </section>
           <section class="lifecycle-grid" aria-label="Product areas">
             <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
