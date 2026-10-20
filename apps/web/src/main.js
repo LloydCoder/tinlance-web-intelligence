@@ -116,6 +116,7 @@ let verifying = false;
 let citationRowSequence = 1;
 let activeMonitor = null;
 let activeMonitorRunId = null;
+let activeMonitorRunStatus = null;
 let monitorBusy = false;
 let monitorRunPolling = false;
 let pendingMonitorCreateFingerprint = null;
@@ -632,7 +633,8 @@ function updateMonitorControls() {
   const canLookupRun = Boolean(activeMonitor && monitorStatusValue !== 'deleted');
   if (lookupMonitorRunButton) lookupMonitorRunButton.disabled = !authorized || monitorBusy || monitorRunPolling || !canLookupRun;
   if (monitorRunIdField) monitorRunIdField.disabled = !authorized || monitorBusy || monitorRunPolling || !canLookupRun;
-  if (runMonitorButton) runMonitorButton.disabled = !authorized || monitorBusy || monitorRunPolling || !activeMonitor || monitorStatusValue !== 'active';
+  const runStillActive = Boolean(activeMonitorRunStatus && !isTerminalMonitorRunStatus(activeMonitorRunStatus));
+  if (runMonitorButton) runMonitorButton.disabled = !authorized || monitorBusy || monitorRunPolling || runStillActive || !activeMonitor || monitorStatusValue !== 'active';
   if (pauseMonitorButton) pauseMonitorButton.disabled = !authorized || monitorBusy || !activeMonitor || monitorStatusValue !== 'active';
   if (resumeMonitorButton) resumeMonitorButton.disabled = !authorized || monitorBusy || !activeMonitor || monitorStatusValue !== 'paused';
   if (deleteMonitorButton) deleteMonitorButton.disabled = !authorized || monitorBusy || !activeMonitor || monitorStatusValue === 'deleted';
@@ -645,6 +647,7 @@ function updateMonitorControls() {
 
 function clearMonitorRunView() {
   activeMonitorRunId = null;
+  activeMonitorRunStatus = null;
   if (monitorRunLookupForm) monitorRunLookupForm.reset();
   if (monitorRunStatus) monitorRunStatus.textContent = 'No run has been requested in this session.';
   if (monitorRunMetadata) monitorRunMetadata.replaceChildren();
@@ -706,6 +709,7 @@ function renderMonitor(monitor, message) {
 }
 
 function renderMonitorRun(run) {
+  activeMonitorRunStatus = run.status;
   if (monitorRunIdField) monitorRunIdField.value = run.job_id;
   if (monitorRunStatus) {
     if (run.status === 'queued' || run.status === 'running') {
