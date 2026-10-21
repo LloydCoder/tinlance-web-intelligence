@@ -47,8 +47,11 @@ function resolveLocalAsset(pathname) {
 await stat(path.join(distRoot, 'index.html'));
 const html = await readFile(path.join(distRoot, 'index.html'), 'utf8');
 assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/, 'built page must identify Tinlyt');
-assert.match(html, /(?:src|href)=["']\/runtime-config\.js["']/, 'built page must load runtime configuration');
-assert.match(html, /(?:src|href)=["']\/src\/main\.js["']/, 'built page must load app entry point');
+assert.match(html, /name=["']robots["'] content=["']noindex, nofollow["']/, 'marketing page must remain noindex until launch approval');
+assert.match(html, /property=["']og:title["']/, 'marketing page must include Open Graph title');
+const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
+assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
+assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
 const jsRoot = path.join(distRoot, 'src');
 const jsFiles = (await collectFiles(jsRoot)).filter((file) => file.endsWith('.js'));
 assert.ok(jsFiles.length > 0, 'build must emit JavaScript modules');
