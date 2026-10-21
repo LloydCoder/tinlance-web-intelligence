@@ -39,7 +39,7 @@ function localAssetPaths(html) {
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
   const cleanPath = decoded.endsWith('/') && decoded !== '/' ? decoded.slice(0, -1) : decoded;
-  const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact']);
+  const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq']);
   const strippedPath = decoded.startsWith('/') ? decoded.slice(1) : decoded;
   const relative = decoded === '/' ? 'index.html' : cleanPath === '/app' ? 'app.html' : pageRoutes.has(cleanPath) ? cleanPath.slice(1) + '.html' : strippedPath;
   const resolved = path.resolve(distRoot, relative);
@@ -100,7 +100,7 @@ try {
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
   const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
-  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact'];
+  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq'];
   for (const route of publicRoutes) {
     const response = await fetch(new URL(route, base));
     assert.equal(response.status, 200, 'public route must resolve: ' + route);
