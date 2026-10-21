@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#0B1220">
+    <meta name="robots" content="noindex, nofollow">\n    <meta name="description" content="Tinlyt web intelligence workspace. Availability depends on configured API and identity services.">
+    <title>Tinlyt — Web Intelligence</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/investigation.css">
+    <script src="/runtime-config.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <a class="brand" href="/app" aria-label="Tinlyt workspace home">
+          <span class="brand-mark" aria-hidden="true">T</span>
+          <span class="brand-copy"><strong>Tinlyt</strong><small>WEB INTELLIGENCE</small></span>
+        </a>
+        <div class="workspace-label">WORKSPACE</div>
+        <nav class="primary-nav">
+          <a class="nav-link is-active" href="#overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</a>
+          <a class="nav-link" href="#investigations"><span aria-hidden="true">⌕</span> Investigations</a>
+          <a class="nav-link" href="#runs"><span aria-hidden="true">↗</span> Runs</a>
+          <a class="nav-link" href="#evidence"><span aria-hidden="true">▤</span> Evidence</a>
+          <a class="nav-link" href="#verification"><span aria-hidden="true">✓</span> Verify</a>
+          <a class="nav-link" href="#monitors"><span aria-hidden="true">◷</span> Monitors</a>
+          <a class="nav-link" href="#developer"><span aria-hidden="true">&lt;/&gt;</span> Developer</a>
+          <a class="nav-link" href="#usage"><span aria-hidden="true">▥</span> Usage</a>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="environment-pill"><span class="status-dot" aria-hidden="true"></span> <span id="environment-label">Foundation mode</span></div>
+          <p id="runtime-message">Sign in with the approved Platform identity provider to submit live jobs.</p>
+        </div>
+      </aside>
+      <div class="main-column">
+        <header class="topbar">
+          <div class="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong id="breadcrumb-current">Overview</strong></div>
+          <div class="topbar-right"><span class="system-state"><span class="status-dot" aria-hidden="true"></span> <span id="system-state">API disconnected</span></span><button id="sign-in" class="button button-primary topbar-sign-in" type="button" aria-label="Sign-in is not configured" disabled>Sign in unavailable</button></div>
+        </header>
+        <main id="main" tabindex="-1">
+          <section class="page-heading" id="overview">
+            <div>
+              <p class="eyebrow">EVIDENCE-FIRST WEB INTELLIGENCE</p>
+              <h1>Discover what the web says.<br><span>Keep the evidence.</span></h1>
+              <p class="lede">Investigate across sources, inspect acquisition provenance, and keep every finding connected to its evidence.</p>
+            </div>
+            <div class="heading-mark" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          </section>
+          <section class="notice" aria-labelledby="mode-title">
+            <span class="notice-icon" aria-hidden="true">i</span>
+            <div><h2 id="mode-title">Authentication required</h2><p id="mode-description">Live investigation submission is available only after the approved Platform identity flow completes and deployment runtime settings are valid. No fixture data is presented as live activity.</p></div>
+          </section>
+          <section class="section-heading" id="investigations">
+            <div><p class="eyebrow">START WITH A QUESTION</p><h2>Investigation workspace</h2></div>
+            <span class="section-index">01 / INVESTIGATE</span>
+          </section>
+          <section class="workspace-grid">
+            <article class="panel investigate-panel">
+              <div class="panel-topline"><span class="panel-kicker">NEW INVESTIGATION</span><span id="connection-badge" class="quiet-badge">Not connected</span></div>
+              <h3>What do you need to find?</h3>
+              <p>Submit a supported search, fetch, or browser job to TWI. Results reflect captured observations—not an independent verdict about factual truth.</p>
+              <form id="investigation-form" novalidate>
+                <label for="job-kind">Acquisition method</label>
+                <select id="job-kind" name="kind" required disabled>
+                  <option value="search">Search the web</option>
+                  <option value="fetch">Fetch a specific URL</option>
+                  <option value="browser">Open a page in an isolated browser</option>
+                </select>
+                <div id="search-fields">
+                  <label for="question">Search query</label>
+                  <textarea id="question" name="question" rows="4" maxlength="400" placeholder="Example: primary sources for a published claim" required disabled></textarea>
+                  <div class="field-meta"><span>1–400 characters</span><label for="search-limit">Maximum results</label><select id="search-limit" name="limit" disabled><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option></select></div>
+                </div>
+                <div id="url-fields" hidden>
+                  <label for="target-url">Target URL</label>
+                  <input id="target-url" name="url" type="url" maxlength="2048" autocomplete="url" placeholder="https://example.com/page" disabled>
+                  <p class="field-help" id="url-help">Use an absolute HTTP(S) URL for fetch. Browser acquisition requires HTTPS.</p>
+                </div>
+                <p class="field-help">Requests are authenticated, tenant-scoped, and sent with an idempotency key. The service enforces acquisition policy.</p>
+                <button id="submit-investigation" class="button button-primary" type="submit" disabled>Start investigation <span aria-hidden="true">→</span></button>
+              </form>
+            </article>
+            <article class="panel principles-panel">
+              <div class="panel-topline"><span class="panel-kicker">EVIDENCE STANDARD</span><span class="principle-icon" aria-hidden="true">✳</span></div>
+              <h3>Evidence before conclusions.</h3>
+              <ul class="principle-list">
+                <li><span class="principle-number">01</span><span><strong>Source attribution</strong><small>Findings remain linked to where they came from.</small></span></li>
+                <li><span class="principle-number">02</span><span><strong>Acquisition provenance</strong><small>Inspect how and when content was captured when the API provides it.</small></span></li>
+                <li><span class="principle-number">03</span><span><strong>Honest uncertainty</strong><small>Conflicts and unknowns stay visible; retrieval is not proof of truth.</small></span></li>
+              </ul>
+            </article>
+          </section>
+          <section id="investigation-status" class="panel result-panel" aria-labelledby="result-title" hidden>
+            <div class="panel-topline"><span class="panel-kicker">LIVE JOB RESPONSE</span><span id="job-status-badge" class="quiet-badge">Not started</span></div>
+            <h2 id="result-title">Investigation status</h2>
+            <p id="job-status-message" role="status" aria-live="polite">No job submitted.</p>
+            <dl id="job-metadata" class="job-metadata"></dl>
+            <div id="job-result-wrap" hidden><h3>Service result</h3><p class="field-help">This is the response returned by TWI. Interpret it alongside source attribution and provenance; it is not a truth guarantee.</p><div id="job-result" class="result-content"></div></div>
+            <button id="refresh-job" class="button button-secondary" type="button" hidden>Refresh job status</button>
+            <button id="cancel-job" class="button button-secondary" type="button" hidden disabled>Request cancellation</button>
+            <button id="export-evidence" class="button button-primary" type="button" hidden disabled>Inspect and export evidence</button>
+          </section>
+          <section class="section-heading lower-heading" id="runs">
+            <div><p class="eyebrow">WORKSPACE MAP</p><h2>Designed around the evidence lifecycle</h2></div>
+            <span class="section-index">02 / NAVIGATION</span>
+          </section>
+          <section class="panel run-lookup-panel" aria-labelledby="run-lookup-title">
+            <div class="panel-topline"><span class="panel-kicker">RUN INSPECTION</span><span class="quiet-badge">Tenant-scoped</span></div>
+            <h3 id="run-lookup-title">Inspect an existing run</h3>
+            <p>Enter a job ID to retrieve its current service-reported state. Access remains subject to Platform scopes and TWI tenant/subject authorization.</p>
+            <form id="run-lookup-form" novalidate>
+              <label for="run-id">Job ID</label>
+              <input id="run-id" name="job_id" type="text" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Paste a TWI job ID" required disabled>
+              <button id="lookup-run" class="button button-secondary" type="submit" disabled>Load run details</button>
+            </form>
+          </section>
+          <section id="evidence" class="panel evidence-panel" aria-labelledby="evidence-title">
+            <div class="panel-topline"><span class="panel-kicker">CAPTURED EVIDENCE</span><span id="evidence-integrity-badge" class="quiet-badge">Awaiting package</span></div>
+            <h2 id="evidence-title">Evidence package</h2>
+            <p id="evidence-status" role="status" aria-live="polite">No evidence package loaded.</p>
+            <p class="field-help">The package records an acquisition observation. Content integrity validation does not establish source truth or source authority. Raw source URLs are not included in the package metadata.</p>
+            <dl id="evidence-metadata" class="evidence-metadata"></dl>
+            <button id="download-evidence" class="button button-secondary" type="button" disabled>Download exact evidence package</button>
+          </section>
+          <section id="verification" class="panel verification-panel" aria-labelledby="verification-title">
+            <div class="panel-topline"><span class="panel-kicker">CLAIM VERIFICATION</span><span class="quiet-badge">Citation matching</span></div>
+            <h2 id="verification-title">Check a claim against captured text</h2>
+            <p>Submit one claim and one to four citations. Each quote is compared with captured text from a successful fetch or browser job. A quote match is not a factual-truth verdict.</p>
+            <form id="verification-form" novalidate>
+              <label for="claim-id">Claim identifier</label>
+              <input id="claim-id" name="claim_id" type="text" value="claim-1" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off">
+              <label for="claim-statement">Claim to inspect</label>
+              <textarea id="claim-statement" name="statement" rows="3" minlength="1" maxlength="500" required placeholder="State the claim exactly as you want to check it."></textarea>
+              <div class="panel-topline citation-heading"><h3>Citations</h3><span id="citation-count" class="quiet-badge">1 / 4</span></div>
+              <p class="field-help">Use an exact quote from captured text (8–350 characters) and the job ID of the successful fetch or browser job that captured it. The API enforces tenant and subject scope.</p>
+              <div id="verification-citations">
+                <fieldset class="citation-row" data-citation-row>
+                  <legend>Citation 1</legend>
+                  <label for="citation-job-1">Captured source job ID</label>
+                  <input id="citation-job-1" name="citation_job_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off" placeholder="TWI job ID">
+                  <label for="citation-quote-1">Exact quote from captured text</label>
+                  <textarea id="citation-quote-1" name="citation_quote" rows="3" minlength="8" maxlength="350" required placeholder="Paste the exact source passage to check."></textarea>
+                  <button class="button button-secondary remove-citation" type="button" hidden disabled>Remove citation</button>
+                </fieldset>
+              </div>
+              <div class="verification-actions">
+                <button id="add-citation" class="button button-secondary" type="button">Add citation</button>
+                <button id="verify-claim" class="button button-primary" type="submit" disabled>Verify citations</button>
+              </div>
+            </form>
+            <p id="verification-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider to verify claims against accessible captured evidence.</p>
+            <section id="verification-result" class="verification-result" aria-labelledby="verification-result-title" hidden>
+              <h3 id="verification-result-title">Verification report</h3>
+              <p class="field-help">This report records citation matching against captured text. It does not determine whether a claim is factually true.</p>
+              <dl id="verification-metadata" class="evidence-metadata"></dl>
+              <div id="verified-claims" class="verified-claims"></div>
+            </section>
+          </section>
+          <section id="monitors" class="panel monitor-panel" aria-labelledby="monitors-title">
+            <div class="panel-topline"><span class="panel-kicker">CHANGE MONITORS</span><span class="quiet-badge">Explicit runs only</span></div>
+            <h2 id="monitors-title">Monitor a public web target</h2>
+            <p>Monitors store a tenant- and subject-scoped target and compare captured text digests. This interface starts runs only when you ask; recurrence belongs to Agent OS. TWI does not return the target URL in monitor responses.</p>
+            <form id="monitor-create-form" novalidate>
+              <label for="monitor-target-url">Target URL</label>
+              <input id="monitor-target-url" name="target_url" type="url" maxlength="4096" required disabled autocomplete="url" placeholder="https://example.com/page">
+              <p class="field-help">Use a public HTTP(S) URL. The server enforces the safe acquisition policy. Do not include credentials or secrets in URLs; query values are not echoed by the API.</p>
+              <label for="monitor-max-bytes">Maximum response bytes (optional)</label>
+              <input id="monitor-max-bytes" name="max_bytes" type="number" min="1" step="1" inputmode="numeric" disabled placeholder="Use service default">
+              <button id="create-monitor" class="button button-primary" type="submit" disabled>Create monitor</button>
+            </form>
+            <div class="monitor-lookup-divider" aria-hidden="true"></div>
+            <form id="monitor-lookup-form" novalidate>
+              <label for="monitor-id">Existing monitor ID</label>
+              <input id="monitor-id" name="monitor_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required disabled autocomplete="off" placeholder="Enter a monitor ID">
+              <button id="lookup-monitor" class="button button-secondary" type="submit" disabled>Load monitor</button>
+            </form>
+            <p class="field-help">There is no monitor-list endpoint in the current API. Load a monitor by its ID; this page does not invent or persist a list of recent monitors.</p>
+            <p id="monitor-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider to create or inspect tenant-scoped monitors.</p>
+            <section id="monitor-details" class="monitor-details" aria-labelledby="monitor-details-title" hidden>
+              <h3 id="monitor-details-title">Monitor details</h3>
+              <dl id="monitor-metadata" class="evidence-metadata"></dl>
+              <div class="monitor-actions">
+                <button id="run-monitor" class="button button-primary" type="button" disabled>Run now</button>
+                <button id="pause-monitor" class="button button-secondary" type="button" disabled>Pause</button>
+                <button id="resume-monitor" class="button button-secondary" type="button" disabled>Resume</button>
+                <button id="delete-monitor" class="button button-danger" type="button" disabled>Delete and redact</button>
+              </div>
+              <form id="monitor-run-lookup-form" novalidate>
+                <label for="monitor-run-id">Existing monitor run ID</label>
+                <input id="monitor-run-id" name="job_id" type="text" maxlength="64" pattern="[A-Za-z0-9._:-]{1,64}" required autocomplete="off" disabled placeholder="Enter a run ID from a prior session">
+                <button id="lookup-monitor-run" class="button button-secondary" type="submit" disabled>Load run status</button>
+              </form>
+              <p class="field-help">Load a known run by ID after loading its monitor. Run history is not listed automatically; deleted monitors intentionally hide run summaries.</p>
+              <p id="monitor-run-status" role="status" aria-live="polite">No run has been requested in this session.</p>
+              <button id="refresh-monitor-run" class="button button-secondary" type="button" hidden disabled>Refresh run status</button>
+              <dl id="monitor-run-metadata" class="evidence-metadata"></dl>
+            </section>
+          </section>
+          <section id="developer" class="panel developer-panel" aria-labelledby="developer-title">
+            <div class="panel-topline"><span class="panel-kicker">DEVELOPER REFERENCE</span><span class="quiet-badge">API v1</span></div>
+            <h2 id="developer-title">Build on the TWI contracts</h2>
+            <p>Use the documented HTTP API with a Platform-issued access token whose audience is the configured TWI API. These examples describe existing contracts; they do not create credentials or prove that a deployment is configured.</p>
+            <div class="developer-notice" role="note"><strong>Security boundary</strong><p>Never paste access tokens into this page, commit them to source control, or place them in URLs. Obtain tokens through the configured Platform identity flow or an approved trusted runtime. Tenant, subject, scopes, acquisition policy and idempotency are enforced by TWI.</p></div>
+            <div class="developer-endpoints"><h3>Supported endpoints</h3><ul>
+              <li><code>POST /v1/jobs</code> — create search, fetch, or browser jobs; requires <code>Idempotency-Key</code> and matching <code>twi:search</code>, <code>twi:fetch</code>, or <code>twi:browser</code> scope.</li>
+              <li><code>GET /v1/jobs/{job_id}</code> — inspect a tenant-scoped job with <code>twi:jobs:read</code>.</li>
+              <li><code>POST /v1/jobs/{job_id}/cancel</code> — request cooperative cancellation with <code>twi:jobs:cancel</code>.</li>
+              <li><code>GET /v1/jobs/{job_id}/evidence</code> — export a successful in-scope fetch job with <code>twi:evidence:export</code>.</li>
+              <li><code>POST /v1/research/verify</code> — compare bounded citations against captured text with <code>twi:research:verify</code>.</li>
+              <li><code>/v1/monitors</code> — create/read monitors and explicitly enqueue, inspect, pause, resume, or delete using documented monitor scopes.</li>
+              <li><code>GET /v1/usage</code> — read bounded tenant-scoped usage facts with <code>twi:usage:read</code> or <code>twi:usage:read:any</code>.</li>
+            </ul></div>
+            <div class="developer-example"><div class="panel-topline"><h3>Create a search job</h3><button class="button button-secondary copy-example" type="button" data-copy-target="developer-search-example">Copy example</button></div>
+              <pre><code id="developer-search-example">curl --fail-with-body --request POST "$TWI_API_BASE_URL/v1/jobs" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: $TWI_IDEMPOTENCY_KEY" \
+  --data '{"kind":"search","payload":{"query":"primary sources for a published claim","limit":5}}'</code></pre>
+              <p class="field-help">Set variables in your trusted runtime. Use a fresh idempotency key for a new logical operation; reuse it only when retrying that same request.</p></div>
+            <div class="developer-example"><div class="panel-topline"><h3>Verify captured citations</h3><button class="button button-secondary copy-example" type="button" data-copy-target="developer-verify-example">Copy example</button></div>
+              <pre><code id="developer-verify-example">curl --fail-with-body --request POST "$TWI_API_BASE_URL/v1/research/verify" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --data '{"claims":[{"claim_id":"claim-1","statement":"The source makes this statement.","citations":[{"job_id":"REPLACE_WITH_CAPTURED_JOB_ID","quote":"REPLACE_WITH_AN_EXACT_QUOTE_FROM_CAPTURED_TEXT"}]}]}'</code></pre>
+              <p class="field-help">Verification reports quote matching against captured text. It does not assess factual truth or source authority. Replace template values with a real, accessible captured job.</p></div>
+            <p id="developer-copy-status" role="status" aria-live="polite">Examples are templates. No request is sent from this reference panel.</p>
+            <p class="field-help">Canonical details: <code>docs/api/jobs-v1.md</code>, <code>docs/api/evidence-packages-v1.md</code>, and <code>docs/api/monitors-v1.md</code>. Browser access requires a configured same-origin reverse proxy or explicitly approved HTTPS API origin.</p>
+          </section>
+          <section id="usage" class="panel usage-panel" aria-labelledby="usage-title">
+            <div class="panel-topline"><span class="panel-kicker">USAGE & ENTITLEMENTS</span><span class="quiet-badge">Tenant-scoped API</span></div>
+            <h2 id="usage-title">Inspect committed usage</h2>
+            <p>Read usage facts for the authenticated Platform principal. Tenant and subject are derived by TWI from the verified token; this screen does not allow identity switching or administer tenants.</p>
+            <div class="developer-notice" role="note"><strong>Scope and billing boundary</strong><p>Requires <code>twi:usage:read</code> or <code>twi:usage:read:any</code>. Usage facts and configured quotas are not invoice balances, payment settlement, tax, refunds, or provider billing status. Unsupported tenant-administration and credential-management actions are not exposed.</p></div>
+            <form id="usage-form" novalidate>
+              <label for="usage-dimension">Usage dimension</label>
+              <input id="usage-dimension" name="dimension" type="text" maxlength="80" pattern="[A-Za-z0-9_.:-]{1,80}" required disabled value="search_requests_month" autocomplete="off">
+              <label for="usage-period-start">Period start (ISO-8601 with timezone)</label>
+              <input id="usage-period-start" name="period_start" type="text" maxlength="40" required disabled placeholder="2026-10-01T00:00:00Z" autocomplete="off">
+              <label for="usage-limit">Events per page</label>
+              <select id="usage-limit" name="limit" disabled><option value="25">25</option><option value="100" selected>100</option><option value="250">250</option><option value="500">500</option></select>
+              <label for="usage-cursor">Opaque cursor (optional)</label>
+              <input id="usage-cursor" name="cursor" type="text" maxlength="1024" disabled autocomplete="off" placeholder="Leave blank for the first page">
+              <div class="usage-actions"><button id="load-usage" class="button button-primary" type="submit" disabled>Load usage</button><button id="load-next-usage-page" class="button button-secondary" type="button" hidden disabled>Load next page</button></div>
+            </form>
+            <p id="usage-status" role="status" aria-live="polite">Sign in with the approved Platform identity provider and provide a period start to load usage.</p>
+            <section id="usage-results" class="usage-results" aria-labelledby="usage-results-title" hidden>
+              <h3 id="usage-results-title">Usage response</h3>
+              <dl id="usage-summary" class="evidence-metadata"></dl>
+              <div class="usage-events-wrap"><table class="usage-events"><caption>Payload-free usage facts returned by TWI</caption><thead><tr><th scope="col">Occurred at</th><th scope="col">Feature</th><th scope="col">Quantity</th><th scope="col">Event ID</th></tr></thead><tbody id="usage-events"></tbody></table></div>
+            </section>
+          </section>
+          <section class="lifecycle-grid" aria-label="Product areas">
+            <article class="lifecycle-card"><span class="card-number">01</span><span class="lifecycle-icon" aria-hidden="true">↗</span><h3>Runs</h3><p>Inspect job state and operation outcomes returned by the service.</p><span class="card-status">Job inspection API</span></article>
+            <article class="lifecycle-card"><span class="card-number">02</span><span class="lifecycle-icon" aria-hidden="true">▤</span><h3>Evidence</h3><p>Inspect the validated acquisition package for a successful fetch job.</p><span class="card-status">Evidence package v1</span></article>
+
+          </section>
+          <footer class="page-footer"><span>TINLYT <span aria-hidden="true">·</span> TINLANCE WEB INTELLIGENCE</span><span>Discover sources. Verify claims. Preserve evidence.</span></footer>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
