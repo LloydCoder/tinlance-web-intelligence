@@ -1,33 +1,40 @@
 (() => {
   'use strict';
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
   const header = document.querySelector('.site-header');
   if (header) {
     const nav = header.querySelector('nav[aria-label="Main navigation"]');
     if (nav) {
       nav.id = nav.id || 'site-primary-navigation';
-      const button = document.createElement('button');
-      button.className = 'site-nav-toggle';
+      const button = make('button', 'site-nav-toggle');
       button.type = 'button';
       button.setAttribute('aria-controls', nav.id);
       button.setAttribute('aria-expanded', 'false');
       button.setAttribute('aria-label', 'Open navigation');
-      button.innerHTML = '<span class="site-nav-toggle-label">Menu</span><span class="site-nav-toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span>';
+      button.append(make('span', 'site-nav-toggle-label', 'Menu'));
+      const icon = make('span', 'site-nav-toggle-icon');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.append(make('span'), make('span'), make('span'));
+      button.append(icon);
       header.insertBefore(button, nav);
       header.dataset.navEnhanced = 'true';
       const close = (restoreFocus = false) => {
         nav.classList.remove('is-open');
         button.setAttribute('aria-expanded', 'false');
         button.setAttribute('aria-label', 'Open navigation');
-        const label = button.querySelector('.site-nav-toggle-label');
-        if (label) label.textContent = 'Menu';
+        button.querySelector('.site-nav-toggle-label').textContent = 'Menu';
         if (restoreFocus) button.focus();
       };
       const open = () => {
         nav.classList.add('is-open');
         button.setAttribute('aria-expanded', 'true');
         button.setAttribute('aria-label', 'Close navigation');
-        const label = button.querySelector('.site-nav-toggle-label');
-        if (label) label.textContent = 'Close';
+        button.querySelector('.site-nav-toggle-label').textContent = 'Close';
       };
       button.addEventListener('click', () => button.getAttribute('aria-expanded') === 'true' ? close() : open());
       nav.addEventListener('click', event => {
@@ -51,13 +58,12 @@
   const topbar = document.querySelector('.app-shell .topbar');
   if (sidebar && topbar) {
     sidebar.id = sidebar.id || 'workspace-sidebar';
-    const toggle = document.createElement('button');
-    toggle.className = 'workspace-nav-toggle';
+    const toggle = make('button', 'workspace-nav-toggle');
     toggle.type = 'button';
     toggle.setAttribute('aria-controls', sidebar.id);
     toggle.setAttribute('aria-expanded', 'false');
     toggle.setAttribute('aria-label', 'Open workspace navigation');
-    toggle.innerHTML = '<span aria-hidden="true">☰</span><span>Navigation</span>';
+    toggle.append(make('span', 'workspace-nav-toggle-icon', '☰'), make('span', '', 'Navigation'));
     const breadcrumb = topbar.querySelector('.breadcrumb');
     topbar.insertBefore(toggle, breadcrumb || topbar.firstChild);
     const closeSidebar = (restoreFocus = false) => {
