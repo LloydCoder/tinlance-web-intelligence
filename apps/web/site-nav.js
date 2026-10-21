@@ -47,7 +47,7 @@
         if (button.getAttribute('aria-expanded') !== 'true') return;
         if (event.target instanceof Node && !header.contains(event.target)) close();
       });
-      const desktop = window.matchMedia('(min-width: 761px)');
+      const desktop = window.matchMedia('(min-width: 901px)');
       const resetAtDesktop = event => { if (event.matches) close(); };
       if (desktop.addEventListener) desktop.addEventListener('change', resetAtDesktop);
       else if (desktop.addListener) desktop.addListener(resetAtDesktop);
