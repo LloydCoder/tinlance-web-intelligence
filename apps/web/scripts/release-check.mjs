@@ -52,7 +52,8 @@ assert.match(html, /property=["']og:title["']/, 'marketing page must include Ope
 const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
 assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
-assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');\nassert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
+assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
+assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 const jsRoot = path.join(distRoot, 'src');
 const jsFiles = (await collectFiles(jsRoot)).filter((file) => file.endsWith('.js'));
 assert.ok(jsFiles.length > 0, 'build must emit JavaScript modules');
@@ -95,7 +96,10 @@ try {
   const address = server.address();
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
-  const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];\n  const appResponse = await fetch(new URL('/app', base));\n  assert.equal(appResponse.status, 200, 'workspace route must resolve');\n  assert.match(await appResponse.text(), /runtime-config\\.js/, 'workspace route must serve the application document');
+  const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
+  const appResponse = await fetch(new URL('/app', base));
+  assert.equal(appResponse.status, 200, 'workspace route must resolve');
+  assert.match(await appResponse.text(), /runtime-config\\.js/, 'workspace route must serve the application document');
   for (const asset of assets) {
     const assetPath = new URL(asset, base).pathname;
     // The root URL is served from index.html, so its expected MIME type is HTML.
