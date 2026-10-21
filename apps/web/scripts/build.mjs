@@ -17,7 +17,7 @@ const compile = spawnSync(process.execPath, [
   path.join(root, 'tsconfig.json'),
 ], { stdio: 'inherit' });
 if (compile.status !== 0) process.exit(compile.status ?? 1);
-await cp(path.join(root, 'index.html'), path.join(out, 'index.html'));
+await cp(path.join(root, 'index.html'), path.join(out, 'index.html'));\nawait cp(path.join(root, 'app.html'), path.join(out, 'app.html'));\nawait cp(path.join(root, 'landing.css'), path.join(out, 'landing.css'));\nawait cp(path.join(root, 'favicon.svg'), path.join(out, 'favicon.svg'));
 await cp(path.join(root, 'runtime-config.js'), path.join(out, 'runtime-config.js'));
 await cp(path.join(root, 'styles.css'), path.join(out, 'styles.css'));
 await cp(path.join(root, 'investigation.css'), path.join(out, 'investigation.css'));
