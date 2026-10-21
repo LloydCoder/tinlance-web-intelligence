@@ -22,7 +22,7 @@ test('workspace document declares language, viewport, title and skip navigation'
 });
 
 test('primary navigation and main landmark are labelled', () => {
-  assert.match(html, /<aside class="sidebar" aria-label="Primary navigation">/);
+  assert.match(html, /<aside id="workspace-sidebar" class="sidebar" aria-label="Primary navigation">/);
   assert.match(html, /<main id="main" tabindex="-1">/);
   assert.match(html, /aria-current="page"/);
 });
