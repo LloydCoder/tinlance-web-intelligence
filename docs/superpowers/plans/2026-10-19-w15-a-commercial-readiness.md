@@ -9,9 +9,9 @@ This plan is sequential and evidence-gated. Do not mark W15-A complete based on 
 - [x] A5 — Add provider-neutral signed event ingestion, replay protection, event ordering strategy, and reconciliation classifications; do not select a payment provider without approval.
 - [x] A6 — Add authorized usage/quota reads and privacy-safe exports.
 - [x] A7 — Add adversarial tests: tenant spoofing/isolation, duplicate/reordered events, idempotency conflict, concurrent quota race, failure recovery, and reconciliation mismatches.
-- [ ] A8 — Run focused tests, Ruff, mypy, full Python 3.12/3.13 CI; audit the exact PR head and fix all findings.
-- [ ] A9 — Merge only when required checks are green; verify post-merge CI and record the exact evidence.
-- [ ] A10 — Write a forensic closeout with completed requirements, test evidence, known external gates, and explicit residual risks before W15-B begins.
+- [x] A8 — Focused test suites are present and the current main CI run passed Python quality/tests on Python 3.12 and 3.13. Exact current evidence: [CI run 39573798125](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39573798125) on `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
+- [x] A9 — Repository work is merged on main; post-merge CI run 39573798125 passed on exact SHA `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
+- [x] A10 — Forensic closeout recorded in [`docs/audits/W15-A-commercial-readiness-closeout-2026-10-21.md`](../audits/W15-A-commercial-readiness-closeout-2026-10-21.md). W15-A repository work is closed; provider-specific checkout and live financial readiness remain separate external/product gates.
 
 ## Blocking product decisions
 

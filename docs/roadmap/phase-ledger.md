@@ -1,7 +1,7 @@
 # Tinlyt / TWI Phase and Release Ledger
 
 **Reconciled:** 2026-10-21  
-**Current main:** `75ced750deef1903d23987d8e2ab9882ba6035e5`  
+**Current main:** `a407b211773e32a71a8cebcae9b9b2177fd5af5c`  
 **Canonical audit:** [Cross-conversation consolidation audit](../PROJECT_CONSOLIDATION_AUDIT_2026-10-21.md)
 
 This is a live status ledger, not a completion claim. It separates repository implementation/CI from live integration, deployment, and release certification. A phase may have accepted code while its external gate remains blocked.
@@ -50,13 +50,13 @@ Detailed W1–W15 history and PR/run references remain in [workstream plan](phas
 
 ## Current exact-revision checkpoint
 
-- Main SHA: `75ced750deef1903d23987d8e2ab9882ba6035e5`.
-- [Post-merge CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39560470365): **success**.
-- [Post-merge Frontend](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39560470415): **success**.
-- [PR #97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97): merged.
+- Main SHA: `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
+- [Post-merge CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39573798125): **success** on this exact SHA.
+- [PR #97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97): brand, responsive and reduced-motion hardening merged.
+- [PR #99](https://github.com/LloydCoder/tinlance-web-intelligence/pull/99): expanded public pages, clean routes, build/lint inclusion and route smoke tests merged.
 - Open PRs: **0**. Open issue: [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18).
-- Vercel reports a production-target deployment READY for this SHA, but project metadata also reports `live: false` and SSO protection for deployments except custom domains. Verify intended public alias/access and live routes before claiming public availability.
-- Branch-protection API check was denied (403) to the connected integration. Prior audit recorded main unprotected on 2026-10-19; authorized owner verification remains required.
+- Vercel deployment/access state has not been refreshed against this latest SHA. Do not claim public availability from repository CI.
+- Branch-protection API check was denied (403) to the connected integration. Effective branch rules and mandatory checks require authorized owner verification.
 
 ## Cross-cutting release gates (must all pass before certification)
 
