@@ -1,7 +1,7 @@
 # Tinlyt / TWI Phase and Release Ledger
 
 **Reconciled:** 2026-10-21  
-**Current main:** `a407b211773e32a71a8cebcae9b9b2177fd5af5c`  
+**Current main:** `7cbacf871ba5f7bcad90211cc2b3caa83b5df8e2`  
 **Canonical audit:** [Cross-conversation consolidation audit](../PROJECT_CONSOLIDATION_AUDIT_2026-10-21.md)
 
 This is a live status ledger, not a completion claim. It separates repository implementation/CI from live integration, deployment, and release certification. A phase may have accepted code while its external gate remains blocked.
@@ -50,11 +50,12 @@ Detailed W1–W15 history and PR/run references remain in [workstream plan](phas
 
 ## Current exact-revision checkpoint
 
-- Main SHA: `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
-- [Post-merge CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39573798125): **success** on this exact SHA.
+- Main SHA: `7cbacf871ba5f7bcad90211cc2b3caa83b5df8e2`.
+- [Post-merge CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39576142736): **success** on this exact SHA.
 - [PR #97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97): brand, responsive and reduced-motion hardening merged.
 - [PR #99](https://github.com/LloydCoder/tinlance-web-intelligence/pull/99): expanded public pages, clean routes, build/lint inclusion and route smoke tests merged.
-- Open PRs: **0**. Open issue: [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18).
+- [PR #100](https://github.com/LloydCoder/tinlance-web-intelligence/pull/100): W15-A commercial-readiness and release-ledger reconciliation merged; post-merge CI run 39576142736 succeeded on the exact main SHA above.
+- Open PRs at the time of this checkpoint: **0**. Open issue: [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18).
 - Vercel deployment/access state has not been refreshed against this latest SHA. Do not claim public availability from repository CI.
 - Branch-protection API check was denied (403) to the connected integration. Effective branch rules and mandatory checks require authorized owner verification.
 
