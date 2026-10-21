@@ -99,7 +99,7 @@ try {
   const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
   const appResponse = await fetch(new URL('/app', base));
   assert.equal(appResponse.status, 200, 'workspace route must resolve');
-  assert.match(await appResponse.text(), /runtime-config\\.js/, 'workspace route must serve the application document');
+  assert.match(await appResponse.text(), /runtime-config\.js/, 'workspace route must serve the application document');
   for (const asset of assets) {
     const assetPath = new URL(asset, base).pathname;
     // The root URL is served from index.html, so its expected MIME type is HTML.
