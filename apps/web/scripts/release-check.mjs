@@ -103,7 +103,7 @@ try {
   for (const asset of assets) {
     const assetPath = new URL(asset, base).pathname;
     // The root URL is served from index.html, so its expected MIME type is HTML.
-    const expectedType = asset === '/' ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
+    const expectedType = ['/', '/app', '/app/'].includes(asset) ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
     const response = await fetch(new URL(asset, base));
     assert.equal(response.status, 200, 'asset failed HTTP smoke check: ' + asset);
     assert.equal(response.headers.get('content-type'), expectedType, 'wrong content type: ' + asset);
