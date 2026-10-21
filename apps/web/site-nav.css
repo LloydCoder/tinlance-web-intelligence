@@ -33,7 +33,7 @@ footer .footer-meta{grid-column:1/-1;display:flex;justify-content:space-between;
 .site-nav-resources>summary::-webkit-details-marker{display:none}
 .site-nav-resources>summary::after{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px)}
 .site-nav-resources[open]>summary::after{transform:rotate(225deg) translate(-1px,-1px)}
-.site-nav-resources>summary:hover,.site-nav-resources[open]>summary{color:var(--signal)}
+.site-nav-resources>summary:hover,.site-nav-resources[open]>summary,.site-nav-resources>summary[aria-current="page"]{color:var(--signal)}.site-nav-resources>summary[aria-current="page"]{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
 .site-nav-resources-panel{position:absolute;top:calc(100% + .35rem);right:0;z-index:35;display:grid;grid-template-columns:repeat(2,minmax(130px,1fr));gap:.2rem;min-width:320px;padding:.55rem;border:1px solid #30485d;border-radius:10px;background:#0e1a2a;box-shadow:0 18px 50px #0008}
 .site-nav-resources-panel a{padding:.55rem .7rem!important;border-radius:6px;white-space:normal!important}
 .site-nav-resources-panel a:hover{background:#ffffff0a}
