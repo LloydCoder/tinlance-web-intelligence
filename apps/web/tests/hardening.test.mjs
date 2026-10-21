@@ -32,7 +32,7 @@ test('interactive controls retain visible focus and forced-colors support', () =
 test('document exposes language, skip link, landmarks, and labelled primary navigation', () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /class="skip-link" href="#main"/);
-  assert.match(html, /<aside id="workspace-sidebar" class="sidebar" aria-label="Primary navigation">);
+  assert.match(html, /<aside id="workspace-sidebar" class="sidebar" aria-label="Primary navigation">/);
   assert.match(html, /<main id="main" tabindex="-1">/);
   assert.match(html, /<nav class="primary-nav">/);
 });
