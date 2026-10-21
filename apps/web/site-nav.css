@@ -1,0 +1,29 @@
+/* Shared Tinlyt public-site and workspace navigation shell. */
+:root{--shell-header-bg:rgba(11,18,32,.94);--shell-line:#2a3b4f}
+.site-header{position:sticky;top:0;z-index:30;width:100%;max-width:none;margin:0;padding:.85rem max(1.25rem,calc((100vw - 1160px)/2));background:var(--shell-header-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--shell-line);gap:1.25rem}
+.site-header>.wordmark,.site-header>a[aria-label="Tinlyt home"]{flex:0 0 auto}
+.site-header .wordmark-image{display:block;width:clamp(112px,12vw,138px);height:auto}
+.site-header nav[aria-label="Main navigation"]{display:flex;align-items:center;justify-content:flex-end;gap:clamp(.65rem,1.5vw,1.35rem);min-width:0}
+.site-header nav[aria-label="Main navigation"] a{display:inline-flex;align-items:center;min-height:44px;padding:.45rem .1rem;white-space:nowrap}
+.site-header nav[aria-label="Main navigation"] a[aria-current="page"]{color:var(--signal);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+.site-header nav[aria-label="Main navigation"] a.nav-cta{padding:.55rem .9rem;border:1px solid #466071;border-radius:7px}
+.site-nav-toggle{display:none;align-items:center;justify-content:center;gap:.65rem;min-width:44px;min-height:44px;padding:.55rem .75rem;border:1px solid #52647a;border-radius:8px;background:#111e30;color:var(--paper);font:600 .9rem/1 var(--tinlyt-font-sans,Inter,system-ui,sans-serif);cursor:pointer}
+.site-nav-toggle:hover{border-color:var(--signal)}
+.site-nav-toggle-icon{display:grid;gap:4px;width:18px}
+.site-nav-toggle-icon span{display:block;height:2px;width:18px;background:currentColor;border-radius:2px;transition:transform .16s ease,opacity .16s ease}
+.site-nav-toggle[aria-expanded="true"] .site-nav-toggle-icon span:first-child{transform:translateY(6px) rotate(45deg)}
+.site-nav-toggle[aria-expanded="true"] .site-nav-toggle-icon span:nth-child(2){opacity:0}
+.site-nav-toggle[aria-expanded="true"] .site-nav-toggle-icon span:last-child{transform:translateY(-6px) rotate(-45deg)}
+.site-header[data-nav-enhanced="true"] nav[aria-label="Main navigation"]{transition:opacity .16s ease}
+footer{max-width:1160px;margin:0 auto;border-top:1px solid #ffffff16;padding:1.6rem 1.5rem 2rem;display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,2fr);align-items:start;gap:1rem 2rem;color:#b0bdcc;font-size:.8rem}
+footer .footer-brand{display:grid;gap:.65rem}
+footer .footer-brand .wordmark-image{display:block;width:120px;height:auto}
+footer .footer-brand p{max-width:300px;margin:0;color:#b0bdcc}
+footer nav[aria-label="Footer navigation"]{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.35rem 1rem}
+footer nav a{color:#c4cedb;text-decoration:none;min-height:32px;display:inline-flex;align-items:center}
+footer nav a:hover{color:var(--signal)}
+footer .footer-meta{grid-column:1/-1;display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;border-top:1px solid #ffffff12;padding-top:1rem;color:#8996aa;font-size:.74rem}
+.skip-link{z-index:60}
+@media(max-width:980px){.site-header{padding:.75rem 1.25rem}.site-header nav[aria-label="Main navigation"]{gap:.7rem;font-size:.86rem}.site-header nav[aria-label="Main navigation"] a{white-space:normal}.site-header .wordmark-image{width:118px}}
+@media(max-width:760px){.site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.75rem;padding:.7rem 1rem}.site-header .wordmark-image{width:118px}.site-nav-toggle{display:inline-flex;justify-self:end}.site-header nav[aria-label="Main navigation"]{grid-column:1/-1;display:none;align-items:stretch;justify-content:flex-start;flex-direction:column;gap:.15rem;padding:.6rem 0 .2rem;border-top:1px solid #ffffff16}.site-header[data-nav-enhanced="true"] nav[aria-label="Main navigation"]{display:none}.site-header[data-nav-enhanced="true"] nav[aria-label="Main navigation"].is-open{display:flex}.site-header nav[aria-label="Main navigation"] a{width:100%;min-height:46px;padding:.65rem .75rem;border-radius:6px}.site-header nav[aria-label="Main navigation"] a:hover{background:#ffffff09}.site-header nav[aria-label="Main navigation"] a.nav-cta{justify-content:center;margin-top:.35rem;padding:.7rem .9rem}footer{grid-template-columns:1fr;padding:1.5rem 1rem;gap:1rem}footer nav[aria-label="Footer navigation"]{justify-content:flex-start;gap:.2rem .8rem}footer .footer-meta{grid-column:auto;display:grid;gap:.4rem}}
+@media(prefers-reduced-motion:reduce){.site-nav-toggle-icon span,.site-header nav[aria-label="Main navigation"]{transition:none}}
