@@ -257,9 +257,9 @@ test('public mobile navigation is a keyboard-operable disclosure, not an applica
   assert.match(siteNavJs, /button\.focus\(\)/);
   assert.match(siteNavJs, /nav\.classList\.add\('is-open'\)/);
   assert.match(siteNavJs, /nav\.classList\.remove\('is-open'\)/);
-  assert.match(siteNavJs, /matchMedia\('\(min-width: 761px\)'\)/);
+  assert.match(siteNavJs, /matchMedia\('\(min-width: 901px\)'\)/);
   assert.doesNotMatch(siteNavJs, /innerHTML/);
-  assert.match(siteNavCss, /@media\(max-width:760px\)/);
+  assert.match(siteNavCss, /@media\(max-width:900px\)/);
   assert.match(siteNavCss, /\.site-header\[data-nav-enhanced="true"\].*\.is-open/s);
   assert.match(siteNavCss, /min-height:44px/);
   assert.match(siteNavCss, /prefers-reduced-motion:reduce/);
@@ -273,7 +273,7 @@ test('workspace navigation collapses to a dismissible drawer on tablet and mobil
   assert.match(siteNavJs, /workspace-nav-open/);
   assert.match(siteNavJs, /aria-label', 'Open workspace navigation'/);
   assert.match(siteNavJs, /sidebar\.querySelectorAll\('nav a\[href\]'\)/);
-  assert.match(siteNavCss, /@media\(max-width:760px\)/);
+  assert.match(siteNavCss, /@media\(max-width:900px\)/);
   assert.match(siteNavCss, /\.app-shell \.sidebar\.is-open/);
   assert.match(siteNavCss, /body\.workspace-nav-open::before/);
 });
