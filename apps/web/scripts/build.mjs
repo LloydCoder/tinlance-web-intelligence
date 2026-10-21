@@ -17,9 +17,8 @@ const compile = spawnSync(process.execPath, [
   path.join(root, 'tsconfig.json'),
 ], { stdio: 'inherit' });
 if (compile.status !== 0) process.exit(compile.status ?? 1);
-await cp(path.join(root, 'index.html'), path.join(out, 'index.html'));
-await cp(path.join(root, 'runtime-config.js'), path.join(out, 'runtime-config.js'));
-await cp(path.join(root, 'styles.css'), path.join(out, 'styles.css'));
-await cp(path.join(root, 'investigation.css'), path.join(out, 'investigation.css'));
+for (const file of ['index.html', 'app.html', 'landing.css', 'favicon.svg', 'tinlyt-logo-dark-bg.svg', 'runtime-config.js', 'styles.css', 'investigation.css']) {
+  await cp(path.join(root, file), path.join(out, file));
+}
 await cp(path.join(root, 'src/main.js'), path.join(out, 'src/main.js'));
 console.log('Tinlyt frontend built at apps/web/dist');

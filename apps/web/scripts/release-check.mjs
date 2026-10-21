@@ -38,7 +38,7 @@ function localAssetPaths(html) {
 }
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
-  const relative = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const relative = decoded === '/' ? 'index.html' : (decoded === '/app' || decoded === '/app/') ? 'app.html' : decoded.replace(/^\/+/, '');
   const resolved = path.resolve(distRoot, relative);
   assert.ok(resolved === distRoot || resolved.startsWith(distPrefix), 'asset path must remain inside build output');
   return resolved;
@@ -47,8 +47,13 @@ function resolveLocalAsset(pathname) {
 await stat(path.join(distRoot, 'index.html'));
 const html = await readFile(path.join(distRoot, 'index.html'), 'utf8');
 assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/, 'built page must identify Tinlyt');
-assert.match(html, /(?:src|href)=["']\/runtime-config\.js["']/, 'built page must load runtime configuration');
-assert.match(html, /(?:src|href)=["']\/src\/main\.js["']/, 'built page must load app entry point');
+assert.match(html, /name=["']robots["'] content=["']noindex, nofollow["']/, 'marketing page must remain noindex until launch approval');
+assert.match(html, /property=["']og:title["']/, 'marketing page must include Open Graph title');
+const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
+assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
+assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
+assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
+assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 const jsRoot = path.join(distRoot, 'src');
 const jsFiles = (await collectFiles(jsRoot)).filter((file) => file.endsWith('.js'));
 assert.ok(jsFiles.length > 0, 'build must emit JavaScript modules');
@@ -91,11 +96,14 @@ try {
   const address = server.address();
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
-  const assets = localAssetPaths(html);
+  const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
+  const appResponse = await fetch(new URL('/app', base));
+  assert.equal(appResponse.status, 200, 'workspace route must resolve');
+  assert.match(await appResponse.text(), /runtime-config\.js/, 'workspace route must serve the application document');
   for (const asset of assets) {
     const assetPath = new URL(asset, base).pathname;
     // The root URL is served from index.html, so its expected MIME type is HTML.
-    const expectedType = asset === '/' ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
+    const expectedType = ['/', '/app', '/app/'].includes(asset) ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
     const response = await fetch(new URL(asset, base));
     assert.equal(response.status, 200, 'asset failed HTTP smoke check: ' + asset);
     assert.equal(response.headers.get('content-type'), expectedType, 'wrong content type: ' + asset);
