@@ -38,7 +38,10 @@ function localAssetPaths(html) {
 }
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
-  const relative = decoded === '/' ? 'index.html' : (decoded === '/app' || decoded === '/app/') ? 'app.html' : decoded.replace(/^\/+/, '');
+  const cleanPath = decoded.endsWith('/') && decoded !== '/' ? decoded.slice(0, -1) : decoded;
+  const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq']);
+  const strippedPath = decoded.startsWith('/') ? decoded.slice(1) : decoded;
+  const relative = decoded === '/' ? 'index.html' : cleanPath === '/app' ? 'app.html' : pageRoutes.has(cleanPath) ? cleanPath.slice(1) + '.html' : strippedPath;
   const resolved = path.resolve(distRoot, relative);
   assert.ok(resolved === distRoot || resolved.startsWith(distPrefix), 'asset path must remain inside build output');
   return resolved;
@@ -97,13 +100,22 @@ try {
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
   const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
+  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq'];
+  for (const route of publicRoutes) {
+    const response = await fetch(new URL(route, base));
+    assert.equal(response.status, 200, 'public route must resolve: ' + route);
+    const page = await response.text();
+    assert.match(page, /<!doctype html>/i, 'public route must serve an HTML document: ' + route);
+    assert.match(page, /name="robots" content="noindex, nofollow"/, 'public page must remain noindex pending launch approval: ' + route);
+    assert.ok(page.includes('href="/pages.css"'), 'public page must load shared page styles: ' + route);
+  }
   const appResponse = await fetch(new URL('/app', base));
   assert.equal(appResponse.status, 200, 'workspace route must resolve');
   assert.match(await appResponse.text(), /runtime-config\.js/, 'workspace route must serve the application document');
   for (const asset of assets) {
     const assetPath = new URL(asset, base).pathname;
     // The root URL is served from index.html, so its expected MIME type is HTML.
-    const expectedType = ['/', '/app', '/app/'].includes(asset) ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
+    const expectedType = ['/', '/app', '/app/', ...publicRoutes, ...publicRoutes.map((route) => route + '/')].includes(asset) ? mimeTypes.get('.html') : (mimeTypes.get(path.extname(assetPath)) ?? 'application/octet-stream');
     const response = await fetch(new URL(asset, base));
     assert.equal(response.status, 200, 'asset failed HTTP smoke check: ' + asset);
     assert.equal(response.headers.get('content-type'), expectedType, 'wrong content type: ' + asset);

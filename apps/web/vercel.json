@@ -7,6 +7,110 @@
     {
       "source": "/app/",
       "destination": "/app.html"
+    },
+    {
+      "source": "/features",
+      "destination": "/features.html"
+    },
+    {
+      "source": "/features/",
+      "destination": "/features.html"
+    },
+    {
+      "source": "/how-it-works",
+      "destination": "/how-it-works.html"
+    },
+    {
+      "source": "/how-it-works/",
+      "destination": "/how-it-works.html"
+    },
+    {
+      "source": "/use-cases",
+      "destination": "/use-cases.html"
+    },
+    {
+      "source": "/use-cases/",
+      "destination": "/use-cases.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/pricing/",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/enterprise",
+      "destination": "/enterprise.html"
+    },
+    {
+      "source": "/enterprise/",
+      "destination": "/enterprise.html"
+    },
+    {
+      "source": "/developers",
+      "destination": "/developers.html"
+    },
+    {
+      "source": "/developers/",
+      "destination": "/developers.html"
+    },
+    {
+      "source": "/integrations",
+      "destination": "/integrations.html"
+    },
+    {
+      "source": "/integrations/",
+      "destination": "/integrations.html"
+    },
+    {
+      "source": "/security",
+      "destination": "/security.html"
+    },
+    {
+      "source": "/security/",
+      "destination": "/security.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/privacy/",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/terms/",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/contact/",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/docs/",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/faq",
+      "destination": "/faq.html"
+    },
+    {
+      "source": "/faq/",
+      "destination": "/faq.html"
     }
   ],
   "headers": [

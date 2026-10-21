@@ -17,7 +17,7 @@ const compile = spawnSync(process.execPath, [
   path.join(root, 'tsconfig.json'),
 ], { stdio: 'inherit' });
 if (compile.status !== 0) process.exit(compile.status ?? 1);
-for (const file of ['index.html', 'app.html', 'brand.css', 'landing.css', 'favicon.svg', 'tinlyt-logo-dark-bg.svg', 'runtime-config.js', 'styles.css', 'investigation.css']) {
+for (const file of ['index.html', 'app.html', 'brand.css', 'landing.css', 'favicon.svg', 'tinlyt-logo-dark-bg.svg', 'runtime-config.js', 'styles.css', 'investigation.css', 'features.html', 'how-it-works.html', 'use-cases.html', 'pricing.html', 'enterprise.html', 'developers.html', 'integrations.html', 'security.html', 'privacy.html', 'terms.html', 'contact.html', 'docs.html', 'faq.html', 'pages.css']) {
   await cp(path.join(root, file), path.join(out, file));
 }
 await cp(path.join(root, 'src/main.js'), path.join(out, 'src/main.js'));
