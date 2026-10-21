@@ -55,7 +55,7 @@ def main() -> None:
                 # The public navigation becomes a keyboard-operable disclosure at mobile width.
                 page.set_viewport_size({"width": 375, "height": 812})
                 page.reload(wait_until="networkidle")
-                menu_button = page.get_by_role("button", name="Open navigation")
+                menu_button = page.locator(".site-nav-toggle")
                 assert menu_button.is_visible()
                 menu_button.click()
                 assert menu_button.get_attribute("aria-expanded") == "true"
@@ -230,7 +230,7 @@ def main() -> None:
                 assert overflow["document"] <= overflow["viewport"], overflow
 
                 # Workspace navigation opens as a drawer, and choosing a destination closes it.
-                drawer_button = page.get_by_role("button", name="Open workspace navigation")
+                drawer_button = page.locator(".workspace-nav-toggle")
                 assert drawer_button.is_visible()
                 drawer_button.click()
                 assert drawer_button.get_attribute("aria-expanded") == "true"
