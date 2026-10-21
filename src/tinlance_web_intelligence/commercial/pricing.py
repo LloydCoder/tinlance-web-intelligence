@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import MappingProxyType
 
-
 PRICING_VERSION = 1
 CURRENCY = "USD"
 MICRO_USD_PER_USD = 1_000_000
