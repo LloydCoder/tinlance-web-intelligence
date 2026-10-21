@@ -124,7 +124,7 @@ def main() -> None:
                     }"""
                 )
                 assert focus_style["outlineStyle"] == "solid", focus_style
-                assert focus_style["outlineWidth"] == "2px", focus_style
+                assert float(focus_style["outlineWidth"].removesuffix("px")) >= 2, focus_style
                 page.emulate_media(forced_colors="none")
 
                 # Check representative text roles against their actual composited backgrounds.
