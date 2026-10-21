@@ -56,14 +56,15 @@ Pricing policy does not imply billing is deployed. Do not charge users until ent
 
 ## Current evidence checkpoint — 2026-10-21
 
-- Main SHA: `75ced750deef1903d23987d8e2ab9882ba6035e5`.
-- PR [#97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97) merged; it aligns brand tokens/logo, improves responsive/mobile behavior, and adds reduced-motion-aware CSS 3D scroll depth.
-- Post-merge [CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39560470365) and [Frontend](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39560470415) workflows both succeeded on the exact main SHA.
-- Vercel reports production-target deployment [READY](https://vercel.com/lloydcoders-projects/tinlyt-web/9VNWk4E6Y6SfctVk235pz4sJ8UqF) for that same SHA. The Vercel project metadata also reports `live: false` and SSO protection enabled for deployments except custom domains; public alias/access behavior needs direct owner verification.
-- No open PRs; one open issue remains: [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18), tracking W5/private-beta integration reconciliation.
-- GitHub branch-protection inspection returned 403 to the connected integration. A previous 2026-10-19 audit recorded main as unprotected; an authorized owner must verify current effective rules and mandatory checks.
-- Overall private beta and GA remain **NOT CERTIFIED**. The W15 evidence registry records a failed Platform consumer-approval gate and multiple external gates as not evidenced. The pinned Platform consumer snapshot is recorded as missing six monitor tools and evidence export; verify against the latest authoritative Platform revision before closure.
-- Current deployment options discussed (Vercel + Railway + PostgreSQL; AWS EC2 + private RDS staging) remain proposals until a provider, region, cost, and topology are approved.
+- Main SHA: `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
+- PR [#97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97) delivered brand-token, logo, responsive and reduced-motion hardening.
+- PR [#99](https://github.com/LloydCoder/tinlance-web-intelligence/pull/99) expanded the public website with Features, How It Works, Use Cases, Pricing, Enterprise, Developers, Integrations, Security, Privacy, Terms, Contact, Docs and FAQ pages; clean routes, build/lint inclusion and route smoke tests were added.
+- Post-merge [CI run 39573798125](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39573798125) completed successfully on exact main SHA `a407b211773e32a71a8cebcae9b9b2177fd5af5c`.
+- The successful CI run proves the repository checks in that workflow passed; it does not prove public deployment accessibility, SSO behavior, external integrations or production certification. Vercel state must be refreshed and verified against this new SHA.
+- No open PRs; issue [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18) remains open for deployment-specific W5/private-beta reconciliation.
+- GitHub branch-protection inspection previously returned 403 to the connected integration. Effective branch rules and mandatory checks remain unverified until an authorized owner confirms them.
+- Overall private beta and GA remain **NOT CERTIFIED**. The W15 evidence registry has a failed Platform consumer-approval gate and external gates marked not evidenced. Do not change these states without evidence against the intended revisions and target environment.
+- Vercel + Railway + PostgreSQL and AWS EC2 + private RDS remain unapproved options until a provider, region, cost and topology are explicitly selected.
 
 ## Change control
 
