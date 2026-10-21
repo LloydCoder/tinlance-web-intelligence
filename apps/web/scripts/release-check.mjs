@@ -107,7 +107,7 @@ try {
     const page = await response.text();
     assert.match(page, /<!doctype html>/i, 'public route must serve an HTML document: ' + route);
     assert.match(page, /name="robots" content="noindex, nofollow"/, 'public page must remain noindex pending launch approval: ' + route);
-    assert.match(page, /href="\\/pages.css"/, 'public page must load shared page styles: ' + route);
+    assert.ok(page.includes('href="/pages.css"'), 'public page must load shared page styles: ' + route);
   }
   const appResponse = await fetch(new URL('/app', base));
   assert.equal(appResponse.status, 200, 'workspace route must resolve');
