@@ -111,6 +111,62 @@
     {
       "source": "/faq/",
       "destination": "/faq.html"
+    },
+    {
+      "source": "/solutions/research",
+      "destination": "/solutions/research.html"
+    },
+    {
+      "source": "/solutions/research/",
+      "destination": "/solutions/research.html"
+    },
+    {
+      "source": "/solutions/competitive-intelligence",
+      "destination": "/solutions/competitive-intelligence.html"
+    },
+    {
+      "source": "/solutions/competitive-intelligence/",
+      "destination": "/solutions/competitive-intelligence.html"
+    },
+    {
+      "source": "/solutions/due-diligence",
+      "destination": "/solutions/due-diligence.html"
+    },
+    {
+      "source": "/solutions/due-diligence/",
+      "destination": "/solutions/due-diligence.html"
+    },
+    {
+      "source": "/solutions/investigations",
+      "destination": "/solutions/investigations.html"
+    },
+    {
+      "source": "/solutions/investigations/",
+      "destination": "/solutions/investigations.html"
+    },
+    {
+      "source": "/book-demo",
+      "destination": "/book-demo.html"
+    },
+    {
+      "source": "/book-demo/",
+      "destination": "/book-demo.html"
+    },
+    {
+      "source": "/status",
+      "destination": "/status.html"
+    },
+    {
+      "source": "/status/",
+      "destination": "/status.html"
+    },
+    {
+      "source": "/insights",
+      "destination": "/insights.html"
+    },
+    {
+      "source": "/insights/",
+      "destination": "/insights.html"
     }
   ],
   "headers": [

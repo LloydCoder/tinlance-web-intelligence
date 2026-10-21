@@ -39,7 +39,7 @@ function localAssetPaths(html) {
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
   const cleanPath = decoded.endsWith('/') && decoded !== '/' ? decoded.slice(0, -1) : decoded;
-  const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq']);
+  const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq','/solutions/research','/solutions/competitive-intelligence','/solutions/due-diligence','/solutions/investigations','/book-demo','/status','/insights']);
   const strippedPath = decoded.startsWith('/') ? decoded.slice(1) : decoded;
   const relative = decoded === '/' ? 'index.html' : cleanPath === '/app' ? 'app.html' : pageRoutes.has(cleanPath) ? cleanPath.slice(1) + '.html' : strippedPath;
   const resolved = path.resolve(distRoot, relative);
@@ -53,8 +53,12 @@ assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/, 'built page mu
 assert.match(html, /name=["']robots["'] content=["']noindex, nofollow["']/, 'marketing page must remain noindex until launch approval');
 assert.match(html, /property=["']og:title["']/, 'marketing page must include Open Graph title');
 const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
+const manifest = JSON.parse(await readFile(path.join(distRoot, 'manifest.webmanifest'), 'utf8'));
+assert.equal(manifest.start_url, '/app', 'web app manifest must launch the workspace');
+assert.equal(manifest.theme_color, '#0B1220', 'web app manifest must use the approved Tinlyt theme');
 assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
+assert.match(html, /rel=["']manifest["']/, 'landing page must link to the web app manifest');
 assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
 assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 const jsRoot = path.join(distRoot, 'src');
@@ -100,7 +104,7 @@ try {
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
   const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
-  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq'];
+  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact','/docs','/faq','/solutions/research','/solutions/competitive-intelligence','/solutions/due-diligence','/solutions/investigations','/book-demo','/status','/insights'];
   for (const route of publicRoutes) {
     const response = await fetch(new URL(route, base));
     assert.equal(response.status, 200, 'public route must resolve: ' + route);
@@ -108,6 +112,9 @@ try {
     assert.match(page, /<!doctype html>/i, 'public route must serve an HTML document: ' + route);
     assert.match(page, /name="robots" content="noindex, nofollow"/, 'public page must remain noindex pending launch approval: ' + route);
     assert.ok(page.includes('href="/pages.css"'), 'public page must load shared page styles: ' + route);
+    assert.match(page, /<header class="site-header">/, 'public page must use shared header: ' + route);
+    assert.match(page, /<footer>/, 'public page must use shared footer: ' + route);
+    assert.match(page, /site-nav\.js/, 'public page must load shared navigation behavior: ' + route);
   }
   const appResponse = await fetch(new URL('/app', base));
   assert.equal(appResponse.status, 200, 'workspace route must resolve');

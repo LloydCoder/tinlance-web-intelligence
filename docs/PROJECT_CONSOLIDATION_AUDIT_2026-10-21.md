@@ -3,7 +3,7 @@
 **Audit date:** 2026-10-21  
 **Scope:** ChatGPT project conversations and retrieved prior-conversation context concerning Tinlance Web Intelligence, Tinlyt, and TWI; current GitHub repository, issue/PR state, CI, roadmap, readiness artifacts, and Vercel deployment metadata.  
 **Repository:** [LloydCoder/tinlance-web-intelligence](https://github.com/LloydCoder/tinlance-web-intelligence)  
-**Audited main revision:** `75ced750deef1903d23987d8e2ab9882ba6035e5`
+**Historical audit baseline:** `75ced750deef1903d23987d8e2ab9882ba6035e5` (superseded by later merges; use the live GitHub branch and the phase ledger for current state).
 
 ## 1. Executive decision
 
@@ -16,7 +16,7 @@ There is now one product identity and one engineering source of truth:
 - **Tagline:** “Discover sources. Verify claims. Preserve evidence.”
 - **Primary product contract:** evidence-first web investigation, retrieval, extraction, execution history, claim/citation comparison, monitoring, and provenance preservation.
 
-**Current state:** the latest main commit is signed/verified; both post-merge GitHub Actions workflows (CI and Frontend) are green; Vercel reports a production-target deployment READY for the same main SHA. This is not a private-beta or GA certification. The repository still has one open issue (#18), no open pull requests, and significant external integration and operational release gates remain open. A successful deployment object is not equivalent to a verified end-to-end customer journey.
+**State at this audit snapshot (historical):** main was recorded at the baseline SHA above, with CI/Frontend workflows green and a Vercel deployment object reported READY. Subsequent merges, including PR #102, supersede that code snapshot. The earlier deployment object is not evidence that the latest commit is deployed or that the customer journey works. Always re-check the live branch head, exact-commit workflows, current PR/issue state, and deployment metadata before making a present-tense claim. Private-beta and GA remain separate certifications.
 
 ## 2. Evidence hierarchy and status vocabulary
 
@@ -93,7 +93,7 @@ Two roadmaps are intentionally distinct and must remain linked:
 
 A phase can have its repository implementation accepted while its external integration or release gate remains blocked. The phase ledger must show both rather than declaring a whole phase “complete” without qualification.
 
-## 6. Current repository and CI facts (2026-10-21)
+## 6. Repository and CI facts at the historical audit snapshot (2026-10-21)
 
 - Main SHA: `75ced750deef1903d23987d8e2ab9882ba6035e5`.
 - Merged PR: [#97 — unify Tinlyt branding and harden mobile layouts](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97).
@@ -105,7 +105,7 @@ A phase can have its repository implementation accepted while its external integ
 - Issue #18 must remain open until the consumer contract mismatch and missing deployment evidence it documents are reconciled with current exact revisions.
 - GitHub's branch-protection endpoint returned 403 to the connected integration during this audit. A previous repository audit dated 2026-10-19 recorded `main` as unprotected with no active rulesets; that observation must be re-verified by an authorized owner. Do not claim branch governance is enforced based on CI visibility alone.
 
-## 7. Deployment evidence and ambiguity
+## 7. Deployment evidence recorded at the historical audit snapshot
 
 Vercel project `tinlyt-web` reports a production-target deployment **READY** for main SHA `75ced750deef1903d23987d8e2ab9882ba6035e5` in region `iad1`. The deployment has aliases including `tinlyt-web.vercel.app`. Project metadata simultaneously reports `live: false`, and SSO protection is enabled for all deployment types except custom domains. Treat this as a provider-state ambiguity requiring a direct owner check of the intended public domain, alias protection, and live route behavior. Do not state that the complete product is publicly live or end-to-end operational from the deployment object alone.
 

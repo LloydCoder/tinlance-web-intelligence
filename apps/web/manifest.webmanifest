@@ -1,0 +1,18 @@
+{
+  "name": "Tinlyt — Web Intelligence",
+  "short_name": "Tinlyt",
+  "description": "Evidence-first web investigation and source review.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0B1220",
+  "theme_color": "#0B1220",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
