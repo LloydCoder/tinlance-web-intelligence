@@ -50,7 +50,7 @@ Detailed W1–W15 history and PR/run references remain in [workstream plan](phas
 
 ## Current exact-revision checkpoint
 
-- Main SHA: `7cbacf871ba5f7bcad90211cc2b3caa83b5df8e2`.
+- Historical checkpoint SHA: `7cbacf871ba5f7bcad90211cc2b3caa83b5df8e2` (superseded by PR #102; not the current main pointer).
 - [Post-merge CI](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39576142736): **success** on this exact SHA.
 - [PR #97](https://github.com/LloydCoder/tinlance-web-intelligence/pull/97): brand, responsive and reduced-motion hardening merged.
 - [PR #99](https://github.com/LloydCoder/tinlance-web-intelligence/pull/99): expanded public pages, clean routes, build/lint inclusion and route smoke tests merged.
