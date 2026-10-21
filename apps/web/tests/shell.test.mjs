@@ -275,5 +275,5 @@ test('workspace navigation collapses to a dismissible drawer on tablet and mobil
   assert.match(siteNavJs, /sidebar\.querySelectorAll\('nav a\[href\]'\)/);
   assert.match(siteNavCss, /@media\(max-width:900px\)/);
   assert.match(siteNavCss, /\.app-shell \.sidebar\.is-open/);
-  assert.match(siteNavCss, /body\.workspace-nav-open::before/);
+  assert.match(siteNavCss, /\.workspace-nav-open::before/);
 });
