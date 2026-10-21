@@ -52,6 +52,20 @@ def main() -> None:
                 assert "Illustrative example" in page.locator(".panel-note").inner_text()
                 assert page.get_by_role("link", name="Open workspace").count() >= 1
 
+                # The public navigation becomes a keyboard-operable disclosure at mobile width.
+                page.set_viewport_size({"width": 375, "height": 812})
+                page.reload(wait_until="networkidle")
+                menu_button = page.locator(".site-nav-toggle")
+                assert menu_button.is_visible()
+                menu_button.click()
+                assert menu_button.get_attribute("aria-expanded") == "true"
+                assert page.get_by_role("navigation", name="Main navigation").is_visible()
+                page.keyboard.press("Escape")
+                assert menu_button.get_attribute("aria-expanded") == "false"
+                assert page.evaluate(
+                    "document.activeElement?.classList.contains('site-nav-toggle')"
+                )
+
                 # The landing route and workspace have separate contracts. Run the existing
                 # interactive-workspace accessibility suite against the preserved app document.
                 response = page.goto(base_url + "app.html", wait_until="networkidle")
@@ -217,8 +231,13 @@ def main() -> None:
                 )
                 assert overflow["document"] <= overflow["viewport"], overflow
 
-                # Every primary navigation link resolves to a real screen on mobile.
+                # Workspace navigation opens as a drawer, and choosing a destination closes it.
+                drawer_button = page.locator(".workspace-nav-toggle")
+                assert drawer_button.is_visible()
+                drawer_button.click()
+                assert drawer_button.get_attribute("aria-expanded") == "true"
                 page.locator('a.nav-link[href="#usage"]').click()
+                assert drawer_button.get_attribute("aria-expanded") == "false"
                 assert page.url.endswith("#usage")
                 assert page.locator("#usage").is_visible()
 

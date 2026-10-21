@@ -10,6 +10,9 @@ const css = await readFile(path.join(root, 'styles.css'), 'utf8');
 const investigationCss = await readFile(path.join(root, 'investigation.css'), 'utf8');
 const js = await readFile(path.join(root, 'src/main.js'), 'utf8');
 const runtimeConfig = await readFile(path.join(root, 'runtime-config.js'), 'utf8');
+const siteNavCss = await readFile(path.join(root, 'site-nav.css'), 'utf8');
+const siteNavJs = await readFile(path.join(root, 'site-nav.js'), 'utf8');
+const publicPages = await Promise.all(['index','features','how-it-works','use-cases','pricing','enterprise','developers','docs','integrations','security','privacy','terms','faq','contact'].map(page => readFile(path.join(root, `${page}.html`), 'utf8')));
 
 test('workspace document declares language, viewport, title and skip navigation', () => {
   assert.match(html, /<html lang="en">/);
@@ -19,7 +22,7 @@ test('workspace document declares language, viewport, title and skip navigation'
 });
 
 test('primary navigation and main landmark are labelled', () => {
-  assert.match(html, /<aside class="sidebar" aria-label="Primary navigation">/);
+  assert.match(html, /<aside id="workspace-sidebar" class="sidebar" aria-label="Primary navigation">/);
   assert.match(html, /<main id="main" tabindex="-1">/);
   assert.match(html, /aria-current="page"/);
 });
@@ -229,4 +232,48 @@ test('usage interface is tenant-scoped, cursor-paginated, and excludes unsupport
   assert.match(js, /event\.event_id/);
   assert.doesNotMatch(js, /localStorage/);
   assert.doesNotMatch(html, /id="(?:tenant-switch|create-api-key|rotate-credentials|invoice-balance)"/i);
+});
+
+
+test('public pages share the same navigation and footer shell', () => {
+  assert.equal(publicPages.length, 14);
+  for (const page of publicPages) {
+    assert.match(page, /<header class="site-header">/);
+    assert.match(page, /aria-label="Main navigation"/);
+    assert.match(page, /class="site-nav-resources"/);
+    assert.match(page, /href="\/app">Open workspace/);
+    assert.match(page, /<footer>/);
+    assert.match(page, /aria-label="Footer navigation"/);
+    assert.match(page, /class="footer-meta"/);
+    assert.match(page, /href="\/site-nav\.css"/);
+    assert.match(page, /src="\/site-nav\.js" defer/);
+  }
+});
+
+test('public mobile navigation is a keyboard-operable disclosure, not an application menu widget', () => {
+  assert.match(siteNavJs, /aria-controls/);
+  assert.match(siteNavJs, /aria-expanded/);
+  assert.match(siteNavJs, /event\.key === 'Escape'/);
+  assert.match(siteNavJs, /button\.focus\(\)/);
+  assert.match(siteNavJs, /nav\.classList\.add\('is-open'\)/);
+  assert.match(siteNavJs, /nav\.classList\.remove\('is-open'\)/);
+  assert.match(siteNavJs, /matchMedia\('\(min-width: 901px\)'\)/);
+  assert.doesNotMatch(siteNavJs, /innerHTML/);
+  assert.match(siteNavCss, /@media\(max-width:900px\)/);
+  assert.match(siteNavCss, /\.site-header\[data-nav-enhanced="true"\].*\.is-open/s);
+  assert.match(siteNavCss, /min-height:44px/);
+  assert.match(siteNavCss, /prefers-reduced-motion:reduce/);
+});
+
+test('workspace navigation collapses to a dismissible drawer on tablet and mobile', () => {
+  assert.match(html, /id="workspace-sidebar"/);
+  assert.match(html, /href="\/site-nav\.css"/);
+  assert.match(html, /src="\/site-nav\.js" defer/);
+  assert.match(siteNavJs, /workspace-nav-toggle/);
+  assert.match(siteNavJs, /workspace-nav-open/);
+  assert.match(siteNavJs, /aria-label', 'Open workspace navigation'/);
+  assert.match(siteNavJs, /sidebar\.querySelectorAll\('nav a\[href\]'\)/);
+  assert.match(siteNavCss, /@media\(max-width:900px\)/);
+  assert.match(siteNavCss, /\.app-shell \.sidebar\.is-open/);
+  assert.match(siteNavCss, /\.workspace-nav-open::before/);
 });
