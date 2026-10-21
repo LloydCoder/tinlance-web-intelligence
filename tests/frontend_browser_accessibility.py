@@ -61,8 +61,10 @@ def main() -> None:
                 assert menu_button.get_attribute("aria-expanded") == "true"
                 assert page.get_by_role("navigation", name="Main navigation").is_visible()
                 page.keyboard.press("Escape")
-                assert page.get_by_role("button", name="Open navigation").get_attribute("aria-expanded") == "false"
-                assert page.evaluate("document.activeElement?.classList.contains('site-nav-toggle')")
+                assert menu_button.get_attribute("aria-expanded") == "false"
+                assert page.evaluate(
+                    "document.activeElement?.classList.contains('site-nav-toggle')"
+                )
 
                 # The landing route and workspace have separate contracts. Run the existing
                 # interactive-workspace accessibility suite against the preserved app document.
