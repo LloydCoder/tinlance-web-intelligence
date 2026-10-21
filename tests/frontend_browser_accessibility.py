@@ -49,6 +49,17 @@ def main() -> None:
                 assert page.title() == "Tinlyt — Web Intelligence"
                 assert page.locator("main#main").count() == 1
                 assert page.locator("h1").count() == 1
+                assert "Illustrative example" in page.locator(".panel-note").inner_text()
+                assert page.get_by_role("link", name="Open workspace").count() >= 1
+
+                # The landing route and workspace have separate contracts. Run the existing
+                # interactive-workspace accessibility suite against the preserved app document.
+                response = page.goto(base_url + "app.html", wait_until="networkidle")
+                assert response is not None and response.status == 200, (
+                    "Tinlyt workspace document did not load"
+                )
+                assert page.title() == "Tinlyt — Web Intelligence"
+                assert page.locator("aside.sidebar").count() == 1
 
                 # Semantic landmarks, navigation destinations, unique IDs and accessible names.
                 audit = page.evaluate(
