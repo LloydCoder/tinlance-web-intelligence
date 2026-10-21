@@ -49,7 +49,7 @@ const html = await readFile(path.join(distRoot, 'index.html'), 'utf8');
 assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/, 'built page must identify Tinlyt');
 assert.match(html, /name=["']robots["'] content=["']noindex, nofollow["']/, 'marketing page must remain noindex until launch approval');
 assert.match(html, /property=["']og:title["']/, 'marketing page must include Open Graph title');
-const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
+const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');\nassert.match(html, /href=["']\\/app["']/, 'landing page must link to workspace');
 assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
 assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
 const jsRoot = path.join(distRoot, 'src');
