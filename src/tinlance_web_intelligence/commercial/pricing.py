@@ -6,7 +6,6 @@ Amounts use integer micro-USD ($0.000001) to avoid floating-point billing errors
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 
@@ -45,7 +44,7 @@ class UsageRate:
 
 
 # $0.014 per completed billable agent step; $0.002 per standalone browser minute.
-USAGE_RATES: Mapping[str, UsageRate] = MappingProxyType({
+USAGE_RATES: MappingProxyType[str, UsageRate] = MappingProxyType({
     "agent_step": UsageRate(
         meter="agent_step",
         unit="completed_billable_step",
@@ -61,7 +60,7 @@ USAGE_RATES: Mapping[str, UsageRate] = MappingProxyType({
 
 # Monthly subscription headline prices in USD cents. None means contract-priced.
 # Included usage and overage entitlements are deliberately not inferred here.
-MONTHLY_PLAN_PRICES_CENTS: Mapping[str, int | None] = MappingProxyType({
+MONTHLY_PLAN_PRICES_CENTS: MappingProxyType[str, int | None] = MappingProxyType({
     "free": 0,
     "starter": 2_900,
     "pro": 9_900,
