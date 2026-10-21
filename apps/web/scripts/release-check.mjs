@@ -97,6 +97,15 @@ try {
   assert.ok(address && typeof address === 'object');
   const base = 'http://127.0.0.1:' + address.port;
   const assets = [...new Set([...localAssetPaths(html), ...localAssetPaths(appHtml).filter((asset) => asset !== '/')])];
+  const publicRoutes = ['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact'];
+  for (const route of publicRoutes) {
+    const response = await fetch(new URL(route, base));
+    assert.equal(response.status, 200, 'public route must resolve: ' + route);
+    const page = await response.text();
+    assert.match(page, /<!doctype html>/i, 'public route must serve an HTML document: ' + route);
+    assert.match(page, /name="robots" content="noindex, nofollow"/, 'public page must remain noindex pending launch approval: ' + route);
+    assert.match(page, /href="\\/pages.css"/, 'public page must load shared page styles: ' + route);
+  }
   const appResponse = await fetch(new URL('/app', base));
   assert.equal(appResponse.status, 200, 'workspace route must resolve');
   assert.match(await appResponse.text(), /runtime-config\.js/, 'workspace route must serve the application document');
