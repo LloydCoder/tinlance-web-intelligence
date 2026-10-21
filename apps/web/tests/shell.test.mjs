@@ -5,13 +5,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const html = await readFile(path.join(root, 'index.html'), 'utf8');
+const html = await readFile(path.join(root, 'app.html'), 'utf8');
 const css = await readFile(path.join(root, 'styles.css'), 'utf8');
 const investigationCss = await readFile(path.join(root, 'investigation.css'), 'utf8');
 const js = await readFile(path.join(root, 'src/main.js'), 'utf8');
 const runtimeConfig = await readFile(path.join(root, 'runtime-config.js'), 'utf8');
 
-test('document declares language, viewport, title and skip navigation', () => {
+test('workspace document declares language, viewport, title and skip navigation', () => {
   assert.match(html, /<html lang="en">/);
   assert.match(html, /name="viewport"/);
   assert.match(html, /<title>Tinlyt — Web Intelligence<\/title>/);
