@@ -6,9 +6,9 @@ Amounts use integer micro-USD ($0.000001) to avoid floating-point billing errors
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Mapping
 
 
 PRICING_VERSION = 1
