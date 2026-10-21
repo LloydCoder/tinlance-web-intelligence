@@ -95,6 +95,22 @@
     {
       "source": "/contact/",
       "destination": "/contact.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/docs/",
+      "destination": "/docs.html"
+    },
+    {
+      "source": "/faq",
+      "destination": "/faq.html"
+    },
+    {
+      "source": "/faq/",
+      "destination": "/faq.html"
     }
   ],
   "headers": [
