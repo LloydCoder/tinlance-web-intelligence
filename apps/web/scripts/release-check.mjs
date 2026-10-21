@@ -38,9 +38,10 @@ function localAssetPaths(html) {
 }
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
+  const cleanPath = decoded.endsWith('/') && decoded !== '/' ? decoded.slice(0, -1) : decoded;
   const pageRoutes = new Set(['/features','/how-it-works','/use-cases','/pricing','/enterprise','/developers','/integrations','/security','/privacy','/terms','/contact']);
-  const cleanPath = decoded.replace(/\\/$/, '');
-  const relative = decoded === '/' ? 'index.html' : cleanPath === '/app' ? 'app.html' : pageRoutes.has(cleanPath) ? cleanPath.slice(1) + '.html' : decoded.replace(/^\\/+/, '');
+  const strippedPath = decoded.startsWith('/') ? decoded.slice(1) : decoded;
+  const relative = decoded === '/' ? 'index.html' : cleanPath === '/app' ? 'app.html' : pageRoutes.has(cleanPath) ? cleanPath.slice(1) + '.html' : strippedPath;
   const resolved = path.resolve(distRoot, relative);
   assert.ok(resolved === distRoot || resolved.startsWith(distPrefix), 'asset path must remain inside build output');
   return resolved;
