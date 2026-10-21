@@ -38,7 +38,7 @@ function localAssetPaths(html) {
 }
 function resolveLocalAsset(pathname) {
   const decoded = decodeURIComponent(pathname);
-  const relative = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
+  const relative = decoded === '/' ? 'index.html' : (decoded === '/app' || decoded === '/app/') ? 'app.html' : decoded.replace(/^\/+/, '');
   const resolved = path.resolve(distRoot, relative);
   assert.ok(resolved === distRoot || resolved.startsWith(distPrefix), 'asset path must remain inside build output');
   return resolved;
@@ -51,7 +51,7 @@ assert.match(html, /name=["']robots["'] content=["']noindex, nofollow["']/, 'mar
 assert.match(html, /property=["']og:title["']/, 'marketing page must include Open Graph title');
 const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');\nassert.match(html, /href=["']\\/app["']/, 'landing page must link to workspace');
 assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
-assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
+assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');\nassert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
 const jsRoot = path.join(distRoot, 'src');
 const jsFiles = (await collectFiles(jsRoot)).filter((file) => file.endsWith('.js'));
 assert.ok(jsFiles.length > 0, 'build must emit JavaScript modules');
