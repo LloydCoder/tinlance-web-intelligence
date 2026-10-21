@@ -1,7 +1,7 @@
 # Tinlyt / TWI Phase and Release Ledger
 
 **Reconciled:** 2026-10-21  
-**Current main:** `7cbacf871ba5f7bcad90211cc2b3caa83b5df8e2`  
+**Historical reconciliation baseline:** `47b2b2d459b1f751c4152301e81212376a941762` (after PR #102; query GitHub for the live branch head).  
 **Canonical audit:** [Cross-conversation consolidation audit](../PROJECT_CONSOLIDATION_AUDIT_2026-10-21.md)
 
 This is a live status ledger, not a completion claim. It separates repository implementation/CI from live integration, deployment, and release certification. A phase may have accepted code while its external gate remains blocked.
