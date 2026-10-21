@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const html = await readFile(path.join(root, 'index.html'), 'utf8');
+const html = await readFile(path.join(root, 'app.html'), 'utf8');
 const css = await readFile(path.join(root, 'styles.css'), 'utf8');
 const investigationCss = await readFile(path.join(root, 'investigation.css'), 'utf8');
 const main = await readFile(path.join(root, 'src/main.js'), 'utf8');
