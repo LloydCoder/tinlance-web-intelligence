@@ -13,7 +13,7 @@ async function collect(dir) {
   }
 }
 await collect(sourceRoot);
-files.push(path.join(root, 'index.html'), path.join(root, 'app.html'), path.join(root, 'landing.css'), path.join(root, 'styles.css'), path.join(root, 'investigation.css'), path.join(root, 'runtime-config.js'));
+files.push(path.join(root, 'index.html'), path.join(root, 'app.html'), path.join(root, 'landing.css'), path.join(root, 'styles.css'), path.join(root, 'investigation.css'), path.join(root, 'runtime-config.js'), path.join(root, 'features.html'), path.join(root, 'how-it-works.html'), path.join(root, 'use-cases.html'), path.join(root, 'pricing.html'), path.join(root, 'enterprise.html'), path.join(root, 'developers.html'), path.join(root, 'integrations.html'), path.join(root, 'security.html'), path.join(root, 'privacy.html'), path.join(root, 'terms.html'), path.join(root, 'contact.html'), path.join(root, 'pages.css'));
 const failures = [];
 for (const file of files) {
   const text = await readFile(file, 'utf8');
