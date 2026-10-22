@@ -5,33 +5,31 @@ set -Eeuo pipefail
 : "${TWI_TEST_POSTGRES_PASSWORD:?CI PostgreSQL password is required}"
 
 # This drill is restricted to the ephemeral localhost PostgreSQL service in CI.
-readarray -t db_config < <(python - <<'PY'
+python - <<'PY'
 import os
 from urllib.parse import unquote, urlsplit
 
 parsed = urlsplit(os.environ["TWI_TEST_POSTGRES_DSN"])
-if parsed.scheme not in {"postgres", "postgresql"}:
-    raise SystemExit("restore drill requires a PostgreSQL test DSN")
-if parsed.hostname not in {"localhost", "127.0.0.1"}:
-    raise SystemExit("restore drill refuses non-local database hosts")
-if not parsed.username or not parsed.path.strip("/"):
-    raise SystemExit("restore drill DSN must include a user and database")
-print("127.0.0.1")
-print(parsed.port or 5432)
-print(unquote(parsed.username))
-print(unquote(parsed.path.lstrip("/")))
+if (
+    parsed.scheme not in {"postgres", "postgresql"}
+    or parsed.hostname not in {"localhost", "127.0.0.1"}
+    or parsed.port not in {None, 5432}
+    or unquote(parsed.username or "") != "twi"
+    or parsed.path.strip("/") != "twi_test"
+):
+    raise SystemExit("restore drill accepts only the expected local CI PostgreSQL service")
 PY
-)
-db_host="${db_config[0]}"
-db_port="${db_config[1]}"
-db_user="${db_config[2]}"
-source_db="${db_config[3]}"
+
+db_host="127.0.0.1"
+db_port=5432
+db_user="twi"
+source_db="twi_test"
 target_db="twi_restore_drill"
 export PGPASSWORD="$TWI_TEST_POSTGRES_PASSWORD"
 tmp_dir="$(mktemp -d)"
 
 client() {
-  docker run --rm --network host -e PGPASSWORD -v "$tmp_dir:/backup" postgres:17-alpine "$@"
+  docker run --rm --network host --user "$(id -u):$(id -g)" -e PGPASSWORD -v "$tmp_dir:/backup" postgres:17-alpine "$@"
 }
 
 cleanup() {
