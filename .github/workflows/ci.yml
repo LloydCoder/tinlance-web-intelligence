@@ -98,7 +98,11 @@ jobs:
           python scripts/validate_consumer_contracts.py --matrix contracts/consumer-matrix.json
           python scripts/build_w15_evidence_pack.py --gates docs/readiness/w15-gates.json --output dist/w15-evidence-pack.json
           python scripts/validate_w15_evidence_pack.py --pack dist/w15-evidence-pack.json --revision "$(git rev-parse HEAD)"
-          bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh
+          bash -n scripts/backup_postgres.sh scripts/restore_postgres.sh scripts/ci_postgres_restore_drill.sh
+      - name: PostgreSQL dump and restore round-trip drill
+        env:
+          TWI_TEST_POSTGRES_PASSWORD: twi-ci-password
+        run: bash scripts/ci_postgres_restore_drill.sh
       - name: Upload source-bound W15 readiness evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

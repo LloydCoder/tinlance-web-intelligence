@@ -31,4 +31,4 @@ Before accepting a recovery:
 
 ## Release gate
 
-A successful backup command does not prove recoverability. Private-beta approval requires a witnessed restore drill from a real encrypted backup in the target deployment class. This repository's CI validates script syntax and PostgreSQL adapter behavior; it does not claim that a production backup or restore has been performed.
+A successful backup command does not prove recoverability. CI runs `scripts/ci_postgres_restore_drill.sh` against its isolated PostgreSQL 17 service: it creates a custom-format `pg_dump`, restores it into a separate empty database, and verifies schema version 4, a round-trip probe, and row counts for the primary persistence tables. This is an automated restore round-trip test, not a production backup drill. Private-beta approval still requires a witnessed restore from a real encrypted backup in the target deployment class, with RPO/RTO and network/account isolation evidence recorded.
