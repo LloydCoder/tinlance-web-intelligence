@@ -11,16 +11,15 @@ from typing import Any
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from tinlance_web_intelligence.persistence.postgres_pool import (
-    acquire_pool,
-    release_pool,
-)
-
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
     Job,
     JobStatus,
     LeaseLostError,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
