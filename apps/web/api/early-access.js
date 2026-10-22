@@ -42,6 +42,11 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return json(res, 405, { error: "Method not allowed." });
   }
+  // Enforce the feature flag at the server boundary as well as in the static UI.
+  // A disabled form must not leave a directly callable intake endpoint.
+  if (process.env.EARLY_ACCESS_ENABLED !== "true") {
+    return json(res, 503, { error: "Early access requests are not enabled." });
+  }
   const origin = req.headers.origin;
   const allowedOrigin = process.env.EARLY_ACCESS_ALLOWED_ORIGIN || "https://tinlyt.tinlance.com";
   let expectedHostname;
