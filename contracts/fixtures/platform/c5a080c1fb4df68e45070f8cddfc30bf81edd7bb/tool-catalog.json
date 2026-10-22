@@ -1,0 +1,40 @@
+{
+  "revision": "c5a080c1fb4df68e45070f8cddfc30bf81edd7bb",
+  "source": "https://github.com/LloydCoder/tinlance-agent-platform/blob/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/packages/mcp/src/tinlance_agent_platform_mcp/twi.py",
+  "ci_run": "https://github.com/LloydCoder/tinlance-agent-platform/actions/runs/39323538502",
+  "test_source": "https://github.com/LloydCoder/tinlance-agent-platform/blob/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tests/test_twi_mcp_integration.py",
+  "registered_tools": [
+    "twi_search",
+    "twi_fetch",
+    "twi_browser_navigate",
+    "twi_job_read",
+    "twi_job_cancel",
+    "twi_research_verify",
+    "twi_world_intelligence_export",
+    "twi_world_intelligence_export_status",
+    "twi_evidence_export",
+    "twi_monitor_create",
+    "twi_monitor_read",
+    "twi_monitor_run",
+    "twi_monitor_pause",
+    "twi_monitor_resume",
+    "twi_monitor_delete"
+  ],
+  "expected_monitor_tools": [
+    "twi_monitor_create",
+    "twi_monitor_delete",
+    "twi_monitor_pause",
+    "twi_monitor_read",
+    "twi_monitor_resume",
+    "twi_monitor_run"
+  ],
+  "missing_monitor_tools": [],
+  "expected_evidence_tools": ["twi_evidence_export"],
+  "missing_evidence_tools": [],
+  "approval_gated_tools": [
+    "twi_world_intelligence_export",
+    "twi_monitor_delete"
+  ],
+  "status": "pass",
+  "reason": "The current pinned Platform adapter registers all six monitor operations and evidence export. Platform integration tests assert the 15-tool registry and require human approval before source-evidence export and destructive monitor deletion."
+}
