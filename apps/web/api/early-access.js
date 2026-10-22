@@ -107,6 +107,11 @@ export default async function handler(req, res) {
   }
 
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseAuthHeaders = { apikey: supabaseKey };
+  // Modern sb_secret_ keys are API keys, not JWTs. Only the legacy service_role key belongs in Authorization.
+  if (supabaseKeyName === "SUPABASE_SERVICE_ROLE_KEY") {
+    supabaseAuthHeaders.Authorization = "Bearer " + supabaseKey;
+  }
   const rateKeyFor = (value) => createHmac("sha256", process.env.EARLY_ACCESS_RATE_LIMIT_SALT)
     .update(value)
     .digest("hex");
@@ -117,7 +122,7 @@ export default async function handler(req, res) {
     for (const rateKey of rateKeys) {
       const rateResponse = await fetch(supabaseUrl + "/rest/v1/rpc/consume_early_access_rate_limit", {
         method: "POST",
-        headers: { apikey: supabaseKey, Authorization: "Bearer " + supabaseKey, "Content-Type": "application/json" },
+        headers: { ...supabaseAuthHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ p_key_hash: rateKey, p_limit: 5, p_window_seconds: 900 }),
         signal: AbortSignal.timeout(5000)
       });
@@ -144,7 +149,7 @@ export default async function handler(req, res) {
     const response = await fetch(supabaseUrl + "/rest/v1/early_access_requests?select=id,created_at", {
       method: "POST",
       headers: {
-        apikey: supabaseKey, Authorization: "Bearer " + supabaseKey,
+        ...supabaseAuthHeaders,
         "Content-Type": "application/json", Prefer: "return=representation"
       },
       body: JSON.stringify(record), signal: AbortSignal.timeout(8000)
@@ -190,7 +195,7 @@ export default async function handler(req, res) {
     const deliveryUpdate = await fetch(supabaseUrl + "/rest/v1/early_access_requests?id=eq." + encodeURIComponent(stored.id), {
       method: "PATCH",
       headers: {
-        apikey: supabaseKey, Authorization: "Bearer " + supabaseKey,
+        ...supabaseAuthHeaders,
         "Content-Type": "application/json", Prefer: "return=minimal"
       },
       body: JSON.stringify({ notification_status: notificationStatus, confirmation_status: confirmationStatus, updated_at: new Date().toISOString() }),
