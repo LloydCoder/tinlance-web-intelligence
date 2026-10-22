@@ -7,17 +7,16 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from tinlance_web_intelligence.persistence.postgres_pool import (
-    acquire_pool,
-    release_pool,
-)
-
 from tinlance_web_intelligence.commercial.usage_ledger import (
     QuotaExceededError,
     UsageConflictError,
     UsageEvent,
     UsageReservation,
     _validate_key,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
