@@ -50,7 +50,7 @@ def main() -> None:
                 assert page.locator("main#main").count() == 1
                 assert page.locator("h1").count() == 1
                 assert "Illustrative example" in page.locator(".panel-note").inner_text()
-                assert page.get_by_role("link", name="Open workspace").count() >= 1
+                assert page.get_by_role("link", name="Request early access").count() >= 1
 
                 # The public navigation becomes a keyboard-operable disclosure at mobile width.
                 page.set_viewport_size({"width": 375, "height": 812})
