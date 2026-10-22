@@ -10,6 +10,8 @@ Configure these in the Tinlyt Vercel project, initially for Preview only:
 
 - `SUPABASE_URL`: URL of the database project intentionally selected for Tinlyt.
 - `SUPABASE_SECRET_KEY`: server-only Supabase secret key (preferred), or legacy `SUPABASE_SERVICE_ROLE_KEY`. Never use a `NEXT_PUBLIC_` prefix.
+
+The endpoint sends modern `sb_secret_` keys only in the `apikey` header because these keys are not JWTs. The legacy `SUPABASE_SERVICE_ROLE_KEY` fallback is sent in both `apikey` and `Authorization: Bearer` headers. Keep either key server-only.
 - `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret for the site key used by the form.
 - `RESEND_API_KEY`: server-only Resend API key.
 - `RESEND_FROM_EMAIL`: sender on a verified Resend domain, only after the sender identity is confirmed.
