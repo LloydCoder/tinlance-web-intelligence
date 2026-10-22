@@ -35,6 +35,7 @@ create unique index if not exists early_access_requests_email_lower_uidx
 create index if not exists early_access_requests_status_created_idx
   on public.early_access_requests (status, created_at desc);
 
+grant usage on schema public to service_role;
 alter table public.early_access_requests enable row level security;
 revoke all on table public.early_access_requests from public, anon, authenticated;
 revoke all on table public.early_access_requests from service_role;
