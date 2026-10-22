@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from psycopg import Connection
-from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
-
 from tinlance_web_intelligence.commercial.billing_events import VerifiedBillingEvent
 from tinlance_web_intelligence.commercial.usage_ledger import _validate_key
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
+)
 
 
 class BillingEventReceiptConflict(ValueError):
@@ -197,12 +197,7 @@ class PostgresBillingEventInbox:
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool configuration")
-        self._pool = ConnectionPool[Connection[dict[str, Any]]](
-            conninfo=dsn, min_size=min_size, max_size=max_size,
-            kwargs={"row_factory": dict_row, "connect_timeout": 5},
-            timeout=10, open=True,
-        )
-        self._pool.wait(timeout=10)
+        self._pool = acquire_pool(dsn, min_size=min_size, max_size=max_size)
         try:
             with self._pool.connection() as conn:
                 row = conn.execute(
@@ -217,7 +212,7 @@ class PostgresBillingEventInbox:
                 ):
                     raise RuntimeError("billing receipt schema missing; run migration job")
         except Exception:
-            self._pool.close()
+            release_pool(self._pool)
             raise
 
     def record(
@@ -300,4 +295,6 @@ class PostgresBillingEventInbox:
         return _receipt(row) if row is not None else None
 
     def close(self) -> None:
-        self._pool.close()
+        if not getattr(self, "_pool_released", False):
+            self._pool_released = True
+            release_pool(self._pool)
