@@ -7,6 +7,7 @@
   const tokenField = form.querySelector('[name="turnstileToken"]');
   const config = window.TINLYT_RUNTIME_CONFIG || {};
   const siteKey = config.earlyAccessTurnstileSiteKey || "";
+  const enabled = config.earlyAccessEnabled === true && Boolean(siteKey);
   let widgetId = null;
 
   const showStatus = (message, kind) => {
@@ -33,7 +34,7 @@
     }
   };
   const loadTurnstile = () => {
-    if (!siteKey) {
+    if (!enabled) {
       showStatus("Early access is not activated yet. Please check back soon.", "error");
       submit.disabled = true;
       return;
