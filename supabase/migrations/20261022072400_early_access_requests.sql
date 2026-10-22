@@ -46,22 +46,22 @@ grant update (notification_status, confirmation_status, updated_at)
 comment on table public.early_access_requests is
   'Tinlyt early-access intake. Browser roles have no privileges; server-side service_role only.';
 
--- The private schema is not exposed through the Supabase Data API by default.
-create schema if not exists private;
-revoke all on schema private from public, anon, authenticated;
-grant usage on schema private to service_role;
+-- The dedicated tinlyt_private schema is not exposed through the Supabase Data API by default.
+create schema if not exists tinlyt_private;
+revoke all on schema tinlyt_private from public, anon, authenticated;
+grant usage on schema tinlyt_private to service_role;
 
-create table if not exists private.early_access_rate_limits (
+create table if not exists tinlyt_private.early_access_rate_limits (
   key_hash text primary key check (key_hash ~ '^[a-f0-9]{64}$'),
   window_started_at timestamptz not null,
   request_count integer not null check (request_count >= 1),
   updated_at timestamptz not null default now()
 );
 create index if not exists early_access_rate_limits_updated_idx
-  on private.early_access_rate_limits (updated_at);
-alter table private.early_access_rate_limits enable row level security;
-revoke all on table private.early_access_rate_limits from public, anon, authenticated;
-grant select, insert, update, delete on table private.early_access_rate_limits to service_role;
+  on tinlyt_private.early_access_rate_limits (updated_at);
+alter table tinlyt_private.early_access_rate_limits enable row level security;
+revoke all on table tinlyt_private.early_access_rate_limits from public, anon, authenticated;
+grant select, insert, update, delete on table tinlyt_private.early_access_rate_limits to service_role;
 
 -- SECURITY INVOKER is intentional: the service_role RPC caller has the explicit table grants.
 -- EXECUTE is revoked from PUBLIC and browser roles; never expose this RPC to anonymous clients.
@@ -83,10 +83,10 @@ begin
     return false;
   end if;
 
-  delete from private.early_access_rate_limits
+  delete from tinlyt_private.early_access_rate_limits
    where updated_at < current_time - interval '24 hours';
 
-  insert into private.early_access_rate_limits as current_limit
+  insert into tinlyt_private.early_access_rate_limits as current_limit
     (key_hash, window_started_at, request_count, updated_at)
   values (p_key_hash, current_time, 1, current_time)
   on conflict (key_hash) do update
