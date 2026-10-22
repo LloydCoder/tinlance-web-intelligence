@@ -3,16 +3,15 @@ from __future__ import annotations
 
 from datetime import datetime
 from hashlib import sha256
-from typing import Any
-
-from psycopg import Connection
-from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool
 
 from tinlance_web_intelligence.artifacts.store import (
     ArtifactRecord,
     validate_artifact_digest,
     validate_artifact_metadata,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
@@ -25,19 +24,11 @@ class PostgresArtifactStore:
         if max_bytes < 1:
             raise ValueError("max_bytes must be positive")
         self._max_bytes = max_bytes
-        self._pool = ConnectionPool[Connection[dict[str, Any]]](
-            conninfo=dsn,
-            min_size=1,
-            max_size=10,
-            kwargs={"row_factory": dict_row, "connect_timeout": 5},
-            timeout=10,
-            open=True,
-        )
-        self._pool.wait(timeout=10)
+        self._pool = acquire_pool(dsn, min_size=1, max_size=10)
         try:
             self._verify_schema()
         except Exception:
-            self._pool.close()
+            release_pool(self._pool)
             raise
 
     def _verify_schema(self) -> None:
@@ -181,4 +172,6 @@ class PostgresArtifactStore:
             return result.rowcount
 
     def close(self) -> None:
-        self._pool.close()
+        if not getattr(self, "_pool_released", False):
+            self._pool_released = True
+            release_pool(self._pool)

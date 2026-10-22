@@ -9,15 +9,17 @@ from importlib.resources import files
 from typing import Any
 
 from psycopg import Connection
-from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-from psycopg_pool import ConnectionPool
 
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
     Job,
     JobStatus,
     LeaseLostError,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
@@ -39,16 +41,15 @@ class PostgresJobRepository:
         if not 1 <= max_attempts <= 10 or not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool or retry configuration")
         self._max_attempts = max_attempts
-        self._pool = ConnectionPool[Connection[dict[str, Any]]](
-            conninfo=dsn, min_size=min_size, max_size=max_size,
-            kwargs={"row_factory": dict_row, "connect_timeout": 5},
-            timeout=10, open=True,
-        )
-        self._pool.wait(timeout=10)
-        if auto_migrate:
-            self._apply_migrations()
-        else:
-            self._verify_schema()
+        self._pool = acquire_pool(dsn, min_size=min_size, max_size=max_size)
+        try:
+            if auto_migrate:
+                self._apply_migrations()
+            else:
+                self._verify_schema()
+        except Exception:
+            release_pool(self._pool)
+            raise
 
     def _apply_migrations(self) -> None:
         migrations = files("tinlance_web_intelligence.persistence.migrations")
@@ -61,7 +62,6 @@ class PostgresJobRepository:
             ):
                 migration = migrations.joinpath(name)
                 if not migration.is_file():
-                    self._pool.close()
                     raise RuntimeError(f"production PostgreSQL migration file is missing: {name}")
                 conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
 
@@ -356,4 +356,6 @@ class PostgresJobRepository:
             return False
 
     def close(self) -> None:
-        self._pool.close()
+        if not getattr(self, "_pool_released", False):
+            self._pool_released = True
+            release_pool(self._pool)
