@@ -77,8 +77,8 @@ assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token|api
   'public runtime config must not contain common privileged credential patterns');
 assert.match(runtimeConfig, /earlyAccessEnabled: false/, 'early access must remain disabled unless explicitly activated');
 const builtHome = await readFile(path.join(distRoot, 'index.html'), 'utf8');
-assert.match(builtHome, /class="nav-cta" href="\\/features">Explore platform/, 'disabled early access must fall back to the honest platform CTA');
-assert.doesNotMatch(builtHome, /class="nav-cta" href="\\/contact">Request early access/, 'disabled early access must not advertise a disabled request form');
+assert.match(builtHome, /class="nav-cta" href="\/features">Explore platform/, 'disabled early access must fall back to the honest platform CTA');
+assert.doesNotMatch(builtHome, /class="nav-cta" href="\/contact">Request early access/, 'disabled early access must not advertise a disabled request form');
 
 const server = http.createServer(async (request, response) => {
   try {
