@@ -37,7 +37,11 @@ create index if not exists early_access_requests_status_created_idx
 
 alter table public.early_access_requests enable row level security;
 revoke all on table public.early_access_requests from public, anon, authenticated;
-grant select, insert, update on table public.early_access_requests to service_role;
+revoke all on table public.early_access_requests from service_role;
+grant insert on table public.early_access_requests to service_role;
+grant select (id, created_at) on table public.early_access_requests to service_role;
+grant update (notification_status, confirmation_status, updated_at)
+  on table public.early_access_requests to service_role;
 
 comment on table public.early_access_requests is
   'Tinlyt early-access intake. Browser roles have no privileges; server-side service_role only.';
