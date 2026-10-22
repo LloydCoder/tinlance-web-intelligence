@@ -27,7 +27,7 @@ Read-only Vercel inspection on 2026-10-22 returned:
 - The environment-variable inventory returned zero variables and `hiddenProductionEnvCount=0`.
 - The frontend remains deployed, but its runtime configuration is not integrated with a verified API origin or Platform identity configuration. A READY static/frontend deployment does not prove an authenticated product journey.
 
-No redeploy or production environment change was attempted. The latest commit after the production deployment only adds the CI restore drill and its documentation, not a frontend behavior change.
+No redeploy or production environment change was attempted. The commits after the inspected production deployment add the CI restore drill, operational evidence reconciliation, and consumer-contract snapshots; none changes frontend behavior.
 
 ## Remaining gates — deployment evidence is absent
 
@@ -41,7 +41,7 @@ No redeploy or production environment change was attempted. The latest commit af
 | Real backup recovery | CI restore round-trip passes; production recovery remains untested | Encrypted backup outside the DB failure domain; checksum/retention evidence; witnessed isolated restore; recorded achieved RPO/RTO |
 | Monitoring and incident response | Repository runbooks exist; live alerts/on-call/rollback exercise not evidenced | Live metrics/logs/traces, alert delivery, named owner, and witnessed rollback/incident drill |
 | GitHub branch governance | GitHub reports branch protection disabled for `main` | Enable required checks and PR-only changes through repository settings; verify rules are enforced |
-| External ecosystem gates | W15 evidence pack intentionally reports `ready=false` for unevidenced integrations | Verify Platform monitor-tool registration/policy, World Intelligence consumer revision, TSIC conformance, and budget/ownership gates against live systems |
+| External ecosystem gates | Platform consumer registration snapshot now passes against `tinlance-agent-platform` revision `c5a080c1fb4df68e45070f8cddfc30bf81edd7bb`; W15 remains `ready=false` because other gates are not evidenced | Verify effective live Platform policy, World Intelligence ingestion, TSIC conformance, and budget/ownership gates against the target systems |
 
 ## Safety constraints
 

@@ -13,16 +13,16 @@ def test_current_consumer_findings_are_exact_and_fail_closed() -> None:
     assert result["valid"] is True
     consumers = cast(list[dict[str, Any]], result["consumers"])
     assert {row["name"]: row["status"] for row in consumers} == {
-        "agent-platform": "fail",
+        "agent-platform": "pass",
         "world-intelligence": "pass",
         "tsic": "not_evidenced",
     }
 
 
-def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
+def test_current_platform_catalog_registers_monitor_and_evidence_operations() -> None:
     fixture = json.loads(
         Path(
-            "contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"
+            "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"
         ).read_text(encoding="utf-8")
     )
     expected = {
@@ -33,12 +33,41 @@ def test_pinned_platform_catalog_records_missing_monitor_operations() -> None:
         "twi_monitor_resume",
         "twi_monitor_run",
     }
-    assert set(fixture["expected_monitor_tools"]) == expected
+    registered = set(fixture["registered_tools"])
+    assert fixture["revision"] == "c5a080c1fb4df68e45070f8cddfc30bf81edd7bb"
+    assert fixture["status"] == "pass"
+    assert expected == set(fixture["expected_monitor_tools"])
+    assert not fixture["missing_monitor_tools"]
+    assert expected <= registered
+    assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
+    assert not fixture["missing_evidence_tools"]
+    assert set(fixture["expected_evidence_tools"]) <= registered
+    assert set(fixture["approval_gated_tools"]) == {
+        "twi_world_intelligence_export",
+        "twi_monitor_delete",
+    }
+
+
+def test_historical_platform_snapshot_preserves_the_original_missing_tools_finding() -> None:
+    fixture = json.loads(
+        Path(
+            "contracts/fixtures/platform/db8473b452701d9b3807797ab1bc178b58feb96d/tool-catalog.json"
+        ).read_text(encoding="utf-8")
+    )
+    expected = set(fixture["expected_monitor_tools"])
+    assert fixture["status"] == "fail"
     assert set(fixture["missing_monitor_tools"]) == expected
-    assert not (expected & set(fixture["registered_tools"]))
     assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
     assert fixture["missing_evidence_tools"] == ["twi_evidence_export"]
-    assert "twi_evidence_export" not in fixture["registered_tools"]
+
+
+def test_w15_consumer_gate_uses_the_current_platform_snapshot() -> None:
+    registry = json.loads(Path("docs/readiness/w15-gates.json").read_text(encoding="utf-8"))
+    gate = next(item for item in registry["gates"] if item["gate"] == "external.consumer_approvals")
+    assert gate["status"] == "pass"
+    assert gate["evidence_reference"] == (
+        "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"
+    )
 
 
 def test_tsic_requirements_are_pinned_without_claiming_external_conformance() -> None:
@@ -57,7 +86,10 @@ def test_passing_consumer_requires_exact_fixture_revision(tmp_path: Path) -> Non
     (root / "schemas/mcp-tools/tool.json").write_text('{"name":"tool"}', encoding="utf-8")
     fixture = root / "fixtures/tool.json"
     fixture.parent.mkdir()
-    fixture.write_text('{"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}', encoding="utf-8")
+    fixture.write_text(
+        '{"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"pass"}',
+        encoding="utf-8",
+    )
     matrix = root / "contracts/consumer-matrix.json"
     matrix.parent.mkdir()
     matrix.write_text(
