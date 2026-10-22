@@ -64,7 +64,23 @@ jobs:
       - name: Security lint
         run: bandit -q -r src apps
       - name: Audit installed Python dependencies
-        run: pip-audit --strict --progress-spinner off --format json --output pip-audit.json -r requirements-dev.txt
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if pip-audit --strict --progress-spinner off --format json --output pip-audit.json -r requirements-dev.txt > pip-audit-output.log 2>&1; then
+              cat pip-audit-output.log
+              exit 0
+            else
+              status=$?
+            fi
+            cat pip-audit-output.log
+            if grep -Eqi 'ConnectionResetError|ChunkedEncodingError|ReadTimeout|ConnectTimeout|Temporary failure in name resolution|RemoteDisconnected|Max retries exceeded|Connection broken' pip-audit-output.log && [ "$attempt" -lt 3 ]; then
+              echo "Transient package-index/network error during pip-audit (attempt $attempt/3); retrying."
+              sleep $((attempt * 5))
+              continue
+            fi
+            exit "$status"
+          done
       - name: Upload dependency audit report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
