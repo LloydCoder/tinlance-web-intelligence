@@ -27,6 +27,7 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 )
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
+    Job,
     JobStatus,
     LeaseLostError,
 )
@@ -144,6 +145,49 @@ def test_postgres_job_claims_are_unique_across_workers() -> None:
         assert len({job.job_id for job in claimed if job is not None}) == 8
     finally:
         repository.close()
+
+
+def test_postgres_job_claims_are_unique_across_repository_instances() -> None:
+    """Independent adapters share one pool without weakening SKIP LOCKED claims."""
+    assert _DSN is not None
+    migration = PostgresJobRepository(_DSN, auto_migrate=True)
+    migration.close()
+    repositories = [
+        PostgresJobRepository(_DSN, min_size=1, max_size=10)
+        for _ in range(4)
+    ]
+    namespace = uuid.uuid4().hex
+    expected_tenants = {f"tenant-multi-{namespace}-{index}" for index in range(8)}
+    try:
+        assert all(repository._pool is repositories[0]._pool for repository in repositories)
+        for index, tenant in enumerate(sorted(expected_tenants)):
+            repositories[0].create(
+                tenant_id=tenant,
+                subject_id=f"subject-multi-{namespace}-{index}",
+                kind="browser",
+                payload={"url": "https://example.com/"},
+                idempotency_key=f"parallel-multi-{namespace}-{index}",
+            )
+
+        # Closing one adapter twice must not close the shared pool while others own it.
+        repositories[0].close()
+        repositories[0].close()
+        assert repositories[1].ping()
+
+        def claim(index: int) -> Job | None:
+            repository = repositories[index % len(repositories)]
+            return repository.claim_next(
+                f"multi-worker-{namespace}-{index}", allowed_kinds=("browser",)
+            )
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            claimed = list(executor.map(claim, range(8)))
+        assert all(job is not None for job in claimed)
+        assert {job.tenant_id for job in claimed if job is not None} == expected_tenants
+        assert len({job.job_id for job in claimed if job is not None}) == 8
+    finally:
+        for repository in repositories:
+            repository.close()
 
 
 def test_postgres_outbox_enforces_idempotency_leases_and_scope() -> None:
@@ -349,14 +393,16 @@ def test_postgres_usage_quota_reservations_serialize_concurrent_requests() -> No
     assert _DSN is not None
     migration = PostgresJobRepository(_DSN, auto_migrate=True)
     migration.close()
-    ledger = PostgresUsageLedger(_DSN, min_size=1, max_size=10)
+    ledgers = [PostgresUsageLedger(_DSN, min_size=1, max_size=10) for _ in range(4)]
     namespace = uuid.uuid4().hex
     tenant, subject = f"quota-tenant-{namespace}", f"quota-subject-{namespace}"
     period = "2026-10-01T00:00:00Z"
 
+    assert all(ledger._pool is ledgers[0]._pool for ledger in ledgers)
+
     def reserve(index: int) -> bool:
         try:
-            ledger.reserve(
+            ledgers[index % len(ledgers)].reserve(
                 tenant_id=tenant, subject_id=subject, feature="fetch",
                 dimension="requests_month", period_start=period, quantity=1, limit=1,
                 idempotency_key=f"concurrent-{namespace}-{index}",
@@ -370,7 +416,8 @@ def test_postgres_usage_quota_reservations_serialize_concurrent_requests() -> No
             results = list(executor.map(reserve, range(8)))
         assert sum(results) == 1
     finally:
-        ledger.close()
+        for ledger in ledgers:
+            ledger.close()
 
 
 
