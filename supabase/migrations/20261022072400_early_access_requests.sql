@@ -77,7 +77,7 @@ set search_path = ''
 as $function$
 declare
   allowed boolean;
-  current_time timestamptz := pg_catalog.clock_timestamp();
+  v_now timestamptz := pg_catalog.clock_timestamp();
 begin
   if p_key_hash !~ '^[a-f0-9]{64}$' or p_limit < 1 or p_limit > 20
      or p_window_seconds < 60 or p_window_seconds > 3600 then
@@ -85,19 +85,19 @@ begin
   end if;
 
   delete from tinlyt_private.early_access_rate_limits
-   where updated_at < current_time - interval '24 hours';
+   where updated_at < v_now - interval '24 hours';
 
   insert into tinlyt_private.early_access_rate_limits as current_limit
     (key_hash, window_started_at, request_count, updated_at)
-  values (p_key_hash, current_time, 1, current_time)
+  values (p_key_hash, v_now, 1, v_now)
   on conflict (key_hash) do update
     set window_started_at = case
-          when current_limit.window_started_at <= current_time - pg_catalog.make_interval(secs => p_window_seconds)
-          then current_time else current_limit.window_started_at end,
+          when current_limit.window_started_at <= v_now - pg_catalog.make_interval(secs => p_window_seconds)
+          then v_now else current_limit.window_started_at end,
         request_count = case
-          when current_limit.window_started_at <= current_time - pg_catalog.make_interval(secs => p_window_seconds)
+          when current_limit.window_started_at <= v_now - pg_catalog.make_interval(secs => p_window_seconds)
           then 1 else current_limit.request_count + 1 end,
-        updated_at = current_time
+        updated_at = v_now
   returning request_count <= p_limit into allowed;
 
   return allowed;
