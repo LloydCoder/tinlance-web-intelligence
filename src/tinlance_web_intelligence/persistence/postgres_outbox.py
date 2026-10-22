@@ -11,8 +11,11 @@ from typing import Any
 
 from psycopg import Connection
 from psycopg.rows import dict_row
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
+)
 from psycopg.types.json import Jsonb
-from psycopg_pool import ConnectionPool
 
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
@@ -32,12 +35,7 @@ class PostgresSourceEvidenceOutbox:
             raise ValueError("PostgreSQL DSN must be non-empty and normalized")
         if not 1 <= min_size <= max_size <= 50:
             raise ValueError("invalid PostgreSQL pool configuration")
-        self._pool = ConnectionPool[Connection[dict[str, Any]]](
-            conninfo=dsn, min_size=min_size, max_size=max_size,
-            kwargs={"row_factory": dict_row, "connect_timeout": 5},
-            timeout=10, open=True,
-        )
-        self._pool.wait(timeout=10)
+        self._pool = acquire_pool(dsn, min_size=min_size, max_size=max_size)
         if auto_migrate:
             self._apply_migrations()
         else:
@@ -54,7 +52,7 @@ class PostgresSourceEvidenceOutbox:
             ):
                 migration = migrations.joinpath(name)
                 if not migration.is_file():
-                    self._pool.close()
+                    release_pool(self._pool)
                     raise RuntimeError(f"production PostgreSQL migration file is missing: {name}")
                 conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
 
@@ -246,4 +244,4 @@ class PostgresSourceEvidenceOutbox:
             return False
 
     def close(self) -> None:
-        self._pool.close()
+        release_pool(self._pool)
