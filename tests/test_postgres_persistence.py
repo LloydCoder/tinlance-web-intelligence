@@ -303,7 +303,8 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
     try:
         first = store.put(
             body=b"durable source bytes", content_type="text/html",
-            source_url="https://one.example/path?token=postgres-secret&query=private", captured_at=now, tenant_id=tenant,
+            source_url="https://one.example/path?token=postgres-secret&query=private",
+            captured_at=now, tenant_id=tenant,
         )
         second = store.put(
             body=b"durable source bytes", content_type="text/html",
@@ -327,7 +328,7 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
                 "WHERE tenant_id=%s AND sha256=%s AND source_url_hash=%s AND captured_at=%s",
                 (
                     tenant, first.sha256,
-                    sha256("https://one.example/path?token=postgres-secret&query=private".encode()).hexdigest(),
+                    sha256(b"https://one.example/path?token=postgres-secret&query=private").hexdigest(),
                     now,
                 ),
             ).fetchone()
@@ -368,7 +369,8 @@ def test_postgres_migration_redacts_historical_artifact_query_strings() -> None:
             )
             conn.execute(
                 "INSERT INTO twi_artifact_records "
-                "(tenant_id, sha256, source_url_hash, source_url, captured_at, content_type, byte_size) "
+                "(tenant_id, sha256, source_url_hash, source_url, captured_at, "
+                "content_type, byte_size) "
                 "VALUES (%s, %s, %s, %s, %s, %s, %s)",
                 (tenant, digest, source_hash, source_url, captured_at, "text/html", len(body)),
             )
