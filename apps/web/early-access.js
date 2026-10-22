@@ -20,10 +20,10 @@
     if (!container) return;
     try {
       widgetId = window.turnstile.render(container, {
-      sitekey: siteKey,
-      callback: (token) => { tokenField.value = token; },
-      "expired-callback": () => { tokenField.value = ""; },
-      "error-callback": () => { tokenField.value = ""; showStatus("The anti-bot check failed. Please try again.", "error"); }
+        sitekey: siteKey,
+        callback: (token) => { tokenField.value = token; },
+        "expired-callback": () => { tokenField.value = ""; },
+        "error-callback": () => { tokenField.value = ""; showStatus("The anti-bot check failed. Please try again.", "error"); }
       });
       submit.disabled = false;
       showStatus("Complete the anti-bot check, then submit your request.", "ready");
