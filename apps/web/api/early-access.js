@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { isIP } from "node:net";
 
 const json = (res, status, body) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -9,7 +10,7 @@ const text = (value, max) => typeof value === "string" ? value.trim().slice(0, m
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const allowedUseCases = new Set(["web-research", "competitive-intelligence", "due-diligence", "investigations", "data-extraction", "agent-integration", "other"]);
 
-async function verifyTurnstile(token, secret, remoteIp) {
+async function verifyTurnstile(token, secret, remoteIp, expectedHostname) {
   const body = new URLSearchParams({ secret, response: token });
   if (remoteIp) body.set("remoteip", remoteIp);
   const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -19,7 +20,8 @@ async function verifyTurnstile(token, secret, remoteIp) {
     signal: AbortSignal.timeout(5000)
   });
   if (!response.ok) return false;
-  return (await response.json()).success === true;
+  const result = await response.json();
+  return result.success === true && result.hostname === expectedHostname;
 }
 async function sendEmail(apiKey, payload) {
   const response = await fetch("https://api.resend.com/emails", {
@@ -42,10 +44,23 @@ export default async function handler(req, res) {
   }
   const origin = req.headers.origin;
   const allowedOrigin = process.env.EARLY_ACCESS_ALLOWED_ORIGIN || "https://tinlyt.tinlance.com";
-  if (origin && origin !== allowedOrigin) return json(res, 403, { error: "Request origin not allowed." });
+  let expectedHostname;
+  try {
+    const parsedOrigin = new URL(allowedOrigin);
+    if (parsedOrigin.protocol !== "https:" || parsedOrigin.origin !== allowedOrigin) {
+      return json(res, 503, { error: "Early access requests are not configured correctly." });
+    }
+    expectedHostname = parsedOrigin.hostname;
+  } catch {
+    return json(res, 503, { error: "Early access requests are not configured correctly." });
+  }
+  if (origin !== allowedOrigin) return json(res, 403, { error: "Request origin not allowed." });
+  if (!/^application\/json(?:\s*;|\s*$)/i.test(String(req.headers["content-type"] || ""))) {
+    return json(res, 415, { error: "Content-Type must be application/json." });
+  }
 
   const supabaseKeyName = process.env.SUPABASE_SECRET_KEY ? "SUPABASE_SECRET_KEY" : "SUPABASE_SERVICE_ROLE_KEY";
-  const required = ["SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT"];
+  const required = ["SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT", "EARLY_ACCESS_PRIVACY_NOTICE_VERSION"];
   if (required.some((key) => !process.env[key])) {
     return json(res, 503, { error: "Early access requests are not configured yet. Please try again later." });
   }
@@ -66,10 +81,10 @@ export default async function handler(req, res) {
     return json(res, 400, { error: "Check the required fields and complete the anti-bot check." });
   }
 
-  const forwarded = text(req.headers["x-forwarded-for"], 512).split(",")[0].trim();
-  const remoteIp = forwarded && /^[0-9a-fA-F:.]+$/.test(forwarded) ? forwarded : "";
+  const candidateIp = text(req.headers["x-real-ip"], 64);
+  const remoteIp = isIP(candidateIp) ? candidateIp : "";
   try {
-    if (!await verifyTurnstile(turnstileToken, process.env.TURNSTILE_SECRET_KEY, remoteIp)) {
+    if (!await verifyTurnstile(turnstileToken, process.env.TURNSTILE_SECRET_KEY, remoteIp, expectedHostname)) {
       return json(res, 400, { error: "The anti-bot check expired or could not be verified. Please try again." });
     }
   } catch {
@@ -78,24 +93,34 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.SUPABASE_URL.replace(/\/$/, "");
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const emailHash = createHash("sha256").update(email).digest("hex");
-  const rateKey = createHash("sha256").update(process.env.EARLY_ACCESS_RATE_LIMIT_SALT + ":" + (remoteIp || email)).digest("hex");
+  const rateKeyFor = (value) => createHmac("sha256", process.env.EARLY_ACCESS_RATE_LIMIT_SALT)
+    .update(value)
+    .digest("hex");
+  const rateKeys = [];
+  if (remoteIp) rateKeys.push(rateKeyFor("ip:" + remoteIp));
+  rateKeys.push(rateKeyFor("email:" + email));
   try {
-    const rateResponse = await fetch(supabaseUrl + "/rest/v1/rpc/consume_early_access_rate_limit", {
-      method: "POST",
-      headers: { apikey: supabaseKey, Authorization: "Bearer " + supabaseKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_key_hash: rateKey, p_limit: 5, p_window_seconds: 900 }),
-      signal: AbortSignal.timeout(5000)
-    });
-    if (!rateResponse.ok) throw new Error("Rate-limit service returned " + rateResponse.status);
-    if (await rateResponse.json() !== true) return json(res, 429, { error: "Too many requests. Please wait before trying again." });
+    for (const rateKey of rateKeys) {
+      const rateResponse = await fetch(supabaseUrl + "/rest/v1/rpc/consume_early_access_rate_limit", {
+        method: "POST",
+        headers: { apikey: supabaseKey, Authorization: "Bearer " + supabaseKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_key_hash: rateKey, p_limit: 5, p_window_seconds: 900 }),
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!rateResponse.ok) throw new Error("Rate-limit service returned " + rateResponse.status);
+      if (await rateResponse.json() !== true) return json(res, 429, { error: "Too many requests. Please wait before trying again." });
+    }
   } catch {
     return json(res, 503, { error: "Request protection is temporarily unavailable. Please try again shortly." });
   }
+  const consentAt = new Date().toISOString();
   const record = {
-    name, email, email_hash: emailHash, company: company || null, role: role || null,
-    use_case: useCase, description: description || null, consent_at: new Date().toISOString(),
-    marketing_opt_in: marketingOptIn, source: "tinlyt-public-website", status: "new"
+    name, email, company: company || null, role: role || null,
+    use_case: useCase, description: description || null, consent_at: consentAt,
+    privacy_notice_version: process.env.EARLY_ACCESS_PRIVACY_NOTICE_VERSION,
+    marketing_opt_in: marketingOptIn,
+    marketing_opt_in_at: marketingOptIn ? consentAt : null,
+    source: "tinlyt-public-website", status: "new"
   };
   let stored;
   try {
@@ -145,7 +170,7 @@ export default async function handler(req, res) {
   const notificationStatus = mailResults[0].status === "fulfilled" ? "sent" : "failed";
   const confirmationStatus = mailResults[1].status === "fulfilled" ? "sent" : "failed";
   try {
-    await fetch(supabaseUrl + "/rest/v1/early_access_requests?id=eq." + encodeURIComponent(stored.id), {
+    const deliveryUpdate = await fetch(supabaseUrl + "/rest/v1/early_access_requests?id=eq." + encodeURIComponent(stored.id), {
       method: "PATCH",
       headers: {
         apikey: supabaseKey, Authorization: "Bearer " + supabaseKey,
@@ -154,8 +179,15 @@ export default async function handler(req, res) {
       body: JSON.stringify({ notification_status: notificationStatus, confirmation_status: confirmationStatus, updated_at: new Date().toISOString() }),
       signal: AbortSignal.timeout(5000)
     });
+    if (!deliveryUpdate.ok) {
+      console.error("Tinlyt early-access delivery metadata update failed", {
+        requestId: stored.id,
+        status: deliveryUpdate.status
+      });
+    }
   } catch {
     // Preserve successful submission; storage remains authoritative if delivery metadata cannot be updated.
+    console.error("Tinlyt early-access delivery metadata update timed out", { requestId: stored.id });
   }
   return json(res, 201, {
     ok: true,
