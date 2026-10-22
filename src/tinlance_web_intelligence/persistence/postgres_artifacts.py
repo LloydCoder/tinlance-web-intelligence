@@ -9,6 +9,7 @@ from tinlance_web_intelligence.artifacts.store import (
     validate_artifact_digest,
     validate_artifact_metadata,
 )
+from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
@@ -37,8 +38,16 @@ class PostgresArtifactStore:
                 "SELECT to_regclass('twi_artifact_content') AS content, "
                 "to_regclass('twi_artifact_records') AS records"
             ).fetchone()
-            if row is None or row["content"] is None or row["records"] is None:
-                raise RuntimeError("PostgreSQL artifact schema is missing; run the migration job")
+            version = conn.execute(
+                "SELECT max(version) AS version FROM twi_schema_migrations"
+            ).fetchone()
+            if (
+                row is None or row["content"] is None or row["records"] is None
+                or version is None or version["version"] < LATEST_SCHEMA_VERSION
+            ):
+                raise RuntimeError(
+                    "PostgreSQL artifact schema is missing or outdated; run the migration job"
+                )
 
     def put(
         self, *, body: bytes, content_type: str, source_url: str,
