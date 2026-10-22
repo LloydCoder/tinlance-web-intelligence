@@ -12,7 +12,7 @@ async function collect(dir) {
   }
 }
 await collect(path.join(root, 'src'));
-files.push(path.join(root, 'index.html'), path.join(root, 'styles.css'), path.join(root, 'investigation.css'), path.join(root, 'runtime-config.js'), path.join(root, 'site-nav.js'), path.join(root, 'site-nav.css'));
+files.push(path.join(root, 'api/early-access.js'), path.join(root, 'index.html'), path.join(root, 'styles.css'), path.join(root, 'investigation.css'), path.join(root, 'runtime-config.js'), path.join(root, 'site-nav.js'), path.join(root, 'site-nav.css'));
 
 const checks = [
   ['dynamic code execution', /\beval\s*\(|\bnew\s+Function\s*\(/i],
