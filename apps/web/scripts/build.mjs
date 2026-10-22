@@ -23,10 +23,13 @@ for (const file of ['index.html', 'app.html', 'brand.css', 'landing.css', 'site-
   if (file === 'runtime-config.js') {
     const source = await readFile(path.join(root, file), 'utf8');
     const siteKey = process.env.EARLY_ACCESS_TURNSTILE_SITE_KEY || '';
-    const configured = source.replace(
-      'earlyAccessTurnstileSiteKey: ""',
-      'earlyAccessTurnstileSiteKey: ' + JSON.stringify(siteKey),
-    );
+    const enabled = process.env.EARLY_ACCESS_ENABLED === 'true' && siteKey.length > 0;
+    const configured = source
+      .replace('earlyAccessEnabled: false', 'earlyAccessEnabled: ' + JSON.stringify(enabled))
+      .replace(
+        'earlyAccessTurnstileSiteKey: ""',
+        'earlyAccessTurnstileSiteKey: ' + JSON.stringify(siteKey),
+      );
     await writeFile(destination, configured, 'utf8');
   } else {
     await cp(path.join(root, file), destination);
