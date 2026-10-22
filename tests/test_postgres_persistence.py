@@ -27,6 +27,7 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
 )
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
+    Job,
     JobStatus,
     LeaseLostError,
 )
@@ -173,7 +174,7 @@ def test_postgres_job_claims_are_unique_across_repository_instances() -> None:
         repositories[0].close()
         assert repositories[1].ping()
 
-        def claim(index: int):
+        def claim(index: int) -> Job | None:
             repository = repositories[index % len(repositories)]
             return repository.claim_next(
                 f"multi-worker-{namespace}-{index}", allowed_kinds=("browser",)
