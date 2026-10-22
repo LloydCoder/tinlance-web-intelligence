@@ -86,7 +86,10 @@ def test_passing_consumer_requires_exact_fixture_revision(tmp_path: Path) -> Non
     (root / "schemas/mcp-tools/tool.json").write_text('{"name":"tool"}', encoding="utf-8")
     fixture = root / "fixtures/tool.json"
     fixture.parent.mkdir()
-    fixture.write_text('{"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"pass"}', encoding="utf-8")
+    fixture.write_text(
+        '{"revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","status":"pass"}',
+        encoding="utf-8",
+    )
     matrix = root / "contracts/consumer-matrix.json"
     matrix.parent.mkdir()
     matrix.write_text(
