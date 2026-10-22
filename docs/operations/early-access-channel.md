@@ -2,30 +2,30 @@
 
 ## Architecture
 
-The public static site submits to the Vercel serverless endpoint at \`/api/early-access\`. The endpoint verifies Cloudflare Turnstile server-side, validates and bounds every field, stores the request in PostgreSQL/Supabase before sending email, and then attempts a team notification and applicant confirmation through Resend. A saved request is successful even if email delivery fails; delivery state is tracked separately.
+The public static site submits JSON to the Vercel serverless endpoint at `/api/early-access`. The endpoint enforces an exact HTTPS origin, checks the JSON content type, validates and bounds fields, verifies Cloudflare Turnstile server-side including its hostname, rate-limits by keyed hashes of client IP and normalized email, stores the request before sending transactional email, and records delivery outcomes separately. A saved request is authoritative even if email delivery fails.
 
 ## Required Vercel environment variables
 
 Configure these in the Tinlyt Vercel project, initially for Preview only:
 
-- \`SUPABASE_URL\`: URL of the database project intentionally selected for Tinlyt.
-- \`SUPABASE_SECRET_KEY\`: server-only Supabase secret key (preferred), or legacy \`SUPABASE_SERVICE_ROLE_KEY\`. Never use a \`NEXT_PUBLIC_\` prefix.
-- \`TURNSTILE_SECRET_KEY\`: Cloudflare Turnstile secret for the site key used by the form.
-- \`RESEND_API_KEY\`: server-only Resend API key.
-- \`RESEND_FROM_EMAIL\`: sender on a verified Resend domain, only after the sender identity is confirmed.
-- \`EARLY_ACCESS_NOTIFY_EMAIL\`: monitored team inbox that should receive requests.
-- \`EARLY_ACCESS_ALLOWED_ORIGIN\`: \`https://tinlyt.tinlance.com\`.
+- `SUPABASE_URL`: URL of the database project intentionally selected for Tinlyt.
+- `SUPABASE_SECRET_KEY`: server-only Supabase secret key (preferred), or legacy `SUPABASE_SERVICE_ROLE_KEY`. Never use a `NEXT_PUBLIC_` prefix.
+- `TURNSTILE_SECRET_KEY`: Cloudflare Turnstile secret for the site key used by the form.
+- `RESEND_API_KEY`: server-only Resend API key.
+- `RESEND_FROM_EMAIL`: sender on a verified Resend domain, only after the sender identity is confirmed.
+- `EARLY_ACCESS_NOTIFY_EMAIL`: monitored team inbox that should receive requests.
+- `EARLY_ACCESS_ALLOWED_ORIGIN`: `https://tinlyt.tinlance.com`.
 
-The public Turnstile site key is configured in \`apps/web/runtime-config.js\` as \`earlyAccessTurnstileSiteKey\`; it is not a secret. Never commit any secret to the repository or expose one in browser code.
+The public Turnstile site key is configured in `apps/web/runtime-config.js` as `earlyAccessTurnstileSiteKey`; it is not a secret. Never commit any secret to the repository or expose one in browser code.
 
 ## Database setup
 
-Review \`db/migrations/004_early_access_requests.sql\` and apply it only to the intended Tinlyt database. This migration has deliberately not been applied automatically because the connected Supabase project must be explicitly confirmed as the Tinlyt data store. The table enables RLS and revokes all browser-role access; only the server-side key can write through the endpoint.
+Review `supabase/migrations/20261022072400_early_access_requests.sql` and apply it only to the database explicitly selected for Tinlyt. It is intentionally separate from `db/migrations/`, which belongs to the core TWI service and its packaged migration set. The migration enables RLS, revokes browser-role privileges, gives the server role only the insert/read-ID/update-delivery-status permissions it needs, and keeps rate-limit state in the non-exposed `private` schema. The rate-limit RPC is `SECURITY INVOKER` and executable only by `service_role`. Do not apply it to the currently connected Supabase project until that project is confirmed as the Tinlyt data store. Verify the Data API is enabled and `public` is an exposed schema for the server-side PostgREST calls; public browser roles still have no grants on the intake table.
 
 ## Activation checklist
 
 1. Confirm the Supabase project and apply the migration.
-2. Create a Cloudflare Turnstile widget for \`tinlyt.tinlance.com\`; set its site key in runtime config and its secret in Vercel.
+2. Create a Cloudflare Turnstile widget for `tinlyt.tinlance.com`; set its site key in runtime config and its secret in Vercel.
 3. Confirm the Resend sender identity and monitored notification inbox; add the server-only API key to Vercel.
 4. Set all variables for Preview and verify valid, invalid, duplicate, honeypot, expired-token, missing-config, database-failure and email-failure behavior.
 5. Review the privacy notice with the responsible legal entity, controller contact, retention period, purpose and rights contact completed.
@@ -37,4 +37,4 @@ The form requests only information needed to review a product evaluation. Market
 
 ## Operational limitation
 
-The endpoint relies on server-verified Turnstile, a honeypot, and a database-backed limit of five requests per hashed client key per 15-minute window. The rate-limit RPC fails closed if unavailable. Add alerting and a retention/cleanup policy for rate-limit records before scaling public traffic. Email is best-effort; database storage is authoritative.
+The endpoint relies on server-verified Turnstile, a honeypot, and a database-backed limit of five requests per keyed client-IP hash and five per normalized-email hash per 15-minute window. The RPC fails closed if unavailable and opportunistically deletes stale rate-limit rows older than 24 hours. Email is best-effort; database storage is authoritative. Add operational alerting before scaling public traffic.
