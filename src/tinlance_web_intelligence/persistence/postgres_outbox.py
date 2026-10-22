@@ -11,15 +11,14 @@ from typing import Any
 
 from psycopg.types.json import Jsonb
 
-from tinlance_web_intelligence.persistence.postgres_pool import (
-    acquire_pool,
-    release_pool,
-)
-
 from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxConflictError,
     OutboxEvent,
     OutboxLeaseLostError,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
