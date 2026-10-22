@@ -1,7 +1,7 @@
 """Unit tests for the process-local PostgreSQL pool registry."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 
@@ -29,7 +29,7 @@ class _FakePool:
 
 
 @pytest.fixture(autouse=True)
-def reset_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+def reset_registry(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     with postgres_pool._lock:
         postgres_pool._pools.clear()
     _FakePool.created.clear()
