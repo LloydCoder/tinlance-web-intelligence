@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from tinlance_web_intelligence.commercial.billing_events import VerifiedBillingEvent
 from tinlance_web_intelligence.commercial.usage_ledger import _validate_key
+from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
@@ -190,7 +191,7 @@ class SQLiteBillingEventInbox:
 
 
 class PostgresBillingEventInbox:
-    """Multi-worker durable receipt inbox; schema migration version 3 is required."""
+    """Multi-worker durable receipt inbox; latest schema version is required."""
 
     def __init__(self, dsn: str, *, min_size: int = 1, max_size: int = 10) -> None:
         if not dsn or dsn != dsn.strip():
@@ -208,7 +209,7 @@ class PostgresBillingEventInbox:
                 ).fetchone()
                 if (
                     row is None or row["receipts"] is None
-                    or version is None or version["version"] < 3
+                    or version is None or version["version"] < LATEST_SCHEMA_VERSION
                 ):
                     raise RuntimeError("billing receipt schema missing; run migration job")
         except Exception:
