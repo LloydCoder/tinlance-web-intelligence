@@ -10,7 +10,7 @@ This is a live status ledger, not a completion claim. It separates repository im
 
 | Track | Scope | Repository/code and CI status | Integration/release status |
 |---|---|---|---|
-| Brand | Logo kit, shared tokens, landing/workspace consistency | **Merged + CI-verified** in PR #97 on main SHA `75ced750deef1903d23987d8e2ab9882ba6035e5`; CI and Frontend workflows green | Direct live visual review and public alias/SSO behavior still need confirmation |
+| Brand | Logo kit, shared tokens, landing/workspace consistency | **Merged + CI-verified** in PR #97 on main SHA `75ced750deef1903d23987d8e2ab9882ba6035e5`; CI and Frontend workflows green | Read-only rendered-page fetches succeeded for `/` and `/app` on the custom domain and Vercel alias; the workspace remains fail-closed because API/Platform identity runtime settings are absent |
 | F0 | Baseline, inventory, source of truth, risk reconciliation | **Consolidation audit added** in `docs/PROJECT_CONSOLIDATION_AUDIT_2026-10-21.md`; cross-document status alignment is being captured in this ledger | Re-open if provider state or source documents conflict; no release claim |
 | F1 | Landing and shell; responsive/keyboard/reduced-motion checks | **Implementation merged; CI-verified**. PR #97 adds responsive hardening, common brand tokens and motion accessibility | Exact Vercel deployment is READY, but direct end-to-end live route/access verification is outstanding |
 | F2 | Identity/security and typed Platform auth integration | Frontend implementation/audit documented in `docs/product/tinlyt-frontend-final-audit.md` | **External gate blocked/unverified:** approved live Platform configuration, auth/session behavior, and negative authorization/tenant tests required |
@@ -36,15 +36,15 @@ Frontend audit evidence: [final cross-phase frontend audit](../product/tinlyt-fr
 | W4 | Isolated browser workers and constrained egress proxy | Merged as PR #12; evidence in [W4 baseline](../audits/W4-baseline.md) | Live egress/isolation testing in approved target environment |
 | W5 | Verified web agent, governed workflows, World Intelligence export, TSIC | Repository/recorded conformance marked complete in [W5 baseline](../audits/W5-baseline.md) | Re-verify exact current Platform/World Intelligence/TSIC revisions; live ingestion and TSIC evidence required |
 | W6 | PostgreSQL persistence, operations, recovery and private beta | Repository implementation and closeout merged (PRs #15/#16); see [W6 final audit](../audits/W6-final.md) | Private beta **NOT CERTIFIED** until target-environment checklist is evidenced |
-| W7 | Governance, enforceable CI, supply chain/SBOM/provenance | Code-level scanning/reproducible artifact/provenance work implemented and previously exercised | **OPEN:** current effective branch rules not verified (prior audit recorded main unprotected); durable scan/provenance evidence retention and mandatory-check enforcement |
+| W7 | Governance, enforceable CI, supply chain/SBOM/provenance | Code-level scanning/reproducible artifact/provenance work implemented and previously exercised | **OPEN:** exact-main CI is green at `820883345cfff43f8c70b0340751258ae4677ea2`; current branch-protection/ruleset enforcement remains unverified (rulesets endpoint returns empty, branch-protection read is denied to the integration); durable scan/provenance evidence retention and mandatory-check enforcement |
 | W8 | Staging topology and live end-to-end journeys | Repository deployment topology merged | **OPEN:** approved staging environment, secrets/rotation, DB/TLS, browser egress, restore, and Platform → TWI → World Intelligence journey |
 | W9 | Security assurance/adversarial validation | Regression suite merged and CI-verified in recorded historical runs | **OPEN:** live SSRF/redirect/private-range, tenant-isolation, browser-egress and resource-exhaustion tests |
 | W10 | Observability/SRE | Tracing/metrics contracts and no-op-safe telemetry implemented | **OPEN:** collector/alert delivery, capacity budgets, on-call, incident response and witnessed rollback |
 | W11 | Provenance/data governance | Provenance manifests, retention semantics and integrity checks implemented/CI-verified | **OPEN:** target retention/deletion, raw-URL privacy, tenant-scoped evidence and deployment controls |
 | W12 | Intelligence quality/evaluation | Offline benchmark/evaluator and deterministic tests merged | **OPEN:** live representative observations, approved thresholds, regression baselines and consumer integration; synthetic fixtures are not truth certification |
 | W13 | Continuous monitoring/change intelligence | Durable definitions/runs, explicit enqueue, pause/resume/delete, bounded change digests and idempotency implemented/tested | **OPEN:** Agent OS recurrence and real-network alert delivery |
-| W14 | Enterprise tenant controls/contracts | Tenant/subject-scoped API/tool contracts and schema tests implemented | **BLOCKED/UNVERIFIED:** pinned Platform snapshot cited by readiness registry lacks six monitor tools; cited TSIC revision has no external conformance result |
-| W15 | GA/customer operations | Evidence-pack and GA contract/validators implemented; subphases A–E have differing repository status | **NOT READY / NOT CERTIFIED:** readiness pack has failed Platform consumer approval and multiple external gates not evidenced |
+| W14 | Enterprise tenant controls/contracts | Tenant/subject-scoped API/tool contracts and schema tests implemented | **PARTIAL / EXTERNAL GATES OPEN:** Platform consumer snapshot now passes against `c5a080c1fb4df68e45070f8cddfc30bf81edd7bb` with all 15 tools and approval-gated consequential operations recorded; TSIC conformance and live Platform policy/World Intelligence ingestion remain unverified |
+| W15 | GA/customer operations | Evidence-pack and GA contract/validators implemented; subphases A–E have differing repository status | **NOT READY / NOT CERTIFIED:** Platform consumer snapshot and exact-main CI gates pass; external deployment/identity, branch governance, TSIC, live recovery, SLO/on-call, privacy/retention, live quality and GA approval remain not evidenced |
 
 Detailed W1–W15 history and PR/run references remain in [workstream plan](phases.md). Readiness truth is in [W15 gates](../readiness/w15-gates.json), [readiness guide](../readiness/README.md), and [private-beta checklist](../operations/private-beta-readiness.md).
 
@@ -59,6 +59,16 @@ Detailed W1–W15 history and PR/run references remain in [workstream plan](phas
 - Open PRs at the time of this checkpoint: **0**. Open issue: [#18](https://github.com/LloydCoder/tinlance-web-intelligence/issues/18).
 - Vercel deployment/access state has not been refreshed against this latest SHA. Do not claim public availability from repository CI.
 - Branch-protection API check was denied (403) to the connected integration. Effective branch rules and mandatory checks require authorized owner verification.
+
+## Latest exact-revision checkpoint — 2026-10-22
+
+- Current `main` commit: `820883345cfff43f8c70b0340751258ae4677ea2`, merged from [PR #114](https://github.com/LloydCoder/tinlance-web-intelligence/pull/114).
+- [Post-merge CI run 39768780762](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39768780762): **success** on the exact main SHA. All four jobs passed: Python 3.12, Python 3.13, browser container isolation, and reproducible release artifact validation.
+- The CI workflow completed the PostgreSQL 17 dump/restore round-trip, image vulnerability policy, browser egress-proxy bypass test, and Chromium sandbox check.
+- Vercel deployment `dpl_CeMxzKbnp7p1nM2bxw9rEuMQyKFc` reports READY for the same main SHA. Read-only fetches confirmed rendered `/` and `/app` routes; this does not verify API connectivity or Platform authentication.
+- Vercel environment inventory is empty. Private beta remains **NOT CERTIFIED**.
+- [Exact-commit evidence record](../evidence/2026-10-22-main-820883345cfff43f8c70b0340751258ae4677ea2.json) captures the CI and route-smoke observations without secrets.
+- Branch protection cannot be independently verified with the current GitHub integration: the rulesets list is empty and branch-protection endpoint access returns 403.
 
 ## Cross-cutting release gates (must all pass before certification)
 

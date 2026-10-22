@@ -6,13 +6,13 @@
 
 | Check | Evidence | Result |
 |---|---|---|
-| Audited source revision | `main` at `f7594814fe14dbcd1115ee38096e9153b8a2a77b` | Confirmed via GitHub |
-| Repository CI | [Run 39762376911](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39762376911) | All four jobs completed successfully |
-| Python 3.12 | Job 119769441083 | Passed; PostgreSQL dump/restore round-trip passed |
-| Python 3.13 | Job 119769440979 | Passed |
-| Browser isolation | Job 119769441168 | Passed |
-| Reproducible release artifact validation | Job 119769440938 | Passed |
-| Remediation PRs | [#108](https://github.com/LloydCoder/tinlance-web-intelligence/pull/108), [#109](https://github.com/LloydCoder/tinlance-web-intelligence/pull/109), [#110](https://github.com/LloydCoder/tinlance-web-intelligence/pull/110), [#111](https://github.com/LloydCoder/tinlance-web-intelligence/pull/111), [#112](https://github.com/LloydCoder/tinlance-web-intelligence/pull/112) | All merged |
+| Audited source revision | `main` at `820883345cfff43f8c70b0340751258ae4677ea2` | Confirmed via GitHub |
+| Repository CI | [Run 39768780762](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39768780762) | All four jobs completed successfully |
+| Python 3.12 | Job 119790772334 | Passed; PostgreSQL dump/restore round-trip passed |
+| Python 3.13 | Job 119790772495 | Passed |
+| Browser isolation | Job 119790772501 | Passed |
+| Reproducible release artifact validation | Job 119790772664 | Passed |
+| Remediation PRs | [#108](https://github.com/LloydCoder/tinlance-web-intelligence/pull/108), [#109](https://github.com/LloydCoder/tinlance-web-intelligence/pull/109), [#110](https://github.com/LloydCoder/tinlance-web-intelligence/pull/110), [#111](https://github.com/LloydCoder/tinlance-web-intelligence/pull/111), [#112](https://github.com/LloydCoder/tinlance-web-intelligence/pull/112), [#114](https://github.com/LloydCoder/tinlance-web-intelligence/pull/114) | All merged |
 
 The CI restore test creates a PostgreSQL 17 custom-format dump, restores it into a separate database, and checks schema version 4, a probe record, and persistence-table row counts. It is **not** a witnessed restore of a real encrypted deployment backup.
 
@@ -21,13 +21,13 @@ The CI restore test creates a PostgreSQL 17 custom-format dump, restores it into
 Read-only Vercel inspection on 2026-10-22 returned:
 
 - Project: `tinlyt-web` (`prj_ypYtRbHtPYejZUHRwAYmHurmXgSM`).
-- Latest reported production deployment: READY, deployment `dpl_3Z6ncUanyXtqjX5LGCv1T64bW4m9`.
-- That deployment is built from `main` commit `28722145517a1d8cb8b44d5fcbd175c380f1bd45`, which predates the final documentation/CI-only PR #112 merge at `f7594814fe14dbcd1115ee38096e9153b8a2a77b`.
-- Project domains include `tinlyt.tinlance.com` and `tinlyt-web.vercel.app`.
-- The environment-variable inventory returned zero variables and `hiddenProductionEnvCount=0`.
-- The frontend remains deployed, but its runtime configuration is not integrated with a verified API origin or Platform identity configuration. A READY static/frontend deployment does not prove an authenticated product journey.
+- Latest reported production deployment: READY, deployment `dpl_CeMxzKbnp7p1nM2bxw9rEuMQyKFc`, built from the exact current `main` commit `820883345cfff43f8c70b0340751258ae4677ea2`.
+- Vercel reports aliases `tinlyt.tinlance.com`, `tinlyt-web.vercel.app`, and project-generated deployment aliases. The two project domains `tinlyt.tinlance.com` and `tinlyt-web.vercel.app` are verified.
+- Read-only rendered-page fetches succeeded for `/` and `/app` on both the custom domain and the Vercel alias. The landing page remains `noindex, nofollow`. The workspace states that live investigation submission requires the approved Platform identity flow and valid deployment runtime settings; it presents no fixture data as live activity.
+- The Vercel project still reports `live=false` and SSO protection enabled for all deployment types except custom domains. The successful custom-domain page fetch confirms rendering, not a complete public launch or authenticated journey.
+- The environment-variable inventory returned `envs=[]` and `hiddenProductionEnvCount=0`. No API origin or Platform identity configuration is currently set in this Vercel project.
 
-No redeploy or production environment change was attempted. The commits after the inspected production deployment add the CI restore drill, operational evidence reconciliation, and consumer-contract snapshots; none changes frontend behavior.
+Vercel automatically reports a READY production deployment for the current main SHA. No manual redeploy, environment-variable change, or frontend behavior change was performed. The exact commit's CI run 39768780762 passed all four jobs, including the PostgreSQL restore round-trip, container vulnerability policy, browser egress-proxy test, and Chromium sandbox check.
 
 ## Remaining gates — deployment evidence is absent
 
