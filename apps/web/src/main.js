@@ -21,19 +21,32 @@ for (const button of developerCopyButtons) {
     }
   });
 }
-const activeLinks = document.querySelectorAll('.nav-link');
+const activeLinks = [...document.querySelectorAll('.nav-link[href^="#"]')];
+const breadcrumbCurrent = document.querySelector('#breadcrumb-current');
+function syncWorkspaceNavigation() {
+  const requestedHash = window.location.hash || '#overview';
+  const activeLink = activeLinks.find((link) => link.getAttribute('href') === requestedHash)
+    ?? activeLinks.find((link) => link.getAttribute('href') === '#overview');
+  for (const link of activeLinks) {
+    const isActive = link === activeLink;
+    link.classList.toggle('is-active', isActive);
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+  if (breadcrumbCurrent && activeLink) {
+    const label = activeLink.cloneNode(true);
+    label.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+    breadcrumbCurrent.textContent = label.textContent.trim();
+  }
+}
 for (const link of activeLinks) {
   link.addEventListener('click', () => {
-    for (const candidate of activeLinks) {
-      candidate.classList.remove('is-active');
-      candidate.removeAttribute('aria-current');
-    }
-    link.classList.add('is-active');
-    link.setAttribute('aria-current', 'page');
-    const heading = document.querySelector('#breadcrumb-current');
-    if (heading) heading.textContent = link.textContent.trim();
+    // Clicking the current hash does not emit hashchange, so sync immediately as well.
+    syncWorkspaceNavigation();
   });
 }
+window.addEventListener('hashchange', syncWorkspaceNavigation);
+syncWorkspaceNavigation();
 
 const runtimeConfig = window.TINLYT_RUNTIME_CONFIG;
 const runtime = getRuntime(runtimeConfig);
