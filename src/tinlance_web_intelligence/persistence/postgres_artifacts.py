@@ -8,6 +8,7 @@ from tinlance_web_intelligence.artifacts.store import (
     ArtifactRecord,
     validate_artifact_digest,
     validate_artifact_metadata,
+    redact_artifact_source_url,
 )
 from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
@@ -67,6 +68,7 @@ class PostgresArtifactStore:
             raise ValueError("captured_at must be timezone-aware")
         digest = sha256(body).hexdigest()
         source_hash = sha256(source_url.encode("utf-8")).hexdigest()
+        safe_source_url = redact_artifact_source_url(source_url)
         with self._pool.connection() as conn:
             stored = conn.execute(
                 "INSERT INTO twi_artifact_content "
@@ -87,7 +89,7 @@ class PostgresArtifactStore:
                 "VALUES (%s, %s, %s, %s, %s, %s, %s) "
                 "ON CONFLICT (tenant_id, sha256, source_url_hash, captured_at) DO NOTHING "
                 "RETURNING tenant_id, sha256, byte_size, content_type, source_url, captured_at",
-                (tenant_id, digest, source_hash, source_url, captured_at, content_type, len(body)),
+                (tenant_id, digest, source_hash, safe_source_url, captured_at, content_type, len(body)),
             ).fetchone()
             if row is None:
                 row = conn.execute(
