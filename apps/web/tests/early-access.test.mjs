@@ -206,3 +206,70 @@ test("early-access endpoint rejects insecure Supabase URLs and weak rate-limit s
     assert.equal(res.statusCode, 503);
   });
 });
+
+
+test("Supabase secret keys use apikey only; legacy service_role uses a JWT bearer header", async () => {
+  const originalFetch = globalThis.fetch;
+  const submissions = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const target = String(url);
+    submissions.push({ url: target, headers: options.headers || {} });
+    if (target.includes("challenges.cloudflare.com/turnstile/v0/siteverify")) {
+      return { ok: true, status: 200, json: async () => ({ success: true, hostname: "tinlyt.tinlance.com" }) };
+    }
+    if (target.includes("/rest/v1/rpc/consume_early_access_rate_limit")) {
+      return { ok: true, status: 200, json: async () => true };
+    }
+    if (target.includes("/rest/v1/early_access_requests?select=id,created_at")) {
+      return { ok: true, status: 201, json: async () => [{ id: "test-request-id", created_at: "2026-10-22T00:00:00Z" }] };
+    }
+    if (target === "https://api.resend.com/emails") {
+      return { ok: true, status: 200, json: async () => ({ id: "test-email-id" }) };
+    }
+    if (target.includes("/rest/v1/early_access_requests?id=eq.")) {
+      return { ok: true, status: 204, json: async () => null };
+    }
+    throw new Error("Unexpected outbound request in test: " + target);
+  };
+
+  const validBody = {
+    name: "Test Person",
+    email: "person@example.com",
+    useCase: "web-research",
+    consent: true,
+    marketingOptIn: false,
+    turnstileToken: "test-token"
+  };
+  const run = async (env) => withEnv(env, async () => {
+    const res = responseRecorder();
+    await handler(request(validBody, { "x-real-ip": "203.0.113.10" }), res);
+    assert.equal(res.statusCode, 201);
+    assert.equal(res.body.ok, true);
+    const databaseCalls = submissions.filter((call) => call.url.startsWith("https://project.supabase.co/"));
+    assert.ok(databaseCalls.length >= 3);
+    return databaseCalls;
+  });
+
+  try {
+    submissions.length = 0;
+    const modernCalls = await run(configuredEnv);
+    for (const call of modernCalls) {
+      assert.equal(call.headers.apikey, configuredEnv.SUPABASE_SECRET_KEY);
+      assert.equal(call.headers.Authorization, undefined);
+    }
+
+    submissions.length = 0;
+    const legacyEnv = {
+      ...configuredEnv,
+      SUPABASE_SECRET_KEY: "",
+      SUPABASE_SERVICE_ROLE_KEY: "legacy-test-service-role-jwt"
+    };
+    const legacyCalls = await run(legacyEnv);
+    for (const call of legacyCalls) {
+      assert.equal(call.headers.apikey, legacyEnv.SUPABASE_SERVICE_ROLE_KEY);
+      assert.equal(call.headers.Authorization, "Bearer " + legacyEnv.SUPABASE_SERVICE_ROLE_KEY);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
