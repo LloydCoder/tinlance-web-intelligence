@@ -79,6 +79,8 @@ assert.match(runtimeConfig, /earlyAccessEnabled: false/, 'early access must rema
 const builtHome = await readFile(path.join(distRoot, 'index.html'), 'utf8');
 assert.match(builtHome, /class="nav-cta" href="\/features">Explore platform/, 'disabled early access must fall back to the honest platform CTA');
 assert.doesNotMatch(builtHome, /class="nav-cta" href="\/contact">Request early access/, 'disabled early access must not advertise a disabled request form');
+assert.match(builtHome, /class="button primary" href="\/features">Explore platform/, 'disabled early access must use the platform as the primary CTA');
+assert.doesNotMatch(builtHome, /class="button primary" href="\/contact">Request early access/, 'disabled early access must not leave the hero CTA pointing to an inactive form');
 
 const server = http.createServer(async (request, response) => {
   try {
