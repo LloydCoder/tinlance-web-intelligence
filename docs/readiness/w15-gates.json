@@ -10,7 +10,7 @@
     {"gate":"repository.monitor_persistence","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_monitors_repository.py"},
     {"gate":"repository.ci_contracts","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_ci_contracts.py"},
     {"gate":"repository.evidence_export","status":"pass","owner":"TWI engineering","evidence_reference":"tests/test_evidence_api.py"},
-    {"gate":"external.ci_run","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
+    {"gate":"external.ci_run","status":"pass","owner":"TWI engineering","evidence_reference":"docs/evidence/2026-10-22-main-820883345cfff43f8c70b0340751258ae4677ea2.json"},
     {"gate":"external.branch_governance","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
     {"gate":"external.consumer_approvals","status":"pass","owner":"Platform integration owner","evidence_reference":"contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"},
     {"gate":"external.deployment_and_security","status":"not_evidenced","owner":"unassigned","evidence_reference":""},
