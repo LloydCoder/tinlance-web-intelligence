@@ -3,7 +3,8 @@
 window.TINLYT_RUNTIME_CONFIG = Object.freeze({
   apiBaseUrl: "/api/twi",
   apiAllowedOrigins: [],
-  earlyAccessTurnstileSiteKey: "",
+  earlyAccessEnabled: false,
+  earlyAccessTurnstileSiteKey: ""
   oauth: {
     issuer: "",
     authorizationEndpoint: "",
