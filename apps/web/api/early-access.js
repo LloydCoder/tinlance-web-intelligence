@@ -191,6 +191,8 @@ export default async function handler(req, res) {
 
   const notificationStatus = mailResults[0].status === "fulfilled" ? "sent" : "failed";
   const confirmationStatus = mailResults[1].status === "fulfilled" ? "sent" : "failed";
+  if (notificationStatus === "failed") console.error("Tinlyt early-access team notification failed", { requestId: stored.id });
+  if (confirmationStatus === "failed") console.error("Tinlyt early-access confirmation email failed", { requestId: stored.id });
   try {
     const deliveryUpdate = await fetch(supabaseUrl + "/rest/v1/early_access_requests?id=eq." + encodeURIComponent(stored.id), {
       method: "PATCH",
