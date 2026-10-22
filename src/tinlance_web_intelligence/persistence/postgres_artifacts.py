@@ -3,17 +3,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from hashlib import sha256
-from typing import Any
-
-from tinlance_web_intelligence.persistence.postgres_pool import (
-    acquire_pool,
-    release_pool,
-)
-
 from tinlance_web_intelligence.artifacts.store import (
     ArtifactRecord,
     validate_artifact_digest,
     validate_artifact_metadata,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
