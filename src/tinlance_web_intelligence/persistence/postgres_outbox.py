@@ -16,6 +16,10 @@ from tinlance_web_intelligence.integrations.world_intelligence.outbox import (
     OutboxEvent,
     OutboxLeaseLostError,
 )
+from tinlance_web_intelligence.persistence.migrations import (
+    LATEST_SCHEMA_VERSION,
+    MIGRATION_FILES,
+)
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
@@ -47,11 +51,7 @@ class PostgresSourceEvidenceOutbox:
         migrations = files("tinlance_web_intelligence.persistence.migrations")
         with self._pool.connection() as conn:
             conn.execute("SELECT pg_advisory_xact_lock(71020261018)")
-            for name in (
-                "001_production_postgres.sql",
-                "002_monitors.sql",
-                "003_commercial_usage.sql",
-            ):
+            for name in MIGRATION_FILES:
                 migration = migrations.joinpath(name)
                 if not migration.is_file():
                     raise RuntimeError(f"production PostgreSQL migration file is missing: {name}")
@@ -71,7 +71,7 @@ class PostgresSourceEvidenceOutbox:
             version = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-            if version is None or version["version"] < 3:
+            if version is None or version["version"] < LATEST_SCHEMA_VERSION:
                 raise RuntimeError("unsupported PostgreSQL schema version")
 
     @staticmethod
