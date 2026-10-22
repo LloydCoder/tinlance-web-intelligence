@@ -202,7 +202,7 @@ def test_postgres_outbox_enforces_idempotency_leases_and_scope() -> None:
             schema = conn.execute(
                 "SELECT max(version) AS version FROM twi_schema_migrations"
             ).fetchone()
-        assert schema is not None and schema["version"] == 3
+        assert schema is not None and schema["version"] == 4
         first, replayed = outbox.enqueue(
             tenant_ref=tenant_ref, subject_ref=subject_ref, idempotency_key=key,
             payload=payload, request_id="postgres-outbox-test", traceparent=None,
@@ -302,7 +302,7 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
     try:
         first = store.put(
             body=b"durable source bytes", content_type="text/html",
-            source_url="https://one.example/", captured_at=now, tenant_id=tenant,
+            source_url="https://one.example/path?token=postgres-secret&query=private", captured_at=now, tenant_id=tenant,
         )
         second = store.put(
             body=b"durable source bytes", content_type="text/html",
@@ -318,6 +318,19 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
             tenant_id=tenant,
         )
         assert first.sha256 == second.sha256 == other.sha256 == old.sha256
+        assert first.source_url == "https://one.example/path"
+        assert "postgres-secret" not in first.source_url
+        with store._pool.connection() as conn:
+            stored = conn.execute(
+                "SELECT source_url FROM twi_artifact_records "
+                "WHERE tenant_id=%s AND sha256=%s AND source_url_hash=%s AND captured_at=%s",
+                (
+                    tenant, first.sha256,
+                    sha256("https://one.example/path?token=postgres-secret&query=private".encode()).hexdigest(),
+                    now,
+                ),
+            ).fetchone()
+        assert stored is not None and stored["source_url"] == "https://one.example/path"
         assert store.get(first.sha256, tenant_id=tenant) == b"durable source bytes"
         assert store.get(first.sha256, tenant_id=other_tenant) == b"durable source bytes"
         assert store.count(tenant_id=tenant) == 3
