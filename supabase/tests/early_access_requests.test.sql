@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(24);
 
 select has_table('public', 'early_access_requests', 'early-access table exists');
 select ok(
@@ -21,6 +21,13 @@ select ok(not has_schema_privilege('authenticated', 'private', 'USAGE'), 'authen
 select ok(not has_function_privilege('anon', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'anon cannot execute rate-limit RPC');
 select ok(not has_function_privilege('authenticated', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'authenticated cannot execute rate-limit RPC');
 select ok(has_function_privilege('service_role', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'server role can execute rate-limit RPC');
+select ok(has_table_privilege('service_role', 'public.early_access_requests', 'INSERT'), 'server role can insert requests');
+select ok(has_column_privilege('service_role', 'public.early_access_requests', 'id', 'SELECT'), 'server role can read generated request IDs');
+select ok(has_column_privilege('service_role', 'public.early_access_requests', 'created_at', 'SELECT'), 'server role can read creation timestamps');
+select ok(not has_column_privilege('service_role', 'public.early_access_requests', 'email', 'SELECT'), 'server role cannot read stored email through broad table select');
+select ok(has_column_privilege('service_role', 'public.early_access_requests', 'notification_status', 'UPDATE'), 'server role can update notification status');
+select ok(not has_column_privilege('service_role', 'public.early_access_requests', 'status', 'UPDATE'), 'request endpoint cannot change review status');
+select ok(not has_table_privilege('service_role', 'public.early_access_requests', 'DELETE'), 'request endpoint cannot delete leads');
 
 select ok(public.consume_early_access_rate_limit(repeat('a', 64), 2, 900), 'first request within limit is allowed');
 select ok(public.consume_early_access_rate_limit(repeat('a', 64), 2, 900), 'second request within limit is allowed');
