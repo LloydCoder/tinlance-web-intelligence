@@ -14,7 +14,7 @@ async function collect(dir) {
   }
 }
 await collect(sourceRoot);
-files.push(path.join(root, 'site-nav.js'));
+files.push(path.join(root, 'site-nav.js'), path.join(root, 'api/early-access.js'));
 let failed = false;
 for (const file of files) {
   const result = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
