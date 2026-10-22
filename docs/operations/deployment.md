@@ -2,11 +2,15 @@
 
 ## Persistence
 
-Run the explicit migration job before API and worker startup. The runtime role must not have DDL privileges; production uses a separate TWI_MIGRATION_DATABASE_URL role with TLS certificate and hostname verification. The migration runner serializes migration execution with a PostgreSQL advisory lock and verifies the schema version. The API and workers fail closed if the schema is absent or unsupported.
+Run the explicit migration job before API and worker startup. Schema version 4 is the current baseline. The runtime role must not have DDL privileges; production uses a separate TWI_MIGRATION_DATABASE_URL role with TLS certificate and hostname verification. The migration runner serializes migration execution with a PostgreSQL advisory lock and verifies the latest schema version. The API and workers fail closed if the schema is absent or outdated.
 
 PostgreSQL is the supported production persistence backend for jobs, usage facts, billing-event receipts, tenant-scoped content-addressed artifacts, and the World Intelligence source-evidence outbox. Configure TWI_DATABASE_URL as a secret. Production configuration fails closed unless it is a PostgreSQL URL with a hostname, database, credentials, and sslmode=verify-full. Configure a trusted CA and verify the server hostname. Do not put credentials in command-line arguments, logs, images, or committed files.
 
 SQLite is supported only for development, tests, and the single-host browser-isolation harness. Do not run multiple API/worker replicas against a shared SQLite file.
+
+### PostgreSQL connection budget
+
+All six PostgreSQL adapters share one process-local connection pool when configured with the same DSN and sizing. The default pool maximum is 10 connections per DSN per application process, not per adapter. Budget the database for `replica_count × application_processes_per_replica × pool_max_size`, plus migration, backup, restore, and maintenance connections. Keep adapter sizing consistent for a given DSN; conflicting sizing fails closed. Pool sharing does not cap connections across separate processes or replicas.
 
 ## Services and network
 
@@ -20,6 +24,8 @@ SQLite is supported only for development, tests, and the single-host browser-iso
 ## Readiness and operations
 
 Readiness checks verify the configured job repository and outbox database connectivity. Liveness is intentionally independent of downstream readiness. Configure alerts for readiness failures, queue age, retry/dead-letter counts, outbox delivery lag, browser failures, and provider rate limits.
+
+Artifact source URLs have query strings removed before they are persisted or returned; migration 004 also strips query strings from existing artifact records. The full validated URL is used only transiently for capture identity and is not stored in plaintext. Artifact capture records default to a 30-day retention period; schedule `scripts/prune_artifacts.py` in dry-run mode first, then use `--apply` only with `TWI_CONFIRM_ARTIFACT_PRUNE=YES` and the dedicated artifact-maintenance role. Job payload/result redaction is separate and uses `scripts/prune_job_data.py`. Historical backups created before migration 004 may still contain old query strings and must age out under the approved backup-retention policy.
 
 Run `scripts/backup_postgres.sh` from an approved backup environment with a dedicated backup role and an approved encrypted backup mount. Restore is destructive and requires the explicit confirmation, dedicated restore role, primary/target comparison, checksum verification, and isolated target checks documented in `backup-and-restore.md`. Private beta requires a witnessed restore drill and deployment-specific network-policy verification.
 

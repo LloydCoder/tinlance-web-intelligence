@@ -23,6 +23,20 @@ def test_content_is_deduplicated_but_source_capture_records_are_preserved() -> N
     assert store.count() == 2
 
 
+def test_artifact_source_url_query_strings_are_not_retained() -> None:
+    store = MemoryArtifactStore()
+    record = store.put(
+        body=b"private query response",
+        content_type="text/html",
+        source_url="https://example.com/search?token=secret-token&q=private+search",
+        captured_at=datetime(2026, 10, 18, tzinfo=UTC),
+    )
+
+    assert record.source_url == "https://example.com/search"
+    assert "secret-token" not in record.source_url
+    assert "private+search" not in record.source_url
+
+
 def test_memory_artifacts_are_tenant_scoped() -> None:
     store = MemoryArtifactStore()
     now = datetime(2026, 10, 18, tzinfo=UTC)

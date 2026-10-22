@@ -19,6 +19,7 @@ from tinlance_web_intelligence.monitors.model import (
     MonitorStatus,
     normalize_monitor_policy,
 )
+from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
@@ -54,7 +55,7 @@ class PostgresMonitorRepository:
                 or row["monitors"] is None
                 or row["runs"] is None
                 or version is None
-                or version["version"] < 3
+                or version["version"] < LATEST_SCHEMA_VERSION
             ):
                 raise RuntimeError("PostgreSQL monitor schema is missing; run the migration job")
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass  # noqa: I001
 from datetime import datetime
 from hashlib import sha256
 from typing import Protocol
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 
 
 _DIGEST_HEX = frozenset("0123456789abcdef")
@@ -22,6 +22,17 @@ def validate_artifact_digest(digest: str) -> None:
         or any(character not in _DIGEST_HEX for character in digest)
     ):
         raise ValueError("artifact digest must be a lowercase SHA-256 hex digest")
+
+
+def redact_artifact_source_url(source_url: str) -> str:
+    """Remove the entire query string before source URLs are persisted or returned.
+
+    The full validated URL is hashed separately for capture identity. Query values
+    are not reliable provenance metadata: they often contain credentials, signed
+    links, personal search terms, or other request-specific secrets.
+    """
+    parsed = urlsplit(source_url)
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
 
 
 def validate_artifact_metadata(content_type: str, source_url: str) -> None:
@@ -113,6 +124,7 @@ class MemoryArtifactStore:
         if captured_at.tzinfo is None or captured_at.utcoffset() is None:
             raise ValueError("captured_at must be timezone-aware")
         digest = sha256(body).hexdigest()
+        safe_source_url = redact_artifact_source_url(source_url)
         key = (tenant_id, digest, source_url, captured_at.isoformat())
         record = self._records.get(key)
         if record is not None:
@@ -123,7 +135,7 @@ class MemoryArtifactStore:
             sha256=digest,
             byte_size=len(body),
             content_type=content_type,
-            source_url=source_url,
+            source_url=safe_source_url,
             captured_at=captured_at,
         )
         self._content.setdefault((tenant_id, digest), body)

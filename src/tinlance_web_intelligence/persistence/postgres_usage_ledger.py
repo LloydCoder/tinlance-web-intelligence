@@ -14,6 +14,7 @@ from tinlance_web_intelligence.commercial.usage_ledger import (
     UsageReservation,
     _validate_key,
 )
+from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
@@ -25,7 +26,7 @@ def _now() -> datetime:
 
 
 class PostgresUsageLedger:
-    """Durable multi-worker ledger; requires schema migration version 3."""
+    """Durable multi-worker ledger; requires the latest PostgreSQL schema version."""
 
     def __init__(self, dsn: str, *, min_size: int = 1, max_size: int = 10) -> None:
         if not dsn or dsn != dsn.strip():
@@ -44,7 +45,7 @@ class PostgresUsageLedger:
                 ).fetchone()
                 if (
                     row is None or row["reservations"] is None or row["events"] is None
-                    or version is None or version["version"] < 3
+                    or version is None or version["version"] < LATEST_SCHEMA_VERSION
                 ):
                     raise RuntimeError("PostgreSQL usage schema missing; run migration job")
         except Exception:
