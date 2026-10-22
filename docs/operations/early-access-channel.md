@@ -16,7 +16,7 @@ Configure these in the Tinlyt Vercel project, initially for Preview only:
 - `EARLY_ACCESS_NOTIFY_EMAIL`: monitored team inbox that should receive requests.
 - `EARLY_ACCESS_ALLOWED_ORIGIN`: `https://tinlyt.tinlance.com`.
 
-The public Turnstile site key is configured in `apps/web/runtime-config.js` as `earlyAccessTurnstileSiteKey`; it is not a secret. Never commit any secret to the repository or expose one in browser code.
+Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` as a Vercel build environment variable. The frontend build injects this public site key into the generated `dist/runtime-config.js`; do not edit the source runtime config for each deployment. Use separate Turnstile widgets/keys for Preview and Production, and restrict each widget to the matching hostname. The site key is public; the Siteverify secret is server-only.
 
 ## Database setup
 
@@ -25,7 +25,7 @@ Review `supabase/migrations/20261022072400_early_access_requests.sql` and apply 
 ## Activation checklist
 
 1. Confirm the Supabase project and apply the migration.
-2. Create a Cloudflare Turnstile widget for `tinlyt.tinlance.com`; set its site key in runtime config and its secret in Vercel.
+2. Create a Cloudflare Turnstile widget for the relevant environment hostname. Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` at build time and `TURNSTILE_SECRET_KEY` server-side; the Siteverify hostname must match `EARLY_ACCESS_ALLOWED_ORIGIN`.
 3. Confirm the Resend sender identity and monitored notification inbox; add the server-only API key to Vercel.
 4. Set all variables for Preview and verify valid, invalid, duplicate, honeypot, expired-token, missing-config, database-failure and email-failure behavior.
 5. Review the privacy notice with the responsible legal entity, controller contact, retention period, purpose and rights contact completed.
