@@ -154,6 +154,11 @@ def test_postgres_outbox_enforces_idempotency_leases_and_scope() -> None:
     key = f"outbox-key-{uuid.uuid4().hex}"
     payload = {"schema_version": "1.0.0", "statement": "Source-backed test evidence"}
     try:
+        with outbox._pool.connection() as conn:
+            schema = conn.execute(
+                "SELECT max(version) AS version FROM twi_schema_migrations"
+            ).fetchone()
+        assert schema is not None and schema["version"] == 3
         first, replayed = outbox.enqueue(
             tenant_ref=tenant_ref, subject_ref=subject_ref, idempotency_key=key,
             payload=payload, request_id="postgres-outbox-test", traceparent=None,
