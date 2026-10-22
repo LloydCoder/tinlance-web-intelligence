@@ -168,6 +168,7 @@ test("contact and demo pages load runtime config before the early-access handler
     assert.ok(html.indexOf("/runtime-config.js") < html.indexOf("/early-access.js"));
     assert.match(html, /name="consent"[^>]*required/);
     assert.match(html, /name="marketingOptIn"/);
+    assert.match(html, /type="submit" disabled/);
   }
 });
 
