@@ -192,3 +192,17 @@ test("Supabase migration keeps intake private and rate-limit RPC least-privilege
   assert.doesNotMatch(migration, /security definer/i);
   assert.doesNotMatch(migration, /grant all on table public\.early_access_requests/i);
 });
+
+
+test("early-access endpoint rejects insecure Supabase URLs and weak rate-limit salts", async () => {
+  await withEnv({ ...configuredEnv, SUPABASE_URL: "http://127.0.0.1:5432" }, async () => {
+    const res = responseRecorder();
+    await handler(request({}), res);
+    assert.equal(res.statusCode, 503);
+  });
+  await withEnv({ ...configuredEnv, EARLY_ACCESS_RATE_LIMIT_SALT: "short" }, async () => {
+    const res = responseRecorder();
+    await handler(request({}), res);
+    assert.equal(res.statusCode, 503);
+  });
+});
