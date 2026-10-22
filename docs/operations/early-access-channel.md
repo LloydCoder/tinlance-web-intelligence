@@ -6,7 +6,7 @@ The public static site submits JSON to the Vercel serverless endpoint at `/api/e
 
 ## Required Vercel environment variables
 
-- `EARLY_ACCESS_ENABLED`: build-time feature flag. Keep `false` until the intended Supabase database is migrated, server-only secrets and Resend sender/inbox are verified, and the privacy notice is approved. Only set `true` with a valid site key after all launch gates pass.
+- `EARLY_ACCESS_ENABLED`: feature flag enforced by both the static build and the server endpoint. Keep `false` in Production until the intended Supabase database is migrated, server-only secrets and Resend sender/inbox are verified, privacy is approved, and Preview passes the full test matrix. A disabled flag must reject direct API submissions as well as hide the form.
 
 Configure these in the Tinlyt Vercel project, initially for Preview only:
 
@@ -18,22 +18,38 @@ The endpoint sends modern `sb_secret_` keys only in the `apikey` header because 
 - `RESEND_API_KEY`: server-only Resend API key.
 - `RESEND_FROM_EMAIL`: sender on a verified Resend domain, only after the sender identity is confirmed.
 - `EARLY_ACCESS_NOTIFY_EMAIL`: monitored team inbox that should receive requests.
-- `EARLY_ACCESS_ALLOWED_ORIGIN`: `https://tinlyt.tinlance.com`.
+- `EARLY_ACCESS_ALLOWED_ORIGIN`: exact HTTPS origin of the tested deployment, with no path or trailing slash. Use a stable Preview hostname for Preview and `https://tinlyt.tinlance.com` for Production.
+- `EARLY_ACCESS_RATE_LIMIT_SALT`: server-only cryptographically random secret of at least 32 characters. Never commit it, expose it to the browser, or reuse a password.
+- `EARLY_ACCESS_PRIVACY_NOTICE_VERSION`: non-empty identifier for the exact approved privacy notice shown to applicants; do not activate intake until the notice and version match.
 
-Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` as a Vercel build environment variable. The frontend build injects this public site key into the generated `dist/runtime-config.js`; do not edit the source runtime config for each deployment. Use separate Turnstile widgets/keys for Preview and Production, and restrict each widget to the matching hostname. The site key is public; the Siteverify secret is server-only. The form remains disabled unless `EARLY_ACCESS_ENABLED=true` and a site key is present in the same build.
+Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` as a Vercel build environment variable. The frontend build injects this public site key into the generated `dist/runtime-config.js`; do not edit the source runtime config for each deployment. Use separate Turnstile widgets/keys for Preview and Production, and restrict each widget to the matching hostname. The site key is public; the Siteverify secret is server-only. The form remains disabled unless `EARLY_ACCESS_ENABLED=true` and a site key is present in the same build; the API also checks `EARLY_ACCESS_ENABLED` server-side so direct POST requests cannot bypass a disabled form.
 
 ## Database setup
 
 Review `supabase/migrations/20261022072400_early_access_requests.sql` and apply it only to the database explicitly selected for Tinlyt. It is intentionally separate from `db/migrations/`, which belongs to the core TWI service and its packaged migration set. The migration enables RLS, revokes browser-role privileges, gives the server role only the insert/read-ID/update-delivery-status permissions it needs, and keeps rate-limit state in the non-exposed `tinlyt_private` schema. The rate-limit RPC is `SECURITY INVOKER` and executable only by `service_role`. Do not apply it to the currently connected Supabase project until that project is confirmed as the Tinlyt data store. Verify the Data API is enabled and `public` is an exposed schema for the server-side PostgREST calls; public browser roles still have no grants on the intake table.
 
-## Activation checklist
+## Preview-first activation checklist
 
-1. Confirm the Supabase project and apply the migration.
-2. Create a Cloudflare Turnstile widget for the relevant environment hostname. Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` at build time and `TURNSTILE_SECRET_KEY` server-side; the Siteverify hostname must match `EARLY_ACCESS_ALLOWED_ORIGIN`.
-3. Confirm the Resend sender identity and monitored notification inbox; add the server-only API key to Vercel.
-4. Set all variables for Preview and verify valid, invalid, duplicate, honeypot, expired-token, missing-config, database-failure and email-failure behavior.
-5. Review the privacy notice with the responsible legal entity, controller contact, retention period, purpose and rights contact completed.
-6. Only after preview evidence is green, configure Production variables and deploy. Then submit a real test request and verify the database row, team notification and applicant confirmation.
+1. **Confirm project identity before touching the database.** Verify the dedicated Supabase project name/ref, organization, region, active/healthy status, and intended purpose. Do not apply the migration to a generic/shared project or the core TWI database. Record metadata, not credentials, in the deployment evidence ledger.
+2. **Apply and verify the migration.** Apply `supabase/migrations/20261022072400_early_access_requests.sql` only to the confirmed dedicated project. Verify `public.early_access_requests`, `tinlyt_private.early_access_rate_limits`, and `public.consume_early_access_rate_limit`; inspect migration history, RLS and grants; run Supabase security and performance advisors.
+3. **Approve privacy notice.** Complete the controller/legal entity, contact address, purpose, lawful basis, retention period, rights-request channel, processors, and any international-transfer disclosures. Set `EARLY_ACCESS_PRIVACY_NOTICE_VERSION` to the exact notice version.
+4. **Configure Preview only.** Use a stable Preview hostname and matching Turnstile widget/site key and server-side secret. Set `EARLY_ACCESS_ENABLED=true` and `EARLY_ACCESS_TURNSTILE_SITE_KEY` only for Preview. Configure Preview-only Supabase credentials and Resend settings; do not point Preview at production lead data. Never expose secret/service-role keys, Turnstile secrets, Resend keys, or the rate-limit salt in browser code or `NEXT_PUBLIC_` variables.
+5. **Test the positive path.** Submit through the actual Preview form. Verify success, exactly one row with the expected consent/privacy version, team notification, applicant confirmation, and persisted delivery statuses.
+6. **Test duplicate handling.** Submit the same normalized email with a fresh valid Turnstile token. Verify generic success on unique-constraint conflict and no second row.
+7. **Test rate limiting.** With controlled test identities and fresh valid tokens, verify the sixth request in a 15-minute window receives HTTP 429 and `Retry-After`; verify limiter failure is fail-closed. Do not load-test Production.
+8. **Test bot and validation paths.** Verify invalid/expired tokens and hostname mismatch are rejected; honeypot submissions create no row; invalid origin, wrong content type, missing consent, malformed fields and oversized payloads are rejected.
+9. **Test failures.** Missing config fails closed with 503; database failure never returns success; team-notification and applicant-confirmation failures are recorded independently while the lead remains stored; failure to persist delivery status is visible in logs/alerts.
+10. **Review and sign off.** Attach timestamped, redacted evidence for every test path, review Supabase advisors and Vercel logs, and get explicit owner approval before Production activation.
+
+Vercel environment variables are scoped to Production, Preview, and Development and are injected into a deployment; changing them requires a new deployment. Verify variable names and environment scope without printing values. Use separate Preview and Production Turnstile widgets/secrets. The site key is public; the Siteverify secret is server-only.
+
+## Lead review operations
+
+Initially review leads in the dedicated Supabase dashboard: Table Editor → `public.early_access_requests`. Restrict access to the owner and explicitly authorized reviewers; use individual accounts, MFA/passkeys where available, least privilege, and prompt access removal. Never share the owner account or expose a service-role key to a browser. Review `status`, `created_at`, `notification_status`, and `confirmation_status`. A custom admin UI is deferred unless a concrete workflow need is established; if built later, it must use authenticated server-side access, authorization checks and audit logging.
+
+## Production activation
+
+Keep `EARLY_ACCESS_ENABLED=false` in Production until Preview tests pass, the privacy notice is approved, the dedicated project is verified, email delivery is verified, and the owner explicitly approves launch. Configure Production-scoped credentials and a separate Production Turnstile widget/secret. Confirm the Production origin is exactly `https://tinlyt.tinlance.com`, then redeploy. Verify the live form is enabled and submit one controlled test request; confirm the row and both email outcomes before accepting public leads. If any check fails, disable intake and investigate.
 
 ## Data handling
 

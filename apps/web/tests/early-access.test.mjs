@@ -8,6 +8,7 @@ import handler from "../api/early-access.js";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const allowedOrigin = "https://tinlyt.tinlance.com";
 const configuredEnv = {
+  EARLY_ACCESS_ENABLED: "true",
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_SECRET_KEY: "test-server-secret",
   SUPABASE_SERVICE_ROLE_KEY: "",
@@ -66,6 +67,30 @@ test("early-access endpoint rejects methods other than POST", async () => {
   assert.equal(res.headers["Cache-Control"], "no-store");
 });
 
+
+test("early-access endpoint remains disabled server-side when the feature flag is off", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalled = false;
+  globalThis.fetch = async () => { fetchCalled = true; throw new Error("network must not be called"); };
+  try {
+    await withEnv({ ...configuredEnv, EARLY_ACCESS_ENABLED: "false" }, async () => {
+      const res = responseRecorder();
+      await handler(request({
+        name: "Test Person",
+        email: "person@example.com",
+        useCase: "web-research",
+        consent: true,
+        turnstileToken: "test-token"
+      }), res);
+      assert.equal(res.statusCode, 503);
+      assert.match(res.body.error, /not enabled/i);
+      assert.equal(fetchCalled, false);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("early-access endpoint rejects cross-origin requests", async () => {
   const res = responseRecorder();
   await handler(request({}, { origin: "https://untrusted.example" }), res);
@@ -88,7 +113,7 @@ test("early-access endpoint fails closed when server configuration is missing", 
   const names = [
     "SUPABASE_URL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY",
     "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL",
-    "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT",
+    "EARLY_ACCESS_ENABLED", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT",
     "EARLY_ACCESS_PRIVACY_NOTICE_VERSION"
   ];
   const original = Object.fromEntries(names.map((name) => [name, process.env[name]]));

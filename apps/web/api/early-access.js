@@ -60,9 +60,14 @@ export default async function handler(req, res) {
   }
 
   const supabaseKeyName = process.env.SUPABASE_SECRET_KEY ? "SUPABASE_SECRET_KEY" : "SUPABASE_SERVICE_ROLE_KEY";
-  const required = ["SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT", "EARLY_ACCESS_PRIVACY_NOTICE_VERSION"];
+  const required = ["EARLY_ACCESS_ENABLED", "SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT", "EARLY_ACCESS_PRIVACY_NOTICE_VERSION"];
   if (required.some((key) => !process.env[key])) {
     return json(res, 503, { error: "Early access requests are not configured yet. Please try again later." });
+  }
+  // Enforce the feature flag at the server boundary as well as in the static UI.
+  // A disabled form must not leave a directly callable intake endpoint.
+  if (process.env.EARLY_ACCESS_ENABLED !== "true") {
+    return json(res, 503, { error: "Early access requests are not enabled." });
   }
   if (process.env.EARLY_ACCESS_RATE_LIMIT_SALT.length < 32) {
     return json(res, 503, { error: "Early access request protection is not configured correctly." });
