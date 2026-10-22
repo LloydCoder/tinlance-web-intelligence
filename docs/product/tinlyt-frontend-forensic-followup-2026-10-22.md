@@ -37,6 +37,7 @@ The fix makes the hash the source of truth, synchronizes on initial load and `ha
 - [x] Navigation derives active state and breadcrumb from the URL hash.
 - [x] Regression test added for deep links/history synchronization.
 - [x] F0 document marked as historical.
-- [ ] Frontend and repository CI pass on the PR head.
+- [x] Frontend quality gates passed on PR head `b8542e96de36304a5984dbfed622b0fde844638c` (run [#39733743096](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39733743096)).
+- [x] Full repository CI passed on the same PR head, including Python 3.12/3.13, browser container isolation, and reproducible release artifact validation (run [#39733742966](https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/39733742966)).
 - [ ] Changes merged only after checks pass.
 - [ ] Post-merge Frontend and repository CI pass on the exact main commit.
