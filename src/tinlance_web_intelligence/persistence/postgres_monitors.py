@@ -8,12 +8,12 @@ import uuid
 from typing import Any
 
 from psycopg import Connection
-from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
 )
-from psycopg.types.json import Jsonb
 
 from tinlance_web_intelligence.monitors.model import (
     BaselineConflictError,
