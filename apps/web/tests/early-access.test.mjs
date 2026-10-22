@@ -170,3 +170,25 @@ test("contact and demo pages load runtime config before the early-access handler
     assert.match(html, /name="marketingOptIn"/);
   }
 });
+
+
+test("build injects only the public Turnstile site key into generated runtime config", async () => {
+  const build = await readFile(path.join(root, "scripts/build.mjs"), "utf8");
+  const runtime = await readFile(path.join(root, "runtime-config.js"), "utf8");
+  assert.match(build, /process\.env\.EARLY_ACCESS_TURNSTILE_SITE_KEY/);
+  assert.match(build, /JSON\.stringify\(siteKey\)/);
+  assert.match(runtime, /earlyAccessTurnstileSiteKey: ""/);
+  assert.doesNotMatch(runtime, /TURNSTILE_SECRET_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY/);
+});
+
+test("Supabase migration keeps intake private and rate-limit RPC least-privileged", async () => {
+  const migrationPath = path.resolve(root, "../../supabase/migrations/20261022072400_early_access_requests.sql");
+  const migration = await readFile(migrationPath, "utf8");
+  assert.match(migration, /enable row level security/i);
+  assert.match(migration, /revoke all on table public\.early_access_requests from public, anon, authenticated/i);
+  assert.match(migration, /security invoker/i);
+  assert.match(migration, /revoke all on function public\.consume_early_access_rate_limit[\s\S]*?from public, anon, authenticated/i);
+  assert.match(migration, /grant update \(notification_status, confirmation_status, updated_at\)/i);
+  assert.doesNotMatch(migration, /security definer/i);
+  assert.doesNotMatch(migration, /grant all on table public\.early_access_requests/i);
+});
