@@ -27,6 +27,15 @@ test('primary navigation and main landmark are labelled', () => {
   assert.match(html, /aria-current="page"/);
 });
 
+test('workspace navigation stays synchronized with deep links and browser history', () => {
+  assert.match(js, /function syncWorkspaceNavigation\(\)/);
+  assert.match(js, /window\.location\.hash \|\| '#overview'/);
+  assert.match(js, /window\.addEventListener\('hashchange', syncWorkspaceNavigation\)/);
+  assert.match(js, /link\.classList\.toggle\('is-active', isActive\)/);
+  assert.match(js, /if \(isActive\) link\.setAttribute\('aria-current', 'page'\)/);
+  assert.match(js, /breadcrumbCurrent\.textContent = label\.textContent\.trim\(\)/);
+});
+
 test('live investigation controls are disabled until authentication completes', () => {
   assert.match(html, /id="investigation-form"/);
   assert.match(html, /id="run-lookup-form"/);
