@@ -7,6 +7,7 @@ const json = (res, status, body) => {
 };
 const text = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const allowedUseCases = new Set(["web-research", "competitive-intelligence", "due-diligence", "investigations", "data-extraction", "agent-integration", "other"]);
 
 async function verifyTurnstile(token, secret, remoteIp) {
   const body = new URLSearchParams({ secret, response: token });
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
   const consent = body.consent === true;
   const marketingOptIn = body.marketingOptIn === true;
   const turnstileToken = text(body.turnstileToken, 4096);
-  if (name.length < 2 || !emailPattern.test(email) || !useCase || !consent || !turnstileToken) {
+  if (name.length < 2 || !emailPattern.test(email) || !allowedUseCases.has(useCase) || !consent || !turnstileToken) {
     return json(res, 400, { error: "Check the required fields and complete the anti-bot check." });
   }
 
@@ -137,7 +138,7 @@ export default async function handler(req, res) {
         apikey: supabaseKey, Authorization: "Bearer " + supabaseKey,
         "Content-Type": "application/json", Prefer: "return=minimal"
       },
-      body: JSON.stringify({ notification_status: notificationStatus, confirmation_status: confirmationStatus }),
+      body: JSON.stringify({ notification_status: notificationStatus, confirmation_status: confirmationStatus, updated_at: new Date().toISOString() }),
       signal: AbortSignal.timeout(5000)
     });
   } catch {
