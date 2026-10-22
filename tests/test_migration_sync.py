@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from scripts.check_migration_sync import validate_migration_sync
 
 
-def test_migration_sync_rejects_extra_packaged_files(tmp_path) -> None:
+def test_migration_sync_rejects_extra_packaged_files(tmp_path: Path) -> None:
     canonical = tmp_path / "canonical"
     packaged = tmp_path / "packaged"
     canonical.mkdir()
@@ -18,7 +20,7 @@ def test_migration_sync_rejects_extra_packaged_files(tmp_path) -> None:
         validate_migration_sync(canonical, packaged)
 
 
-def test_migration_sync_rejects_missing_or_different_copies(tmp_path) -> None:
+def test_migration_sync_rejects_missing_or_different_copies(tmp_path: Path) -> None:
     canonical = tmp_path / "canonical"
     packaged = tmp_path / "packaged"
     canonical.mkdir()
