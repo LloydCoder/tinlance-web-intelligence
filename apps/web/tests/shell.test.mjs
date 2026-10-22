@@ -250,7 +250,7 @@ test('public pages share the same navigation and footer shell', () => {
     assert.match(page, /<header class="site-header">/);
     assert.match(page, /aria-label="Main navigation"/);
     assert.match(page, /class="site-nav-resources"/);
-    assert.match(page, /href="\/app">Open workspace/);
+    assert.match(page, /href="\/features">Explore platform/);
     assert.match(page, /<footer>/);
     assert.match(page, /aria-label="Footer navigation"/);
     assert.match(page, /class="footer-meta"/);
