@@ -5,6 +5,8 @@
 **Product:** Tinlyt  
 **Engineering identity:** Tinlance Web Intelligence (TWI)  
 **Audit baseline:** `main` at the repository state inspected on 2026-10-20.  
+**Historical snapshot notice (updated 2026-10-22):** This document records the F0 state before the frontend was introduced and is not a description of the current repository. Later phases created `apps/web/`, static marketing/workspace pages, a typed API client, OAuth PKCE, frontend tests, build/release checks, and a Playwright accessibility workflow. Use `docs/product/tinlyt-frontend-contract.md`, current source, and the latest F-phase audits for current behavior. The original findings below are retained as historical evidence of the initial gap.  
+
 **Scope:** frontend presence, monorepo boundaries, existing API contracts, CI coverage, and implementation risks.
 
 ## Executive finding
