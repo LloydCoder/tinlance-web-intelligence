@@ -6,9 +6,9 @@ from hashlib import sha256
 
 from tinlance_web_intelligence.artifacts.store import (
     ArtifactRecord,
+    redact_artifact_source_url,
     validate_artifact_digest,
     validate_artifact_metadata,
-    redact_artifact_source_url,
 )
 from tinlance_web_intelligence.persistence.migrations import LATEST_SCHEMA_VERSION
 from tinlance_web_intelligence.persistence.postgres_pool import (
@@ -89,7 +89,10 @@ class PostgresArtifactStore:
                 "VALUES (%s, %s, %s, %s, %s, %s, %s) "
                 "ON CONFLICT (tenant_id, sha256, source_url_hash, captured_at) DO NOTHING "
                 "RETURNING tenant_id, sha256, byte_size, content_type, source_url, captured_at",
-                (tenant_id, digest, source_hash, safe_source_url, captured_at, content_type, len(body)),
+                (
+                    tenant_id, digest, source_hash, safe_source_url, captured_at,
+                    content_type, len(body),
+                ),
             ).fetchone()
             if row is None:
                 row = conn.execute(
