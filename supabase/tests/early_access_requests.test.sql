@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(25);
 
 select has_table('public', 'early_access_requests', 'early-access table exists');
 select ok(
