@@ -16,8 +16,8 @@ select ok(not has_table_privilege('authenticated', 'public.early_access_requests
 select ok(not has_table_privilege('authenticated', 'public.early_access_requests', 'UPDATE'), 'authenticated cannot update requests');
 select ok(not has_table_privilege('authenticated', 'public.early_access_requests', 'DELETE'), 'authenticated cannot delete requests');
 
-select ok(not has_schema_privilege('anon', 'private', 'USAGE'), 'anon cannot use the private schema');
-select ok(not has_schema_privilege('authenticated', 'private', 'USAGE'), 'authenticated cannot use the private schema');
+select ok(not has_schema_privilege('anon', 'tinlyt_private', 'USAGE'), 'anon cannot use the private schema');
+select ok(not has_schema_privilege('authenticated', 'tinlyt_private', 'USAGE'), 'authenticated cannot use the private schema');
 select ok(not has_function_privilege('anon', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'anon cannot execute rate-limit RPC');
 select ok(not has_function_privilege('authenticated', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'authenticated cannot execute rate-limit RPC');
 select ok(has_function_privilege('service_role', 'public.consume_early_access_rate_limit(text,integer,integer)', 'EXECUTE'), 'server role can execute rate-limit RPC');
