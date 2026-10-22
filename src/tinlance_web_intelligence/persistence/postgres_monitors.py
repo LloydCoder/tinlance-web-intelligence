@@ -10,11 +10,6 @@ from typing import Any
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from tinlance_web_intelligence.persistence.postgres_pool import (
-    acquire_pool,
-    release_pool,
-)
-
 from tinlance_web_intelligence.monitors.model import (
     BaselineConflictError,
     IdempotencyConflictError,
@@ -23,6 +18,10 @@ from tinlance_web_intelligence.monitors.model import (
     MonitorRunStatus,
     MonitorStatus,
     normalize_monitor_policy,
+)
+from tinlance_web_intelligence.persistence.postgres_pool import (
+    acquire_pool,
+    release_pool,
 )
 
 
