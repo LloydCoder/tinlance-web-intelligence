@@ -18,13 +18,19 @@
     if (!window.turnstile || widgetId !== null) return;
     const container = form.querySelector("[data-turnstile]");
     if (!container) return;
-    widgetId = window.turnstile.render(container, {
+    try {
+      widgetId = window.turnstile.render(container, {
       sitekey: siteKey,
       callback: (token) => { tokenField.value = token; },
       "expired-callback": () => { tokenField.value = ""; },
       "error-callback": () => { tokenField.value = ""; showStatus("The anti-bot check failed. Please try again.", "error"); }
-    });
-    showStatus("Complete the anti-bot check, then submit your request.", "ready");
+      });
+      submit.disabled = false;
+      showStatus("Complete the anti-bot check, then submit your request.", "ready");
+    } catch {
+      submit.disabled = true;
+      showStatus("The anti-bot check could not initialize. Please refresh and try again.", "error");
+    }
   };
   const loadTurnstile = () => {
     if (!siteKey) {
@@ -40,7 +46,7 @@
     script.defer = true;
     script.dataset.turnstileLoader = "true";
     script.onload = renderTurnstile;
-    script.onerror = () => showStatus("The anti-bot check could not load. Please refresh and try again.", "error");
+    script.onerror = () => { submit.disabled = true; showStatus("The anti-bot check could not load. Please refresh and try again.", "error"); };
     document.head.append(script);
   };
 
