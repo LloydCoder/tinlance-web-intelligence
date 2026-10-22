@@ -1,7 +1,8 @@
 """Unit tests for the process-local PostgreSQL pool registry."""
 from __future__ import annotations
 
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pytest
 
