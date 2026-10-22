@@ -251,7 +251,9 @@ class PostgresMonitorRepository:
             return bool(row is not None and row["ok"] == 1)
 
     def close(self) -> None:
-        release_pool(self._pool)
+        if not getattr(self, "_pool_released", False):
+            self._pool_released = True
+            release_pool(self._pool)
 
     @staticmethod
     def _to_monitor(row: dict[str, Any]) -> Monitor:
