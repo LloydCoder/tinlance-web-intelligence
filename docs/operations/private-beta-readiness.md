@@ -51,4 +51,4 @@ If a box is unchecked or lacks evidence, private beta remains NOT CERTIFIED. Pas
 - [ ] Bind Platform, World Intelligence and TSIC contracts to exact reviewed consumer revisions.
 - [ ] Confirm collector, paging route, on-call owner and a witnessed alert/rollback exercise.
 
-The current W15 pack records a confirmed Platform monitor-tool integration failure, a pinned passing World Intelligence schema check, TSIC conformance as `not_evidenced`, and additional external gates as `not_evidenced`. It reports `ready=false`.
+The current Platform main revision `c5a080c1fb4df68e45070f8cddfc30bf81edd7bb` registers all six monitor operations and evidence export; its CI, security, supply-chain, and certification workflows pass. The TWI consumer snapshot and W15 consumer-approval gate are refreshed to that immutable revision. The W15 pack still reports `ready=false`: TSIC conformance and deployment, branch-governance, SLO/on-call, privacy/retention, and live-quality/GA gates remain `not_evidenced`.
