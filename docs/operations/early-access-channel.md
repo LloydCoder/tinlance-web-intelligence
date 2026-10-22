@@ -37,4 +37,4 @@ The form requests only information needed to review a product evaluation. Market
 
 ## Operational limitation
 
-The endpoint relies on Turnstile plus a honeypot for public anti-abuse protection. Add a durable distributed rate limiter and alerting before scaling public traffic. Email is best-effort; database storage is authoritative.
+The endpoint relies on server-verified Turnstile, a honeypot, and a database-backed limit of five requests per hashed client key per 15-minute window. The rate-limit RPC fails closed if unavailable. Add alerting and a retention/cleanup policy for rate-limit records before scaling public traffic. Email is best-effort; database storage is authoritative.
