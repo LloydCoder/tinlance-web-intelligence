@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   if (origin && origin !== allowedOrigin) return json(res, 403, { error: "Request origin not allowed." });
 
   const supabaseKeyName = process.env.SUPABASE_SECRET_KEY ? "SUPABASE_SECRET_KEY" : "SUPABASE_SERVICE_ROLE_KEY";
-  const required = ["SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY"];
+  const required = ["SUPABASE_URL", supabaseKeyName, "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT"];
   if (required.some((key) => !process.env[key])) {
     return json(res, 503, { error: "Early access requests are not configured yet. Please try again later." });
   }
@@ -79,6 +79,19 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.SUPABASE_URL.replace(/\/$/, "");
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const emailHash = createHash("sha256").update(email).digest("hex");
+  const rateKey = createHash("sha256").update(process.env.EARLY_ACCESS_RATE_LIMIT_SALT + ":" + (remoteIp || email)).digest("hex");
+  try {
+    const rateResponse = await fetch(supabaseUrl + "/rest/v1/rpc/consume_early_access_rate_limit", {
+      method: "POST",
+      headers: { apikey: supabaseKey, Authorization: "Bearer " + supabaseKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_key_hash: rateKey, p_limit: 5, p_window_seconds: 900 }),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!rateResponse.ok) throw new Error("Rate-limit service returned " + rateResponse.status);
+    if (await rateResponse.json() !== true) return json(res, 429, { error: "Too many requests. Please wait before trying again." });
+  } catch {
+    return json(res, 503, { error: "Request protection is temporarily unavailable. Please try again shortly." });
+  }
   const record = {
     name, email, email_hash: emailHash, company: company || null, role: role || null,
     use_case: useCase, description: description || null, consent_at: new Date().toISOString(),
