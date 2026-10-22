@@ -6,6 +6,8 @@ The public static site submits JSON to the Vercel serverless endpoint at `/api/e
 
 ## Required Vercel environment variables
 
+- `EARLY_ACCESS_ENABLED`: build-time feature flag. Keep `false` until the intended Supabase database is migrated, server-only secrets and Resend sender/inbox are verified, and the privacy notice is approved. Only set `true` with a valid site key after all launch gates pass.
+
 Configure these in the Tinlyt Vercel project, initially for Preview only:
 
 - `SUPABASE_URL`: URL of the database project intentionally selected for Tinlyt.
@@ -18,7 +20,7 @@ The endpoint sends modern `sb_secret_` keys only in the `apikey` header because 
 - `EARLY_ACCESS_NOTIFY_EMAIL`: monitored team inbox that should receive requests.
 - `EARLY_ACCESS_ALLOWED_ORIGIN`: `https://tinlyt.tinlance.com`.
 
-Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` as a Vercel build environment variable. The frontend build injects this public site key into the generated `dist/runtime-config.js`; do not edit the source runtime config for each deployment. Use separate Turnstile widgets/keys for Preview and Production, and restrict each widget to the matching hostname. The site key is public; the Siteverify secret is server-only.
+Set `EARLY_ACCESS_TURNSTILE_SITE_KEY` as a Vercel build environment variable. The frontend build injects this public site key into the generated `dist/runtime-config.js`; do not edit the source runtime config for each deployment. Use separate Turnstile widgets/keys for Preview and Production, and restrict each widget to the matching hostname. The site key is public; the Siteverify secret is server-only. The form remains disabled unless `EARLY_ACCESS_ENABLED=true` and a site key is present in the same build.
 
 ## Database setup
 
