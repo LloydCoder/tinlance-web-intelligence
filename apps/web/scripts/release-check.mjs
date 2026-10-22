@@ -56,11 +56,11 @@ const appHtml = await readFile(path.join(distRoot, 'app.html'), 'utf8');
 const manifest = JSON.parse(await readFile(path.join(distRoot, 'manifest.webmanifest'), 'utf8'));
 assert.equal(manifest.start_url, '/app', 'web app manifest must launch the workspace');
 assert.equal(manifest.theme_color, '#0B1220', 'web app manifest must use the approved Tinlyt theme');
-assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
+assert.match(html, /href=["']\/features["']/, 'landing page must direct public visitors to product capabilities');
 assert.match(appHtml, /(?:src|href)=["']\/runtime-config\.js["']/, 'workspace must load runtime configuration');
 assert.match(html, /rel=["']manifest["']/, 'landing page must link to the web app manifest');
 assert.match(appHtml, /(?:src|href)=["']\/src\/main\.js["']/, 'workspace must load app entry point');
-assert.match(html, /href=["']\/app["']/, 'landing page must link to workspace');
+assert.match(html, /href=["']\/features["']/, 'landing page must direct public visitors to product capabilities');
 const jsRoot = path.join(distRoot, 'src');
 const jsFiles = (await collectFiles(jsRoot)).filter((file) => file.endsWith('.js'));
 assert.ok(jsFiles.length > 0, 'build must emit JavaScript modules');
@@ -75,6 +75,12 @@ for (const file of jsFiles) {
 const runtimeConfig = await readFile(path.join(distRoot, 'runtime-config.js'), 'utf8');
 assert.doesNotMatch(runtimeConfig, /client_secret|access_token|refresh_token|api[_-]?key\s*[:=]|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i,
   'public runtime config must not contain common privileged credential patterns');
+assert.match(runtimeConfig, /earlyAccessEnabled: false/, 'early access must remain disabled unless explicitly activated');
+const builtHome = await readFile(path.join(distRoot, 'index.html'), 'utf8');
+assert.match(builtHome, /class="nav-cta" href="\/features">Explore platform/, 'disabled early access must fall back to the honest platform CTA');
+assert.doesNotMatch(builtHome, /class="nav-cta" href="\/contact">Request early access/, 'disabled early access must not advertise a disabled request form');
+assert.match(builtHome, /class="button primary" href="\/features">Explore platform/, 'disabled early access must use the platform as the primary CTA');
+assert.doesNotMatch(builtHome, /class="button primary" href="\/contact">Request early access/, 'disabled early access must not leave the hero CTA pointing to an inactive form');
 
 const server = http.createServer(async (request, response) => {
   try {
