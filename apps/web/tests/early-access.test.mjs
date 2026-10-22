@@ -1,6 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import handler from "../api/early-access.js";
+
+const root = fileURLToPath(new URL("../", import.meta.url));
+const allowedOrigin = "https://tinlyt.tinlance.com";
+const configuredEnv = {
+  SUPABASE_URL: "https://project.supabase.co",
+  SUPABASE_SECRET_KEY: "test-server-secret",
+  SUPABASE_SERVICE_ROLE_KEY: "",
+  RESEND_API_KEY: "test-resend-key",
+  RESEND_FROM_EMAIL: "Tinlyt <hello@tinlance.com>",
+  EARLY_ACCESS_NOTIFY_EMAIL: "team@tinlance.com",
+  TURNSTILE_SECRET_KEY: "test-turnstile-secret",
+  EARLY_ACCESS_RATE_LIMIT_SALT: "test-only-high-entropy-rate-limit-salt-0123456789",
+  EARLY_ACCESS_PRIVACY_NOTICE_VERSION: "test-approved-notice-v1",
+  EARLY_ACCESS_ALLOWED_ORIGIN: allowedOrigin
+};
 
 function responseRecorder() {
   return {
@@ -13,26 +31,71 @@ function responseRecorder() {
   };
 }
 
+async function withEnv(values, run) {
+  const names = new Set([...Object.keys(values), ...Object.keys(configuredEnv)]);
+  const original = Object.fromEntries([...names].map((name) => [name, process.env[name]]));
+  for (const name of names) delete process.env[name];
+  Object.assign(process.env, values);
+  try {
+    return await run();
+  } finally {
+    for (const name of names) {
+      if (original[name] === undefined) delete process.env[name];
+      else process.env[name] = original[name];
+    }
+  }
+}
+
+function request(body = {}, headers = {}) {
+  return {
+    method: "POST",
+    headers: {
+      origin: allowedOrigin,
+      "content-type": "application/json",
+      ...headers
+    },
+    body
+  };
+}
+
 test("early-access endpoint rejects methods other than POST", async () => {
   const res = responseRecorder();
   await handler({ method: "GET", headers: {} }, res);
   assert.equal(res.statusCode, 405);
   assert.equal(res.headers.Allow, "POST");
+  assert.equal(res.headers["Cache-Control"], "no-store");
 });
 
 test("early-access endpoint rejects cross-origin requests", async () => {
   const res = responseRecorder();
-  await handler({ method: "POST", headers: { origin: "https://untrusted.example" }, body: {} }, res);
+  await handler(request({}, { origin: "https://untrusted.example" }), res);
   assert.equal(res.statusCode, 403);
 });
 
-test("early-access endpoint fails closed when secrets are not configured", async () => {
-  const names = ["SUPABASE_URL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL", "TURNSTILE_SECRET_KEY"];
+test("early-access endpoint rejects requests without an origin", async () => {
+  const res = responseRecorder();
+  await handler(request({}, { origin: undefined }), res);
+  assert.equal(res.statusCode, 403);
+});
+
+test("early-access endpoint requires JSON", async () => {
+  const res = responseRecorder();
+  await handler(request({}, { "content-type": "text/plain" }), res);
+  assert.equal(res.statusCode, 415);
+});
+
+test("early-access endpoint fails closed when server configuration is missing", async () => {
+  const names = [
+    "SUPABASE_URL", "SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY",
+    "RESEND_API_KEY", "RESEND_FROM_EMAIL", "EARLY_ACCESS_NOTIFY_EMAIL",
+    "TURNSTILE_SECRET_KEY", "EARLY_ACCESS_RATE_LIMIT_SALT",
+    "EARLY_ACCESS_PRIVACY_NOTICE_VERSION"
+  ];
   const original = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   for (const name of names) delete process.env[name];
   try {
     const res = responseRecorder();
-    await handler({ method: "POST", headers: { origin: "https://tinlyt.tinlance.com" }, body: {} }, res);
+    await handler(request({}), res);
     assert.equal(res.statusCode, 503);
     assert.match(res.body.error, /not configured/i);
   } finally {
@@ -40,5 +103,70 @@ test("early-access endpoint fails closed when secrets are not configured", async
       if (original[name] === undefined) delete process.env[name];
       else process.env[name] = original[name];
     }
+  }
+});
+
+test("early-access endpoint rejects an unsupported use case before network access", async () => {
+  await withEnv(configuredEnv, async () => {
+    const res = responseRecorder();
+    await handler(request({
+      name: "Test Person",
+      email: "person@example.com",
+      useCase: "admin-access",
+      consent: true,
+      turnstileToken: "test-token"
+    }), res);
+    assert.equal(res.statusCode, 400);
+  });
+});
+
+test("early-access endpoint requires an explicit privacy consent and Turnstile token", async () => {
+  await withEnv(configuredEnv, async () => {
+    const missingConsent = responseRecorder();
+    await handler(request({
+      name: "Test Person",
+      email: "person@example.com",
+      useCase: "web-research",
+      consent: false,
+      turnstileToken: "test-token"
+    }), missingConsent);
+    assert.equal(missingConsent.statusCode, 400);
+
+    const missingToken = responseRecorder();
+    await handler(request({
+      name: "Test Person",
+      email: "person@example.com",
+      useCase: "web-research",
+      consent: true,
+      turnstileToken: ""
+    }), missingToken);
+    assert.equal(missingToken.statusCode, 400);
+  });
+});
+
+test("honeypot submissions return a generic success without external calls", async () => {
+  await withEnv(configuredEnv, async () => {
+    const res = responseRecorder();
+    await handler(request({ website: "bot-filled-value" }), res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.ok, true);
+  });
+});
+
+test("Turnstile is permitted by the deployed Content Security Policy", async () => {
+  const vercel = JSON.parse(await readFile(path.join(root, "vercel.json"), "utf8"));
+  const policy = vercel.headers.flatMap((rule) => rule.headers)
+    .find((header) => header.key === "Content-Security-Policy")?.value || "";
+  assert.match(policy, /script-src[^;]*https:\/\/challenges\.cloudflare\.com/);
+  assert.match(policy, /frame-src https:\/\/challenges\.cloudflare\.com/);
+});
+
+test("contact and demo pages load runtime config before the early-access handler", async () => {
+  for (const pageName of ["contact.html", "book-demo.html"]) {
+    const html = await readFile(path.join(root, pageName), "utf8");
+    assert.match(html, /data-early-access-form/);
+    assert.ok(html.indexOf("/runtime-config.js") < html.indexOf("/early-access.js"));
+    assert.match(html, /name="consent"[^>]*required/);
+    assert.match(html, /name="marketingOptIn"/);
   }
 });
