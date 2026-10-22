@@ -177,7 +177,9 @@ test("build injects only the public Turnstile site key into generated runtime co
   const build = await readFile(path.join(root, "scripts/build.mjs"), "utf8");
   const runtime = await readFile(path.join(root, "runtime-config.js"), "utf8");
   assert.match(build, /process\.env\.EARLY_ACCESS_TURNSTILE_SITE_KEY/);
+  assert.match(build, /process\.env\.EARLY_ACCESS_ENABLED === 'true'/);
   assert.match(build, /JSON\.stringify\(siteKey\)/);
+  assert.match(runtime, /earlyAccessEnabled: false/);
   assert.match(runtime, /earlyAccessTurnstileSiteKey: ""/);
   assert.doesNotMatch(runtime, /TURNSTILE_SECRET_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY/);
 });
