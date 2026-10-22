@@ -64,6 +64,21 @@ export default async function handler(req, res) {
   if (required.some((key) => !process.env[key])) {
     return json(res, 503, { error: "Early access requests are not configured yet. Please try again later." });
   }
+  if (process.env.EARLY_ACCESS_RATE_LIMIT_SALT.length < 32) {
+    return json(res, 503, { error: "Early access request protection is not configured correctly." });
+  }
+  let supabaseUrl;
+  try {
+    const parsedSupabaseUrl = new URL(process.env.SUPABASE_URL);
+    if (parsedSupabaseUrl.protocol !== "https:" || parsedSupabaseUrl.username ||
+        parsedSupabaseUrl.password || parsedSupabaseUrl.pathname !== "/" ||
+        parsedSupabaseUrl.search || parsedSupabaseUrl.hash) {
+      return json(res, 503, { error: "Early access requests are not configured correctly." });
+    }
+    supabaseUrl = parsedSupabaseUrl.origin;
+  } catch {
+    return json(res, 503, { error: "Early access requests are not configured correctly." });
+  }
   const body = req.body && typeof req.body === "object" ? req.body : {};
   if (JSON.stringify(body).length > 12000) return json(res, 413, { error: "Request is too large." });
   if (text(body.website, 200)) return json(res, 200, { ok: true });
@@ -91,7 +106,6 @@ export default async function handler(req, res) {
     return json(res, 503, { error: "The anti-bot service is temporarily unavailable. Please try again." });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL.replace(/\/$/, "");
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   const rateKeyFor = (value) => createHmac("sha256", process.env.EARLY_ACCESS_RATE_LIMIT_SALT)
     .update(value)
@@ -108,7 +122,10 @@ export default async function handler(req, res) {
         signal: AbortSignal.timeout(5000)
       });
       if (!rateResponse.ok) throw new Error("Rate-limit service returned " + rateResponse.status);
-      if (await rateResponse.json() !== true) return json(res, 429, { error: "Too many requests. Please wait before trying again." });
+      if (await rateResponse.json() !== true) {
+        res.setHeader("Retry-After", "900");
+        return json(res, 429, { error: "Too many requests. Please wait before trying again." });
+      }
     }
   } catch {
     return json(res, 503, { error: "Request protection is temporarily unavailable. Please try again shortly." });
