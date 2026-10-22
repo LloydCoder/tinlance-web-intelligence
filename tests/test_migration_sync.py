@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from scripts.check_migration_sync import validate_migration_sync
 from tinlance_web_intelligence.persistence.migrations import (
     LATEST_SCHEMA_VERSION,
