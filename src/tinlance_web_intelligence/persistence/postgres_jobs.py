@@ -63,7 +63,6 @@ class PostgresJobRepository:
             ):
                 migration = migrations.joinpath(name)
                 if not migration.is_file():
-                    release_pool(self._pool)
                     raise RuntimeError(f"production PostgreSQL migration file is missing: {name}")
                 conn.execute(migration.read_text(encoding="utf-8"), prepare=False)
 
@@ -358,4 +357,6 @@ class PostgresJobRepository:
             return False
 
     def close(self) -> None:
-        release_pool(self._pool)
+        if not getattr(self, "_pool_released", False):
+            self._pool_released = True
+            release_pool(self._pool)
