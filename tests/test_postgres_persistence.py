@@ -8,6 +8,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from importlib.resources import files
 
 import pytest
 from psycopg.errors import RaiseException
@@ -347,6 +348,45 @@ def test_postgres_artifacts_are_durable_deduplicated_and_tenant_scoped() -> None
         store.close()
         migration.close()
 
+
+
+def test_postgres_migration_redacts_historical_artifact_query_strings() -> None:
+    assert _DSN is not None
+    repository = PostgresJobRepository(_DSN, auto_migrate=True)
+    tenant = f"legacy-url-tenant-{uuid.uuid4().hex}"
+    body = b"historical artifact content"
+    digest = sha256(body).hexdigest()
+    source_url = "https://legacy.example/path?token=legacy-secret&search=private"
+    source_hash = sha256(source_url.encode("utf-8")).hexdigest()
+    captured_at = datetime.now(UTC)
+    try:
+        with repository._pool.connection() as conn:
+            conn.execute(
+                "INSERT INTO twi_artifact_content (tenant_id, sha256, body, byte_size) "
+                "VALUES (%s, %s, %s, %s)",
+                (tenant, digest, body, len(body)),
+            )
+            conn.execute(
+                "INSERT INTO twi_artifact_records "
+                "(tenant_id, sha256, source_url_hash, source_url, captured_at, content_type, byte_size) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (tenant, digest, source_hash, source_url, captured_at, "text/html", len(body)),
+            )
+            migration_sql = files(
+                "tinlance_web_intelligence.persistence.migrations"
+            ).joinpath("004_redact_artifact_source_urls.sql").read_text(encoding="utf-8")
+            conn.execute(migration_sql, prepare=False)
+            row = conn.execute(
+                "SELECT source_url FROM twi_artifact_records "
+                "WHERE tenant_id=%s AND sha256=%s AND source_url_hash=%s",
+                (tenant, digest, source_hash),
+            ).fetchone()
+        assert row is not None
+        assert row["source_url"] == "https://legacy.example/path"
+        assert "legacy-secret" not in row["source_url"]
+        assert "private" not in row["source_url"]
+    finally:
+        repository.close()
 
 
 def test_postgres_usage_ledger_is_idempotent_scoped_and_append_only() -> None:
