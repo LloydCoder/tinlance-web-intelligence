@@ -9,12 +9,12 @@ from importlib.resources import files
 from typing import Any
 
 from psycopg import Connection
-from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+
 from tinlance_web_intelligence.persistence.postgres_pool import (
     acquire_pool,
     release_pool,
 )
-from psycopg.types.json import Jsonb
 
 from tinlance_web_intelligence.jobs.model import (
     IdempotencyConflictError,
@@ -43,10 +43,14 @@ class PostgresJobRepository:
             raise ValueError("invalid PostgreSQL pool or retry configuration")
         self._max_attempts = max_attempts
         self._pool = acquire_pool(dsn, min_size=min_size, max_size=max_size)
-        if auto_migrate:
-            self._apply_migrations()
-        else:
-            self._verify_schema()
+        try:
+            if auto_migrate:
+                self._apply_migrations()
+            else:
+                self._verify_schema()
+        except Exception:
+            release_pool(self._pool)
+            raise
 
     def _apply_migrations(self) -> None:
         migrations = files("tinlance_web_intelligence.persistence.migrations")
