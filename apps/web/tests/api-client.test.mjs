@@ -623,14 +623,15 @@ test('usage reads call the governed Platform operation', async () => {
     captured = { url: String(url), init };
     return new Response(JSON.stringify(usage), { status: 200, headers: { 'content-type': 'application/json' } });
   });
-  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
+  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25, cursor: 'opaque-cursor-value' });
   const request = JSON.parse(captured.init.headers['X-Test-Platform-Request']);
   const url = new URL(captured.url);
   assert.equal(url.pathname, '/api/twi/v1/usage');
   assert.equal(url.searchParams.get('limit'), '25');
+  assert.equal(url.searchParams.get('cursor'), 'opaque-cursor-value');
   assert.equal(captured.init.method, 'GET');
   assert.equal(request.operation, 'twi.usage.read');
-  assert.deepEqual(request.payload, { dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
+  assert.deepEqual(request.payload, { dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25, cursor: 'opaque-cursor-value' });
   assert.equal(result.used, 12);
 });
 
