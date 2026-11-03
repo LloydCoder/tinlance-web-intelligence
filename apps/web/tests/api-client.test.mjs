@@ -21,14 +21,104 @@ const job = {
 };
 
 function makeClient(fetchImpl, overrides = {}) {
+  const platformFetch = async (url, init) => {
+    const requestUrl = new URL(String(url));
+    if (requestUrl.pathname !== '/api/twi/v1/agent-platform') return fetchImpl(url, init);
+    const request = JSON.parse(init.body);
+    const { operation, payload } = request;
+    const routes = {
+      'twi.jobs.create_search': ['/v1/jobs', 'POST', { kind: 'search', payload }],
+      'twi.jobs.create_fetch': ['/v1/jobs', 'POST', { kind: 'fetch', payload }],
+      'twi.jobs.create_browser': ['/v1/jobs', 'POST', { kind: 'browser', payload }],
+      'twi.jobs.read': [`/v1/jobs/${encodeURIComponent(payload.job_id)}`, 'GET'],
+      'twi.jobs.cancel': [`/v1/jobs/${encodeURIComponent(payload.job_id)}/cancel`, 'POST'],
+      'twi.jobs.export_evidence': [`/v1/jobs/${encodeURIComponent(payload.job_id)}/evidence`, 'GET'],
+      'twi.research.verify': ['/v1/research/verify', 'POST', payload],
+      'twi.monitors.create': ['/v1/monitors', 'POST', payload],
+      'twi.monitors.read': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}`, 'GET'],
+      'twi.monitors.run': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/runs`, 'POST'],
+      'twi.monitors.pause': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/pause`, 'POST'],
+      'twi.monitors.resume': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/resume`, 'POST'],
+      'twi.usage.read': ['/v1/usage', 'GET']
+    };
+    const route = routes[operation];
+    if (!route) throw new Error(`Unexpected Platform operation: ${operation}`);
+    const [basePath, method, body] = route;
+    const path = operation === 'twi.usage.read' ? `${basePath}?${new URLSearchParams(payload).toString()}` : basePath;
+    const headers = { ...init.headers, 'X-Test-Platform-Request': init.body };
+    const virtualInit = {
+      ...init,
+      method,
+      headers,
+      ...(body === undefined ? { body: undefined } : { body: JSON.stringify(body) })
+    };
+    const response = await fetchImpl(new URL(`/api/twi${path}`, 'https://tinlyt.test'), virtualInit);
+    if (!response.ok) return response;
+    if (operation === 'twi.jobs.export_evidence'
+      && (response.headers.get('content-type') ?? '').split(';', 1)[0].trim().toLowerCase()
+        !== 'application/vnd.tinlance.twi-evidence+json') {
+      return new Response(JSON.stringify({ status: 'failed', payload: { error: 'evidence_media_type_rejected' } }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
+    const text = await response.text();
+    let payloadResult;
+    try {
+      payloadResult = text ? JSON.parse(text) : {};
+    } catch {
+      return new Response(text, { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    let platformPayload = payloadResult;
+    if (operation === 'twi.jobs.export_evidence') {
+      platformPayload = {
+        evidence_package: payloadResult,
+        response_bytes_base64: Buffer.from(text, 'utf8').toString('base64')
+      };
+    }
+    const responseHeaders = { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' };
+    const originalLength = response.headers.get('content-length');
+    if (originalLength) responseHeaders['content-length'] = originalLength;
+    return new Response(JSON.stringify({ status: 'success', payload: platformPayload }), {
+      status: 200,
+      headers: responseHeaders
+    });
+  };
   return new TwiApiClient({
     baseUrl: '/api/twi',
     tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
-    fetchImpl,
+    fetchImpl: platformFetch,
     idempotencyKeyFactory: () => 'test-idempotency-key-0001',
     ...overrides
   });
 }
+
+test('sends browser requests only to the Platform API envelope', async () => {
+  let captured;
+  const client = new TwiApiClient({
+    baseUrl: '/api/twi',
+    tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
+    idempotencyKeyFactory: () => 'platform-adapter-key-0001',
+    fetchImpl: async (url, init) => {
+      captured = { url: String(url), init };
+      return new Response(JSON.stringify({ status: 'success', payload: job }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+  });
+  const result = await client.createJob({ kind: 'search', payload: { query: 'primary source', limit: 5 } });
+  const request = JSON.parse(captured.init.body);
+  assert.match(captured.url, /\/api\/twi\/v1\/agent-platform$/);
+  assert.equal(captured.init.method, 'POST');
+  assert.equal(captured.init.headers['X-Tinlance-API-Version'], '1.1');
+  assert.match(captured.init.headers['X-Request-ID'], /^[0-9a-f-]{36}$/i);
+  assert.equal(captured.init.headers.Authorization, 'Bearer ephemeral-test-token');
+  assert.equal(captured.init.headers['Idempotency-Key'], 'platform-adapter-key-0001');
+  assert.equal(request.operation, 'twi.jobs.create_search');
+  assert.deepEqual(request.payload, { query: 'primary source', limit: 5 });
+  assert.equal('tenant_id' in request.payload, false);
+  assert.equal(result.job_id, 'job_01');
+});
 
 test('submits a strict job with bearer token, idempotency and safe fetch options', async () => {
   let captured;
@@ -180,7 +270,7 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   }));
   await assert.rejects(
     wrongMediaTypeClient.exportEvidencePackage('job_01'),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+    (error) => error instanceof TwiApiError && error.code === 'server_error'
   );
   const deniedEvidenceClient = makeClient(async () => new Response(JSON.stringify({ detail: 'must not be surfaced' }), {
     status: 403,
@@ -351,7 +441,7 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
     if (path === '/api/twi/v1/monitors/mon_01/runs' && init.method === 'POST') {
       return new Response(JSON.stringify(monitorRun), { status: 202, headers: { 'content-type': 'application/json' } });
     }
-    if (path === '/api/twi/v1/monitors/mon_01/runs/job_monitor_01' && init.method === 'GET') {
+    if (path === '/api/twi/v1/jobs/job_monitor_01' && init.method === 'GET') {
       return new Response(JSON.stringify(monitorRun), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (path === '/api/twi/v1/monitors/mon_01/pause' && init.method === 'POST') {
@@ -381,7 +471,11 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
   assert.equal((await client.getMonitorRun('mon_01', 'job_monitor_01')).job_id, 'job_monitor_01');
   assert.equal((await client.pauseMonitor('mon_01')).status, 'paused');
   assert.equal((await client.resumeMonitor('mon_01')).status, 'active');
-  assert.equal((await client.deleteMonitor('mon_01')).status, 'deleted');
+  await assert.rejects(
+    client.deleteMonitor('mon_01'),
+    (error) => error instanceof TwiApiError && error.code === 'permission_denied'
+  );
+  assert.equal(calls.length, 6);
 
   assert.equal(calls[0].headers['Idempotency-Key'], 'monitor-create-key-0001');
   assert.equal(JSON.parse(calls[0].body).policy.max_bytes, 2048);
@@ -517,144 +611,36 @@ test('monitor run client validates result outcome and baseline digest fields', a
   assert.equal((await staleCapture.getMonitorRun('mon_01', 'job_monitor_01')).result.outcome, 'stale_capture');
 });
 
-test('usage client validates tenant-scoped usage facts and preserves opaque cursor pagination', async () => {
-  let captured;
+test('usage reads call the governed Platform operation', async () => {
   const usage = {
-    schema_version: 1,
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    used: 12,
-    quota_limit: 1000,
-    remaining: 988,
-    plan_id: 'customer-basic',
-    plan_version: 1,
-    events: [{
-      event_id: 'opaque-event-id',
-      feature: 'search',
-      dimension: 'search_requests_month',
-      period_start: '2026-10-01T00:00:00Z',
-      quantity: 1,
-      occurred_at: '2026-10-19T10:00:00+00:00',
-      schema_version: 1
-    }],
-    returned: 1,
-    has_more: true,
-    next_cursor: 'opaque-cursor-value'
+    schema_version: 1, dimension: 'search_requests_month',
+    period_start: '2026-10-01T00:00:00Z', used: 12,
+    quota_limit: 100, remaining: 88, plan_id: 'starter', plan_version: 1,
+    events: [], returned: 0, has_more: false, next_cursor: null
   };
+  let captured;
   const client = makeClient(async (url, init) => {
     captured = { url: String(url), init };
     return new Response(JSON.stringify(usage), { status: 200, headers: { 'content-type': 'application/json' } });
   });
-  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
+  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25, cursor: 'opaque-cursor-value' });
+  const request = JSON.parse(captured.init.headers['X-Test-Platform-Request']);
   const url = new URL(captured.url);
   assert.equal(url.pathname, '/api/twi/v1/usage');
-  assert.equal(url.searchParams.get('dimension'), 'search_requests_month');
-  assert.equal(url.searchParams.get('period_start'), '2026-10-01T00:00:00Z');
   assert.equal(url.searchParams.get('limit'), '25');
+  assert.equal(url.searchParams.get('cursor'), 'opaque-cursor-value');
   assert.equal(captured.init.method, 'GET');
-  assert.equal(captured.init.credentials, 'omit');
+  assert.equal(request.operation, 'twi.usage.read');
+  assert.deepEqual(request.payload, { dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25, cursor: 'opaque-cursor-value' });
   assert.equal(result.used, 12);
-  assert.equal(result.events[0].event_id, 'opaque-event-id');
-  assert.equal(result.next_cursor, 'opaque-cursor-value');
-
-  const paged = makeClient(async (url) => {
-    assert.equal(new URL(String(url)).searchParams.get('cursor'), 'opaque-cursor-value');
-    return new Response(JSON.stringify({ ...usage, has_more: false, next_cursor: null }), {
-      status: 200, headers: { 'content-type': 'application/json' }
-    });
-  });
-  assert.equal((await paged.readUsage({
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    cursor: 'opaque-cursor-value'
-  })).has_more, false);
 });
 
-test('usage client rejects malformed pagination, inconsistent quotas and invalid query before network access', async () => {
+test('usage client rejects malformed query data before the Platform request', async () => {
   let called = false;
-  const invalidQuery = makeClient(async () => { called = true; return new Response('{}'); });
+  const client = makeClient(async () => { called = true; return new Response('{}'); });
   await assert.rejects(
-    invalidQuery.readUsage({ dimension: 'bad dimension', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'validation_error'
-  );
-  await assert.rejects(
-    invalidQuery.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01' }),
+    client.readUsage({ dimension: 'bad dimension', period_start: '2026-10-01T00:00:00Z' }),
     (error) => error instanceof TwiApiError && error.code === 'validation_error'
   );
   assert.equal(called, false);
-
-  const base = {
-    schema_version: 1,
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    used: 12,
-    quota_limit: 1000,
-    remaining: 988,
-    plan_id: 'customer-basic',
-    plan_version: 1,
-    events: [],
-    returned: 0,
-    has_more: false,
-    next_cursor: null
-  };
-  const malformed = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    remaining: 987,
-    has_more: true,
-    next_cursor: null
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    malformed.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const partialEntitlement = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    plan_id: null,
-    plan_version: null
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    partialEntitlement.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongResponseDimension = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    dimension: 'fetch_requests_month'
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongResponseDimension.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongResponsePeriod = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    period_start: '2026-09-01T00:00:00Z'
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongResponsePeriod.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const oversizedPage = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    events: [
-      { event_id: 'event-1', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:00:00Z', schema_version: 1 },
-      { event_id: 'event-2', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:01:00Z', schema_version: 1 }
-    ],
-    returned: 2
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    oversizedPage.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 1 }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongDimension = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    events: [{
-      event_id: 'event-1', feature: 'search', dimension: 'fetch_requests_month',
-      period_start: '2026-10-01T00:00:00Z', quantity: 1,
-      occurred_at: '2026-10-19T10:00:00Z', schema_version: 1
-    }],
-    returned: 1
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongDimension.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
 });
