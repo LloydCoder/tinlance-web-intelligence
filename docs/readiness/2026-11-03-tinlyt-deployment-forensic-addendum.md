@@ -135,3 +135,19 @@ Private beta and GA remain **NOT CERTIFIED** until evidence exists for all of th
 ## Explicit non-claims
 
 This addendum does not claim that Tinlyt backend infrastructure is deployed, OAuth login succeeds, live search/browser operations work, early-access intake is active, customer billing is enabled, or private beta/GA is approved.
+
+## Early-access notification routing decision — 2026-11-03
+
+Prior project discussions required a monitored internal notification inbox but did not record an exact address. A review of the connected Gmail account found repeated inbound business correspondence addressed to `sales@tinlance.com`, including external company responses. This is stronger evidence of an active, monitored business channel than the other available Tinlance aliases. The chosen internal notification recipient is therefore `sales@tinlance.com`.
+
+Vercel production and preview environments now contain:
+- `EARLY_ACCESS_NOTIFY_EMAIL=sales@tinlance.com`
+- `RESEND_FROM_EMAIL=Tinlyt Early Access <early-access@tinlance.com>`
+- `EARLY_ACCESS_RATE_LIMIT_SALT` as a sensitive 256-bit random value
+
+The sender uses the previously verified `tinlance.com` Resend domain. The salt is stored as a sensitive Vercel variable and is not included in source control or this document.
+
+**Important implementation boundary:** the current Vercel intake handler does not set a `reply_to` property in its Resend payloads. The selected address is confirmed for internal notifications only; reply-to routing has not been represented as configured. A follow-up code change and tests are required before promising applicant replies will route to the team inbox.
+
+The intake feature flag remains `EARLY_ACCESS_ENABLED=false`. No Resend API key or Supabase server secret is available through the connected credential interfaces, and no credential was created or exposed in chat. The missing server credentials and privacy approval remain hard activation blockers. No email was sent and no real/synthetic applicant record was created.
+
