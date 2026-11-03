@@ -25,6 +25,7 @@ def test_platform_tool_catalog_has_unique_names_and_operations() -> None:
         "twi_monitor_pause",
         "twi_monitor_resume",
         "twi_monitor_delete",
+        "twi_usage_read",
     }
 
 
@@ -40,3 +41,17 @@ def test_json_tool_manifests_match_python_catalog() -> None:
         assert manifest["operation"] == tool.operation
         assert manifest["authorization"]["required_scope"] == tool.required_scope
         assert manifest["input_schema"] == tool.input_schema
+
+
+
+def test_usage_read_tool_is_tenant_scoped_and_read_only() -> None:
+    tool = next(item for item in TWI_PLATFORM_TOOLS if item.name == "twi_usage_read")
+    assert tool.operation == "twi.usage.read"
+    assert tool.required_scope == "twi:usage:read"
+    assert tool.capability == "web.usage.read"
+    assert tool.resource_pattern == "twi://usage/*"
+    assert tool.read_only is True
+    assert tool.consequential is False
+    assert tool.destructive is False
+    assert tool.open_world is False
+    assert tool.input_schema["properties"]["period_start"]["maxLength"] == 40
