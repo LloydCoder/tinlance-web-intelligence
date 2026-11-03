@@ -1,5 +1,5 @@
 begin;
-select plan(25);
+select plan(30);
 
 select has_table('public', 'early_access_requests', 'early-access table exists');
 select ok(
@@ -32,6 +32,27 @@ select ok(not has_table_privilege('service_role', 'public.early_access_requests'
 select ok(public.consume_early_access_rate_limit(repeat('a', 64), 2, 900), 'first request within limit is allowed');
 select ok(public.consume_early_access_rate_limit(repeat('a', 64), 2, 900), 'second request within limit is allowed');
 select ok(not public.consume_early_access_rate_limit(repeat('a', 64), 2, 900), 'request beyond the limit is denied');
+
+
+select ok(exists (select 1 from pg_extension where extname = 'pg_cron'), 'pg_cron is enabled');
+select ok(exists (select 1 from cron.job where jobname = 'tinlyt-early-access-retention'), 'daily retention job is scheduled');
+select ok(not has_function_privilege('anon', 'private.purge_early_access_data()', 'EXECUTE'), 'anon cannot execute retention function');
+
+insert into public.early_access_requests
+  (name, email, use_case, consent_at, privacy_notice_version, marketing_opt_in, source, created_at)
+values
+  ('Expired Test Request', 'expired-retention@example.test', 'other', now(), 'test', false, 'test', now() - interval '13 months'),
+  ('Recent Test Request', 'recent-retention@example.test', 'other', now(), 'test', false, 'test', now());
+
+insert into private.early_access_rate_limits
+  (key_hash, window_started_at, request_count, updated_at)
+values
+  (repeat('b', 64), now() - interval '25 hours', 1, now() - interval '25 hours');
+
+select private.purge_early_access_data();
+select ok(not exists (select 1 from public.early_access_requests where email = 'expired-retention@example.test'), 'requests older than 12 months are deleted');
+select ok(exists (select 1 from public.early_access_requests where email = 'recent-retention@example.test'), 'requests within 12 months are retained');
+select ok(not exists (select 1 from private.early_access_rate_limits where key_hash = repeat('b', 64)), 'rate-limit hashes older than 24 hours are deleted');
 
 select * from finish();
 rollback;
