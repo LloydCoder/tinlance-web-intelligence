@@ -9,7 +9,7 @@
 -- access. The rate-limit function is SECURITY INVOKER and uses a fixed,
 -- empty search_path.
 
-create schema private;
+create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to service_role;
 
