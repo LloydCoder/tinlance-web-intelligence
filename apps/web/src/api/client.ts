@@ -814,7 +814,7 @@ export class TwiApiClient {
     if (segments[1] === "monitors" && segments.length === 5 && segments[3] === "runs" && method === "GET") {
       return { operation: "twi.jobs.read", payload: { job_id: segments[4] } };
     }
-    if (segments[1] === "monitors" && segments.length === 4 && method === "POST" && ["pause", "resume"].includes(segments[3])) {
+    if (segments[1] === "monitors" && segments.length === 4 && method === "POST" && (segments[3] === "pause" || segments[3] === "resume")) {
       return { operation: segments[3] === "pause" ? "twi.monitors.pause" : "twi.monitors.resume", payload: { monitor_id: segments[2] } };
     }
     if (segments[1] === "monitors" && segments.length === 3 && method === "DELETE") {
