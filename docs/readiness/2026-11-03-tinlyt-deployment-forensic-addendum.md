@@ -27,15 +27,17 @@ These are repository-level implementation facts. They do not prove that the corr
 
 The Vercel project is `tinlyt-web` (`prj_ypYtRbHtPYejZUHRwAYmHurmXgSM`).
 
-Read-only project metadata reports:
-- Latest deployment: `dpl_8Q2jgrgwkNgm2KYz8iwYomvp6dqD`
-- Latest deployment state: `READY`
-- Latest deployment URL: `tinlyt-hc1x8zzny-lloydcoders-projects.vercel.app`
-- Project live flag: `false`
-- Custom domains: `tinlyt.tinlance.com`, `tinlyt-web.vercel.app`, plus Vercel project aliases.
-- Preview SSO protection is enabled; custom domains are excluded from that protection.
+The latest main-branch deployment observed during this audit:
+- Deployment: `dpl_8Q2jgrgwkNgm2KYz8iwYomvp6dqD`
+- State: `READY`
+- URL: `tinlyt-hc1x8zzny-lloydcoders-projects.vercel.app`
+- Source commit: `45211fac5138b1df5923d746bf94fff6103d2857`
 
-The latest main commit is #131's merge commit. A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory previously returned only `EARLY_ACCESS_ENABLED=false`; no OAuth issuer/client/resource/scope or Platform API URL configuration was present. Recheck environment variables before any production promotion. Do not enable live operations by setting the frontend flag alone.
+The project live flag is `false`. Custom domains include `tinlyt.tinlance.com` and `tinlyt-web.vercel.app`, plus Vercel project aliases. Preview SSO protection is enabled; custom domains are excluded from that protection.
+
+A separate PR #133 preview was also built successfully from commit `82f1c56b6b169b835ce63378b7615a55d8b9e041`. Its rendered `/` and `/app` routes both returned HTTP 200. The workspace correctly remains in foundation mode: the sign-in control is disabled and the page states that authentication/runtime configuration is unavailable. The preview build log confirms Vercel selected Node `22.x` after the package engine was pinned; this corrects the previous `>=22` declaration that caused Vercel to select Node `26.x`.
+
+A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory returned only `EARLY_ACCESS_ENABLED=false`; no OAuth issuer/client/resource/scope or Platform API URL configuration was present. Recheck environment variables before any production promotion. Do not enable live operations by setting the frontend flag alone.
 
 ## AWS and runtime state
 
