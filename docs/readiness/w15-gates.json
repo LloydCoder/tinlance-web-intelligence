@@ -59,7 +59,7 @@
       "gate": "external.ci_run",
       "status": "pass",
       "owner": "TWI engineering",
-      "evidence_reference": "docs/evidence/2026-11-03-main-5a8a281cb615820703dd45c724d0822568694655.json"
+      "evidence_reference": "docs/evidence/2026-11-03-main-938356218bd5afb834c4b25d8508395ef349980e.json"
     },
     {
       "gate": "external.branch_governance",
