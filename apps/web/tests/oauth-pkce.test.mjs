@@ -48,6 +48,19 @@ test('requires explicit trusted HTTPS issuer origins', () => {
   }), (error) => error instanceof TwiApiError && error.code === 'configuration_error');
 });
 
+test('accepts Cognito issuer and managed-login endpoints on separately trusted origins', () => {
+  const { provider } = makeProvider({
+    issuer: 'https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_Abc123',
+    authorizationEndpoint: 'https://tinlyt.auth.eu-west-1.amazoncognito.com/oauth2/authorize',
+    tokenEndpoint: 'https://tinlyt.auth.eu-west-1.amazoncognito.com/oauth2/token',
+    trustedIssuerOrigins: [
+      'https://cognito-idp.eu-west-1.amazonaws.com',
+      'https://tinlyt.auth.eu-west-1.amazoncognito.com'
+    ]
+  });
+  assert.ok(provider);
+});
+
 test('starts Authorization Code + PKCE with S256 and no client secret', async () => {
   const { provider, storage, navigations } = makeProvider();
   await provider.beginLogin();
