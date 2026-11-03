@@ -202,9 +202,9 @@ test("build injects only public runtime settings and keeps early-access defaults
   const build = await readFile(path.join(root, "scripts/build.mjs"), "utf8");
   const runtime = await readFile(path.join(root, "runtime-config.js"), "utf8");
   const runtimeBuilder = await readFile(path.join(root, "scripts/runtime-config.mjs"), "utf8");
-  assert.match(build, /renderRuntimeConfig\\(process\\.env\\)/);
-  assert.match(build, /process\\.env\\.EARLY_ACCESS_TURNSTILE_SITE_KEY/);
-  assert.match(build, /process\\.env\\.EARLY_ACCESS_ENABLED === 'true'/);
+  assert.ok(build.includes("renderRuntimeConfig(process.env)"));
+  assert.ok(build.includes("process.env.EARLY_ACCESS_TURNSTILE_SITE_KEY"));
+  assert.ok(build.includes("process.env.EARLY_ACCESS_ENABLED === 'true'"));
   assert.match(runtimeBuilder, /earlyAccessTurnstileSiteKey: turnstileSiteKey/);
   assert.match(runtimeBuilder, /EARLY_ACCESS_ENABLED/);
   assert.match(runtime, /earlyAccessEnabled: false/);
