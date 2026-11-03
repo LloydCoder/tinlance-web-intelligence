@@ -22,7 +22,7 @@ def test_current_consumer_findings_are_exact_and_fail_closed() -> None:
 def test_current_platform_catalog_registers_monitor_and_evidence_operations() -> None:
     fixture = json.loads(
         Path(
-            "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"
+            "contracts/fixtures/platform/4e73e8272d222fd7234f86a3cf005ef2fc79b1a0/tool-catalog.json"
         ).read_text(encoding="utf-8")
     )
     expected = {
@@ -34,7 +34,7 @@ def test_current_platform_catalog_registers_monitor_and_evidence_operations() ->
         "twi_monitor_run",
     }
     registered = set(fixture["registered_tools"])
-    assert fixture["revision"] == "c5a080c1fb4df68e45070f8cddfc30bf81edd7bb"
+    assert fixture["revision"] == "4e73e8272d222fd7234f86a3cf005ef2fc79b1a0"
     assert fixture["status"] == "pass"
     assert expected == set(fixture["expected_monitor_tools"])
     assert not fixture["missing_monitor_tools"]
@@ -42,6 +42,9 @@ def test_current_platform_catalog_registers_monitor_and_evidence_operations() ->
     assert fixture["expected_evidence_tools"] == ["twi_evidence_export"]
     assert not fixture["missing_evidence_tools"]
     assert set(fixture["expected_evidence_tools"]) <= registered
+    assert fixture["expected_usage_tools"] == ["twi_usage_read"]
+    assert not fixture["missing_usage_tools"]
+    assert set(fixture["expected_usage_tools"]) <= registered
     assert set(fixture["approval_gated_tools"]) == {
         "twi_world_intelligence_export",
         "twi_monitor_delete",
@@ -66,7 +69,7 @@ def test_w15_consumer_gate_uses_the_current_platform_snapshot() -> None:
     gate = next(item for item in registry["gates"] if item["gate"] == "external.consumer_approvals")
     assert gate["status"] == "pass"
     assert gate["evidence_reference"] == (
-        "contracts/fixtures/platform/c5a080c1fb4df68e45070f8cddfc30bf81edd7bb/tool-catalog.json"
+        "contracts/fixtures/platform/4e73e8272d222fd7234f86a3cf005ef2fc79b1a0/tool-catalog.json"
     )
 
 
@@ -110,3 +113,24 @@ def test_passing_consumer_requires_exact_fixture_revision(tmp_path: Path) -> Non
     )
     with pytest.raises(ValueError, match="revision mismatch"):
         validate(matrix)
+
+
+def test_usage_read_manifest_matches_the_platform_scoped_usage_contract() -> None:
+    manifest = json.loads(
+        Path("schemas/mcp-tools/twi-usage-read.json").read_text(encoding="utf-8")
+    )
+    assert manifest["name"] == "twi_usage_read"
+    assert manifest["operation"] == "twi.usage.read"
+    assert manifest["api"] == {"method": "GET", "path": "/v1/usage"}
+    assert manifest["authorization"]["required_scope"] == "twi:usage:read"
+    assert manifest["authorization"]["capability"] == "web.usage.read"
+    assert manifest["governance"] == {
+        "read_only": True,
+        "consequential": False,
+        "destructive": False,
+        "open_world": False,
+    }
+    assert manifest["input_schema"]["required"] == ["dimension", "period_start"]
+    assert set(manifest["input_schema"]["properties"]) == {
+        "dimension", "period_start", "limit", "cursor"
+    }
