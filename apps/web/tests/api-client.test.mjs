@@ -218,7 +218,7 @@ test('exports canonical evidence packages using the vendor JSON media type', asy
   }));
   await assert.rejects(
     wrongMediaTypeClient.exportEvidencePackage('job_01'),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
+    (error) => error instanceof TwiApiError && error.code === 'server_error'
   );
   const deniedEvidenceClient = makeClient(async () => new Response(JSON.stringify({ detail: 'must not be surfaced' }), {
     status: 403,
@@ -389,7 +389,7 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
     if (path === '/api/twi/v1/monitors/mon_01/runs' && init.method === 'POST') {
       return new Response(JSON.stringify(monitorRun), { status: 202, headers: { 'content-type': 'application/json' } });
     }
-    if (path === '/api/twi/v1/monitors/mon_01/runs/job_monitor_01' && init.method === 'GET') {
+    if (path === '/api/twi/v1/jobs/job_monitor_01' && init.method === 'GET') {
       return new Response(JSON.stringify(monitorRun), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (path === '/api/twi/v1/monitors/mon_01/pause' && init.method === 'POST') {
@@ -419,7 +419,11 @@ test('monitor client covers create, read, explicit run, pause, resume and destru
   assert.equal((await client.getMonitorRun('mon_01', 'job_monitor_01')).job_id, 'job_monitor_01');
   assert.equal((await client.pauseMonitor('mon_01')).status, 'paused');
   assert.equal((await client.resumeMonitor('mon_01')).status, 'active');
-  assert.equal((await client.deleteMonitor('mon_01')).status, 'deleted');
+  await assert.rejects(
+    client.deleteMonitor('mon_01'),
+    (error) => error instanceof TwiApiError && error.code === 'permission_denied'
+  );
+  assert.equal(calls.length, 6);
 
   assert.equal(calls[0].headers['Idempotency-Key'], 'monitor-create-key-0001');
   assert.equal(JSON.parse(calls[0].body).policy.max_bytes, 2048);
