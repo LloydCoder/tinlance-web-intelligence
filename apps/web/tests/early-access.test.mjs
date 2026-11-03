@@ -212,16 +212,35 @@ test("build injects only public runtime settings and keeps early-access defaults
   assert.doesNotMatch(runtimeBuilder, /TURNSTILE_SECRET_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY/);
 });
 
-test("Supabase migration keeps intake private and rate-limit RPC least-privileged", async () => {
-  const migrationPath = path.resolve(root, "../../supabase/migrations/20261022072400_early_access_requests.sql");
-  const migration = await readFile(migrationPath, "utf8");
-  assert.match(migration, /enable row level security/i);
-  assert.match(migration, /revoke all on table public\.early_access_requests from public, anon, authenticated/i);
-  assert.match(migration, /security invoker/i);
-  assert.match(migration, /revoke all on function public\.consume_early_access_rate_limit[\s\S]*?from public, anon, authenticated/i);
-  assert.match(migration, /grant update \(notification_status, confirmation_status, updated_at\)/i);
-  assert.doesNotMatch(migration, /security definer/i);
-  assert.doesNotMatch(migration, /grant all on table public\.early_access_requests/i);
+test("Supabase baseline and hardening migrations preserve private intake and least privilege", async () => {
+  const migrationDir = path.resolve(root, "../../supabase/migrations");
+  const baseline = await readFile(path.join(migrationDir, "20261103050033_create_tinlyt_early_access_intake.sql"), "utf8");
+  const hardening = await readFile(path.join(migrationDir, "20261103055338_tighten_early_access_service_role.sql"), "utf8");
+  assert.match(baseline, /enable row level security/i);
+  assert.match(baseline, /revoke all on table public\.early_access_requests from public, anon, authenticated/i);
+  assert.match(baseline, /security invoker/i);
+  assert.match(baseline, /revoke all on function public\.consume_early_access_rate_limit[\s\S]*?from public, anon, authenticated/i);
+  assert.match(baseline, /grant all privileges on table public\.early_access_requests to service_role/i);
+  assert.match(hardening, /revoke all on table public\.early_access_requests from service_role/i);
+  assert.match(hardening, /grant insert on table public\.early_access_requests to service_role/i);
+  assert.match(hardening, /grant select \(id, created_at\)/i);
+  assert.match(hardening, /grant update \(notification_status, confirmation_status, updated_at\)/i);
+  assert.doesNotMatch(hardening, /grant all/i);
+  assert.doesNotMatch(baseline, /security definer/i);
+});
+
+test("privacy notice identifies the controller, purposes, providers, transfers, retention and rights", async () => {
+  const notice = await readFile(path.join(root, "privacy.html"), "utf8");
+  assert.match(notice, /Tinlance Limited/);
+  assert.match(notice, /120 Okigwe Road/);
+  assert.match(notice, /sales@tinlance\.com/);
+  assert.match(notice, /12 months/);
+  assert.match(notice, /Supabase/);
+  assert.match(notice, /Resend/);
+  assert.match(notice, /Vercel/);
+  assert.match(notice, /Cloudflare/);
+  assert.match(notice, /United States/);
+  assert.match(notice, /data subject rights/i);
 });
 
 
