@@ -868,7 +868,7 @@ export class TwiApiClient {
     const controller = new AbortController();
     const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await this.fetchImpl(new URL("/v1/agent-platform", this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`), {
+      const response = await this.fetchImpl(new URL("v1/agent-platform", `${this.baseUrl.replace(/\/$/, "")}/`), {
         method: "POST",
         headers: {
           Accept: "application/json",
