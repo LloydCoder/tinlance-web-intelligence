@@ -198,15 +198,18 @@ test("contact and demo pages load runtime config before the early-access handler
 });
 
 
-test("build injects only the public Turnstile site key into generated runtime config", async () => {
+test("build injects only public runtime settings and keeps early-access defaults fail-closed", async () => {
   const build = await readFile(path.join(root, "scripts/build.mjs"), "utf8");
   const runtime = await readFile(path.join(root, "runtime-config.js"), "utf8");
-  assert.match(build, /process\.env\.EARLY_ACCESS_TURNSTILE_SITE_KEY/);
-  assert.match(build, /process\.env\.EARLY_ACCESS_ENABLED === 'true'/);
-  assert.match(build, /JSON\.stringify\(siteKey\)/);
+  const runtimeBuilder = await readFile(path.join(root, "scripts/runtime-config.mjs"), "utf8");
+  assert.match(build, /renderRuntimeConfig\\(process\\.env\\)/);
+  assert.match(build, /process\\.env\\.EARLY_ACCESS_TURNSTILE_SITE_KEY/);
+  assert.match(build, /process\\.env\\.EARLY_ACCESS_ENABLED === 'true'/);
+  assert.match(runtimeBuilder, /earlyAccessTurnstileSiteKey: turnstileSiteKey/);
+  assert.match(runtimeBuilder, /EARLY_ACCESS_ENABLED/);
   assert.match(runtime, /earlyAccessEnabled: false/);
   assert.match(runtime, /earlyAccessTurnstileSiteKey: ""/);
-  assert.doesNotMatch(runtime, /TURNSTILE_SECRET_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY/);
+  assert.doesNotMatch(runtimeBuilder, /TURNSTILE_SECRET_KEY|SUPABASE_SECRET_KEY|RESEND_API_KEY/);
 });
 
 test("Supabase migration keeps intake private and rate-limit RPC least-privileged", async () => {
