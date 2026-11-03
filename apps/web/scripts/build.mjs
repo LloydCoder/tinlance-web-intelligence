@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { renderRuntimeConfig } from './runtime-config.mjs';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -23,14 +24,7 @@ for (const file of ['index.html', 'app.html', 'brand.css', 'landing.css', 'site-
   const siteKey = process.env.EARLY_ACCESS_TURNSTILE_SITE_KEY || '';
   const enabled = process.env.EARLY_ACCESS_ENABLED === 'true' && siteKey.length > 0;
   if (file === 'runtime-config.js') {
-    const source = await readFile(path.join(root, file), 'utf8');
-    const configured = source
-      .replace('earlyAccessEnabled: false', 'earlyAccessEnabled: ' + JSON.stringify(enabled))
-      .replace(
-        'earlyAccessTurnstileSiteKey: ""',
-        'earlyAccessTurnstileSiteKey: ' + JSON.stringify(siteKey),
-      );
-    await writeFile(destination, configured, 'utf8');
+    await writeFile(destination, renderRuntimeConfig(process.env), 'utf8');
   } else if (file.endsWith('.html')) {
     const source = await readFile(path.join(root, file), 'utf8');
     const configured = enabled ? source : source
