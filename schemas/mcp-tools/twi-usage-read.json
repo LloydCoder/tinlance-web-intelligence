@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0.0",
+  "name": "twi_usage_read",
+  "description": "Read tenant-scoped usage facts and plan entitlements for one period. This is not a statement of invoice balance, payment settlement, tax, refunds, or provider billing status.",
+  "operation": "twi.usage.read",
+  "api": {
+    "method": "GET",
+    "path": "/v1/usage",
+    "query_parameters": [
+      "dimension",
+      "period_start",
+      "limit",
+      "cursor"
+    ]
+  },
+  "authorization": {
+    "required_scope": "twi:usage:read",
+    "capability": "web.usage.read",
+    "action": "read",
+    "resource_pattern": "twi://usage/*"
+  },
+  "data_class": "confidential",
+  "governance": {
+    "read_only": true,
+    "consequential": false,
+    "destructive": false,
+    "open_world": false
+  },
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "dimension",
+      "period_start"
+    ],
+    "properties": {
+      "dimension": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80,
+        "pattern": "^[A-Za-z0-9_.:-]{1,80}$"
+      },
+      "period_start": {
+        "type": "string",
+        "format": "date-time",
+        "maxLength": 40
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 500,
+        "default": 100
+      },
+      "cursor": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    }
+  }
+}

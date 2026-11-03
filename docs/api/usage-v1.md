@@ -9,7 +9,7 @@ Requires a verified Agent Platform principal and either `twi:usage:read` or
 caller-supplied identity fields are not accepted.
 
 - `dimension`: 1–80 ASCII letters, digits, underscore, dot, colon, or hyphen.
-- `period_start`: timezone-aware ISO-8601 timestamp. The API normalizes it to UTC.
+- `period_start`: timezone-aware ISO-8601 timestamp, maximum 40 characters. The API normalizes it to UTC.
 - `limit`: optional integer from 1 to 500; defaults to 100.
 - `cursor`: optional opaque keyset cursor returned by a prior response. Cursors are bounded
   to 1024 characters and are scoped by the same tenant principal, dimension, and period query.

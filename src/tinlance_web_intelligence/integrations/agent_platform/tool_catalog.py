@@ -179,6 +179,36 @@ MONITOR_RUN_SCHEMA: dict[str, Any] = {
     },
 }
 
+USAGE_READ_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["dimension", "period_start"],
+    "properties": {
+        "dimension": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9_.:-]{1,80}$",
+        },
+        "period_start": {
+            "type": "string",
+            "format": "date-time",
+            "maxLength": 40,
+        },
+        "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "default": 100,
+        },
+        "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+        },
+    },
+}
+
 TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
     PlatformToolContract(
         name="twi_search",
@@ -407,6 +437,24 @@ TWI_PLATFORM_TOOLS: tuple[PlatformToolContract, ...] = (
         read_only=False,
         consequential=False,
         destructive=True,
+        open_world=False,
+    ),
+    PlatformToolContract(
+        name="twi_usage_read",
+        operation="twi.usage.read",
+        description=(
+            "Read tenant-scoped usage facts and plan entitlements for one period; "
+            "does not expose invoice balance, payment settlement, tax, refunds, or "
+            "provider billing status."
+        ),
+        capability="web.usage.read",
+        action="read",
+        resource_pattern="twi://usage/*",
+        required_scope="twi:usage:read",
+        input_schema=USAGE_READ_SCHEMA,
+        read_only=True,
+        consequential=False,
+        destructive=False,
         open_world=False,
     ),
 )
