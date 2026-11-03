@@ -185,9 +185,8 @@ test('rejects access-token lifetimes above one hour', async () => {
 });
 
 
-test('rejects trusted endpoints whose origin differs from the configured issuer', () => {
+test('rejects OAuth endpoints on origins outside the explicit trust allowlist', () => {
   assert.throws(() => makeProvider({
-    issuer: 'https://other-issuer.example',
-    trustedIssuerOrigins: ['https://identity.example.com', 'https://other-issuer.example']
+    tokenEndpoint: 'https://untrusted.example.com/oauth2/token'
   }), (error) => error instanceof TwiApiError && error.code === 'configuration_error');
 });
