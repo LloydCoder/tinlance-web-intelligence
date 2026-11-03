@@ -126,7 +126,14 @@ def test_usage_read_manifest_matches_the_platform_scoped_usage_contract() -> Non
     )
     assert manifest["name"] == "twi_usage_read"
     assert manifest["operation"] == "twi.usage.read"
-    assert manifest["api"] == {"method": "GET", "path": "/v1/usage"}
+    assert manifest["api"]["method"] == "GET"
+    assert manifest["api"]["path"] == "/v1/usage"
+    assert manifest["api"]["query_parameters"] == [
+        "dimension",
+        "period_start",
+        "limit",
+        "cursor",
+    ]
     assert manifest["authorization"]["required_scope"] == "twi:usage:read"
     assert manifest["authorization"]["capability"] == "web.usage.read"
     assert manifest["governance"] == {
