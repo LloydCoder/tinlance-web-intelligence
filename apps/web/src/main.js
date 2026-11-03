@@ -1520,10 +1520,17 @@ if (signInButton && runtime.state === 'ready') {
   signInButton.setAttribute('aria-label', 'Sign in to Tinlyt');
   signInButton.addEventListener('click', async () => {
     if (isAuthorized) {
-      runtime.clearSession();
       isAuthorized = false;
       setLiveControlsEnabled(false);
-      showMode('Local session cleared', 'The in-memory TWI access token was cleared. The external identity-provider session may remain active.');
+      signInButton.disabled = true;
+      try {
+        await runtime.clearSession();
+        showMode('Session revoked', 'The Platform confirmed that this access token and its token family were revoked. The external identity-provider browser session may remain active.');
+      } catch {
+        showMode('Local session cleared; revocation unconfirmed', 'Tinlyt cleared the in-memory token, but the Platform could not confirm durable server-side revocation. The token may remain valid until expiry. Do not treat this as a confirmed security revocation.');
+      } finally {
+        signInButton.disabled = false;
+      }
       return;
     }
     signInButton.disabled = true;
