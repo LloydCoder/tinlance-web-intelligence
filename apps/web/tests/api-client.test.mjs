@@ -50,13 +50,21 @@ function makeClient(fetchImpl, overrides = {}) {
       headers,
       ...(body === undefined ? { body: undefined } : { body: JSON.stringify(body) })
     };
-    const response = await fetchImpl(new URL(path, 'https://tinlyt.test'), virtualInit);
+    const response = await fetchImpl(new URL(`/api/twi${path}`, 'https://tinlyt.test'), virtualInit);
     if (!response.ok) return response;
     const text = await response.text();
-    const payloadResult = text ? JSON.parse(text) : {};
+    let payloadResult;
+    try {
+      payloadResult = text ? JSON.parse(text) : {};
+    } catch {
+      return new Response(text, { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    const headers = { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' };
+    const originalLength = response.headers.get('content-length');
+    if (originalLength) headers['content-length'] = originalLength;
     return new Response(JSON.stringify({ status: 'success', payload: payloadResult }), {
       status: 200,
-      headers: { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' }
+      headers
     });
   };
   return new TwiApiClient({
@@ -67,6 +75,34 @@ function makeClient(fetchImpl, overrides = {}) {
     ...overrides
   });
 }
+
+test('sends browser requests only to the Platform API envelope', async () => {
+  let captured;
+  const client = new TwiApiClient({
+    baseUrl: '/api/twi',
+    tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
+    idempotencyKeyFactory: () => 'platform-adapter-key-0001',
+    fetchImpl: async (url, init) => {
+      captured = { url: String(url), init };
+      return new Response(JSON.stringify({ status: 'success', payload: job }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+  });
+  const result = await client.createJob({ kind: 'search', payload: { query: 'primary source', limit: 5 } });
+  const request = JSON.parse(captured.init.body);
+  assert.match(captured.url, /\/api\/twi\/v1\/agent-platform$/);
+  assert.equal(captured.init.method, 'POST');
+  assert.equal(captured.init.headers['X-Tinlance-API-Version'], '1.1');
+  assert.match(captured.init.headers['X-Request-ID'], /^[0-9a-f-]{36}$/i);
+  assert.equal(captured.init.headers.Authorization, 'Bearer ephemeral-test-token');
+  assert.equal(captured.init.headers['Idempotency-Key'], 'platform-adapter-key-0001');
+  assert.equal(request.operation, 'twi.jobs.create_search');
+  assert.deepEqual(request.payload, { query: 'primary source', limit: 5 });
+  assert.equal('tenant_id' in request.payload, false);
+  assert.equal(result.job_id, 'job_01');
+});
 
 test('submits a strict job with bearer token, idempotency and safe fetch options', async () => {
   let captured;
