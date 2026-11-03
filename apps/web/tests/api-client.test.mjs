@@ -66,10 +66,17 @@ function makeClient(fetchImpl, overrides = {}) {
     } catch {
       return new Response(text, { status: 200, headers: { 'content-type': 'application/json' } });
     }
+    let platformPayload = payloadResult;
+    if (operation === 'twi.jobs.export_evidence') {
+      platformPayload = {
+        evidence_package: payloadResult,
+        response_bytes_base64: Buffer.from(text, 'utf8').toString('base64')
+      };
+    }
     const responseHeaders = { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' };
     const originalLength = response.headers.get('content-length');
     if (originalLength) responseHeaders['content-length'] = originalLength;
-    return new Response(JSON.stringify({ status: 'success', payload: payloadResult }), {
+    return new Response(JSON.stringify({ status: 'success', payload: platformPayload }), {
       status: 200,
       headers: responseHeaders
     });
