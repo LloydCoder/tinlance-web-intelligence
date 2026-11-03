@@ -74,6 +74,13 @@ test('UI states retrieval is not a truth guarantee and does not show fixture met
   assert.match(js, /job\.cancel_requested/);
 });
 
+test('public homepage discloses cookie and tracking use and links to the privacy notice', () => {
+  const homepage = publicPages[0];
+  assert.match(homepage, /aria-label="Cookie notice"/);
+  assert.match(homepage, /does not currently use advertising or analytics cookies/);
+  assert.match(homepage, /href="\/privacy">Read the privacy notice/);
+});
+
 test('styles retain visible focus, responsive behavior and reduced motion', () => {
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width: 760px\)/);
