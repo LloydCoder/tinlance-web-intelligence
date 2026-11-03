@@ -13,6 +13,16 @@ alter table public.early_access_requests
 alter table public.early_access_requests
   drop constraint if exists early_access_requests_description_check;
 
+update public.early_access_requests
+set status = case status
+  when 'approved' then 'accepted'
+  when 'waitlisted' then 'reviewing'
+  when 'declined' then 'rejected'
+  when 'invited' then 'accepted'
+  else status
+end
+where status in ('approved', 'waitlisted', 'declined', 'invited');
+
 alter table public.early_access_requests
   add constraint early_access_requests_status_check
   check (status = any (array['new', 'reviewing', 'accepted', 'rejected', 'withdrawn']));
@@ -65,7 +75,11 @@ alter table private.early_access_rate_limits enable row level security;
 revoke all on table private.early_access_rate_limits from public, anon, authenticated, service_role;
 grant insert, select, update on table private.early_access_rate_limits to service_role;
 
-create or replace function public.consume_early_access_rate_limit(
+-- PostgreSQL does not allow CREATE OR REPLACE to remove existing argument defaults.
+-- Drop and recreate this externally-called function with the explicit required arguments.
+drop function if exists public.consume_early_access_rate_limit(text, integer, integer);
+
+create function public.consume_early_access_rate_limit(
   p_key_hash text,
   p_limit integer,
   p_window_seconds integer
