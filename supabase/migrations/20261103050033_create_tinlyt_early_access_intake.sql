@@ -1,52 +1,78 @@
--- Upgrade the original Tinlyt early-access intake schema to the live
--- 2026-11-03 shape. The earlier 20261022072400 migration already creates
--- public.early_access_requests and tinlyt_private.early_access_rate_limits.
--- This migration is intentionally additive/transformational; do not recreate
--- the public intake table.
+-- Tinlyt early-access intake baseline, matching the verified live project
+-- and its recorded migration version 20261103050033.
+-- The dedicated project records only this migration. The unrecorded October
+-- draft migration has been removed from the active migration directory so a
+-- future db push cannot replay obsolete schema and function definitions.
 --
--- Live catalog reconciliation: RLS enabled with no client-facing policies;
--- service_role-only table access; private rate-limit storage; updated lifecycle
--- states; atomic bounded rate limiting.
-
-alter table public.early_access_requests
-  drop constraint if exists early_access_requests_status_check;
-alter table public.early_access_requests
-  drop constraint if exists early_access_requests_description_check;
-
-alter table public.early_access_requests
-  add constraint early_access_requests_status_check
-  check (status = any (array['new', 'reviewing', 'accepted', 'rejected', 'withdrawn']));
-
-drop index if exists public.early_access_requests_status_created_idx;
-create index if not exists early_access_requests_created_at_idx
-  on public.early_access_requests (created_at desc);
-create index if not exists early_access_requests_status_created_at_idx
-  on public.early_access_requests (status, created_at desc);
-
-comment on table public.early_access_requests is
-  'Tinlyt public early-access requests. Contains personal data; server-only access through service_role.';
-
-alter table public.early_access_requests enable row level security;
-revoke all on table public.early_access_requests from public, anon, authenticated, service_role;
-grant all privileges on table public.early_access_requests to service_role;
+-- Applicant and rate-limit data are server-only. RLS is enabled with no
+-- browser-role policies; service_role is the only application role granted
+-- access. The rate-limit function is SECURITY INVOKER and uses a fixed,
+-- empty search_path.
 
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to service_role;
 
-do $migration$
-begin
-  if to_regclass('private.early_access_rate_limits') is not null
-     and to_regclass('tinlyt_private.early_access_rate_limits') is not null then
-    raise exception 'Both private and tinlyt_private rate-limit tables exist; refusing ambiguous migration';
-  elsif to_regclass('private.early_access_rate_limits') is null
-     and to_regclass('tinlyt_private.early_access_rate_limits') is not null then
-    alter table tinlyt_private.early_access_rate_limits set schema private;
-  end if;
-end;
-$migration$;
+create table public.early_access_requests (
+  id uuid primary key default gen_random_uuid(),
+  name text not null constraint early_access_requests_name_check
+    check (char_length(name) >= 2 and char_length(name) <= 120),
+  email text not null constraint early_access_requests_email_check
+    check (char_length(email) >= 3 and char_length(email) <= 254),
+  company text,
+  role text,
+  use_case text not null constraint early_access_requests_use_case_check
+    check (use_case = any (array[
+      'web-research',
+      'competitive-intelligence',
+      'due-diligence',
+      'investigations',
+      'data-extraction',
+      'agent-integration',
+      'other'
+    ])),
+  description text,
+  consent_at timestamptz not null,
+  privacy_notice_version text not null,
+  marketing_opt_in boolean not null default false,
+  marketing_opt_in_at timestamptz,
+  source text not null default 'tinlyt-public-website',
+  status text not null default 'new'
+    constraint early_access_requests_status_check
+    check (status = any (array['new', 'reviewing', 'accepted', 'rejected', 'withdrawn'])),
+  notification_status text not null default 'pending'
+    constraint early_access_requests_notification_status_check
+    check (notification_status = any (array['pending', 'sent', 'failed'])),
+  confirmation_status text not null default 'pending'
+    constraint early_access_requests_confirmation_status_check
+    check (confirmation_status = any (array['pending', 'sent', 'failed'])),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint early_access_marketing_consent_consistent check (
+    (marketing_opt_in = false and marketing_opt_in_at is null)
+    or
+    (marketing_opt_in = true and marketing_opt_in_at is not null)
+  )
+);
 
-create table if not exists private.early_access_rate_limits (
+comment on table public.early_access_requests is
+  'Tinlyt public early-access requests. Contains personal data; server-only access through service_role.';
+
+create unique index early_access_requests_email_lower_uidx
+  on public.early_access_requests (lower(email));
+create index early_access_requests_created_at_idx
+  on public.early_access_requests (created_at desc);
+create index early_access_requests_status_created_at_idx
+  on public.early_access_requests (status, created_at desc);
+
+alter table public.early_access_requests enable row level security;
+revoke all on table public.early_access_requests from public, anon, authenticated;
+revoke all on table public.early_access_requests from service_role;
+grant insert on table public.early_access_requests to service_role;
+grant select (id, created_at) on table public.early_access_requests to service_role;
+grant update (notification_status, confirmation_status, updated_at) on table public.early_access_requests to service_role;
+
+create table private.early_access_rate_limits (
   key_hash text primary key
     constraint early_access_rate_limits_key_hash_check
     check (key_hash ~ '^[0-9a-f]{64}$'),
@@ -57,15 +83,15 @@ create table if not exists private.early_access_rate_limits (
   updated_at timestamptz not null default now()
 );
 
-drop index if exists private.early_access_rate_limits_updated_idx;
 comment on table private.early_access_rate_limits is
   'Private HMAC-keyed rate-limit counters for Tinlyt early-access intake; never expose through the Data API.';
 
 alter table private.early_access_rate_limits enable row level security;
-revoke all on table private.early_access_rate_limits from public, anon, authenticated, service_role;
+revoke all on table private.early_access_rate_limits from public, anon, authenticated;
+revoke all on table private.early_access_rate_limits from service_role;
 grant insert, select, update on table private.early_access_rate_limits to service_role;
 
-create or replace function public.consume_early_access_rate_limit(
+create function public.consume_early_access_rate_limit(
   p_key_hash text,
   p_limit integer,
   p_window_seconds integer
