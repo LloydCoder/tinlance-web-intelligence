@@ -644,3 +644,48 @@ test('usage client rejects malformed query data before the Platform request', as
   );
   assert.equal(called, false);
 });
+
+
+
+test('revokes the authenticated session through the dedicated Platform endpoint', async () => {
+  let captured;
+  const client = new TwiApiClient({
+    baseUrl: '/api/twi',
+    tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
+    fetchImpl: async (url, init) => {
+      captured = { url: String(url), init };
+      return new Response(JSON.stringify({ status: 'revoked' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+  });
+  await client.revokeSession();
+  assert.match(captured.url, /\\/api\\/twi\\/v1\\/session\\/revoke$/);
+  assert.equal(captured.init.method, 'POST');
+  assert.equal(captured.init.headers.Authorization, 'Bearer ephemeral-test-token');
+  assert.equal(captured.init.headers['X-Tinlance-API-Version'], '1.1');
+  assert.match(captured.init.headers['X-Request-ID'], /^[0-9a-f-]{36}$/i);
+  assert.equal(captured.init.body, '{}');
+  assert.equal(captured.init.credentials, 'omit');
+  assert.equal(captured.init.redirect, 'error');
+  assert.equal(captured.init.cache, 'no-store');
+});
+
+
+test('does not report session revocation success when Platform persistence fails', async () => {
+  const client = new TwiApiClient({
+    baseUrl: '/api/twi',
+    tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
+    fetchImpl: async () => new Response(
+      JSON.stringify({ error: 'session_revocation_unavailable' }),
+      { status: 503, headers: { 'content-type': 'application/json' } }
+    )
+  });
+  await assert.rejects(client.revokeSession(), (error) => {
+    assert.ok(error instanceof TwiApiError);
+    assert.equal(error.code, 'server_error');
+    assert.equal(error.status, 503);
+    return true;
+  });
+});
