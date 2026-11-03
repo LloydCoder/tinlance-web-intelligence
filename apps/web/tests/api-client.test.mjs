@@ -52,6 +52,13 @@ function makeClient(fetchImpl, overrides = {}) {
     };
     const response = await fetchImpl(new URL(`/api/twi${path}`, 'https://tinlyt.test'), virtualInit);
     if (!response.ok) return response;
+    if (operation === 'twi.jobs.export_evidence'
+      && (response.headers.get('content-type') ?? '').split(';', 1)[0].trim().toLowerCase()
+        !== 'application/vnd.tinlance.twi-evidence+json') {
+      return new Response(JSON.stringify({ status: 'failed', payload: { error: 'evidence_media_type_rejected' } }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
     const text = await response.text();
     let payloadResult;
     try {
