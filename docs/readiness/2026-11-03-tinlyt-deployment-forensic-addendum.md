@@ -160,7 +160,7 @@ PR [#138](https://github.com/LloydCoder/tinlance-web-intelligence/pull/138) was 
 The migration history is now reconciled as follows:
 - The obsolete, unrecorded `20261022072400_early_access_requests.sql` migration is removed from the active migration directory.
 - `20261103050033_create_tinlyt_early_access_intake.sql` is the clean-database baseline and preserves the original live grants at that migration point.
-- `20261103060000_tighten_early_access_service_role.sql` is the forward hardening migration that narrows `service_role` access on the public intake table to INSERT, SELECT of only `id, created_at`, and UPDATE of only delivery-status/timestamp fields.
+- `20261103055338_tighten_early_access_service_role.sql` is the forward hardening migration that narrows `service_role` access on the public intake table to INSERT, SELECT of only `id, created_at`, and UPDATE of only delivery-status/timestamp fields.
 - The private rate-limit table retains only INSERT, SELECT, UPDATE for `service_role`; browser roles have no access.
 
 The forward migration was applied to the dedicated live Supabase project `iiluzdjaeunalqmuarxv` using the Supabase migration workflow. Live migration history now contains:
