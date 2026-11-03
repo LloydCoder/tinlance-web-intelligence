@@ -52,6 +52,14 @@ A GitHub OIDC provider was created at `arn:aws:iam::381661387870:oidc-provider/t
 
 **No application infrastructure was provisioned by this audit.** The OIDC provider and empty-trust role are IAM identity scaffolding, not a deployment. Do not add resource permissions or create billable infrastructure until the production deployment design, least-privilege action/resource policy, budget ceiling, and alerts are reviewed.
 
+## Early-access intake state
+
+The production Vercel environment currently contains exactly one visible variable: `EARLY_ACCESS_ENABLED=false`, applied to production, preview, and development. Its configuration comment explicitly says to keep intake disabled until a dedicated Supabase project, privacy approval, provider secrets, and preview end-to-end evidence are complete. There are no hidden production environment variables. The static contact form is therefore disabled by design. The `/api/early-access` Vercel function is deployed (GET returns the expected HTTP 405 because the handler accepts POST only), but intake cannot accept requests until all required server-side settings are configured.
+
+The handler requires a dedicated Supabase URL and secret key, the `early_access_requests` table, the `consume_early_access_rate_limit` RPC, Resend API key/from/notification addresses, Cloudflare Turnstile site and secret keys, a rate-limit salt of at least 32 characters, the approved privacy-notice version, and the feature flag. It verifies Turnstile hostname/origin, applies hashed IP/email rate limits, persists consent timestamps and delivery status, and sends applicant/team email. No real submissions have been attempted or fabricated in this audit.
+
+The connected Supabase account currently exposes one organization and one active project named `LloydCoder's Project` in `eu-west-1`; its purpose has not been established. I did not inspect its tables or data and did not repurpose it. A new dedicated Tinlyt early-access project was quoted at USD $0/month in that organization, but project creation was not performed because the organization choice must be confirmed by the owner. The privacy page remains an explicit legal-review draft, so the intake feature flag must stay off until the controller/contact, retention, processors, legal basis, privacy notice, and operational deletion policy are approved.
+
 ## Production composition gaps
 
 ### Agent Platform
