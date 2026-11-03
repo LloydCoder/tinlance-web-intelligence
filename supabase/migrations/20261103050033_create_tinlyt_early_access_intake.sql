@@ -80,7 +80,7 @@ comment on table private.early_access_rate_limits is
 
 alter table private.early_access_rate_limits enable row level security;
 revoke all on table private.early_access_rate_limits from anon, authenticated;
-grant all privileges on table private.early_access_rate_limits to service_role;
+grant insert, select, update on table private.early_access_rate_limits to service_role;
 
 create or replace function public.consume_early_access_rate_limit(
   p_key_hash text,
