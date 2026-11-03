@@ -611,15 +611,27 @@ test('monitor run client validates result outcome and baseline digest fields', a
   assert.equal((await staleCapture.getMonitorRun('mon_01', 'job_monitor_01')).result.outcome, 'stale_capture');
 });
 
-test('usage reads fail closed until a governed Platform usage operation exists', async () => {
-  let called = false;
-  const client = makeClient(async () => { called = true; return new Response('{}'); });
-  await assert.rejects(
-    client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'configuration_error'
-      && error.message.includes('governed Platform operation')
-  );
-  assert.equal(called, false);
+test('usage reads call the governed Platform operation', async () => {
+  const usage = {
+    schema_version: 1, dimension: 'search_requests_month',
+    period_start: '2026-10-01T00:00:00Z', used: 12,
+    quota_limit: 100, remaining: 88, plan_id: 'starter', plan_version: 1,
+    events: [], returned: 0, has_more: false, next_cursor: null
+  };
+  let captured;
+  const client = makeClient(async (url, init) => {
+    captured = { url: String(url), init };
+    return new Response(JSON.stringify(usage), { status: 200, headers: { 'content-type': 'application/json' } });
+  });
+  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
+  const request = JSON.parse(captured.init.body);
+  const url = new URL(captured.url);
+  assert.equal(url.pathname, '/api/twi/v1/usage');
+  assert.equal(url.searchParams.get('limit'), '25');
+  assert.equal(captured.init.method, 'GET');
+  assert.equal(request.operation, 'twi.usage.read');
+  assert.deepEqual(request.payload, { dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
+  assert.equal(result.used, 12);
 });
 
 test('usage client rejects malformed query data before the Platform request', async () => {
