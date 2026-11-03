@@ -62,6 +62,34 @@ The handler requires a dedicated Supabase URL and secret key, the `early_access_
 
 The connected Supabase account currently exposes one organization and one active project named `LloydCoder's Project` in `eu-west-1`; its purpose has not been established. I did not inspect its tables or data and did not repurpose it. A new dedicated Tinlyt early-access project was quoted at USD $0/month in that organization, but project creation was not performed because the organization choice must be confirmed by the owner. The privacy page remains an explicit legal-review draft, so the intake feature flag must stay off until the controller/contact, retention, processors, legal basis, privacy notice, and operational deletion policy are approved.
 
+## Early-access infrastructure progress — 2026-11-03 follow-up
+
+A dedicated Supabase project was created in the confirmed account organization:
+- Project: `Tinlyt-Early-Access`
+- Project ref: `iiluzdjaeunalqmuarxv`
+- Region: `eu-west-1`
+- Database: PostgreSQL 17
+- Supabase project state: `ACTIVE_HEALTHY`
+- Quoted recurring project cost at creation: USD $0/month
+
+Migration `20261103050033_create_tinlyt_early_access_intake` was applied successfully. It creates:
+- `public.early_access_requests` with consent and privacy-version fields, optional marketing opt-in, controlled lifecycle statuses, notification delivery states, case-insensitive email uniqueness, and created/status indexes.
+- `private.early_access_rate_limits`, with RLS enabled and no public schema access.
+- `public.consume_early_access_rate_limit(text, integer, integer)`, an atomic fixed-window counter using HMAC-SHA256 key hashes, with bounded inputs and execute permission restricted to `service_role`.
+
+Verification:
+- Both tables exist; RLS is enabled on both.
+- Anonymous and authenticated roles cannot read the intake table.
+- Anonymous role cannot use the private schema or execute the rate-limit function.
+- `service_role` can insert intake rows and execute the rate-limit function.
+- Rate-limit test returned five allowed requests followed by a rejected sixth request at a limit of five.
+- No real or synthetic applicant records were inserted.
+- Supabase security advisor returned only informational `rls_enabled_no_policy` notices for the two intentionally server-only tables; performance advisor returned only unused-index notices expected on a new, empty database.
+
+A Cloudflare Turnstile widget named `Tinlyt Early Access` was created in managed mode and restricted to `tinlyt.tinlance.com` and `tinlyt-web.vercel.app`. The public site key is configured in Vercel as `EARLY_ACCESS_TURNSTILE_SITE_KEY`; the verification secret is stored as a sensitive server environment variable, not a browser variable. Vercel also has the dedicated `SUPABASE_URL` and exact allowed origin configured for production and preview. These settings do not enable intake.
+
+**Intake remains disabled.** `EARLY_ACCESS_ENABLED=false` remains in production, preview, and development. Activation is blocked on the Supabase server secret/API credential for the Vercel handler, a dedicated Resend sending credential, approved sender and notification recipient addresses, a 32-character rate-limit salt, and approval of the privacy notice/retention policy. No Resend key was created and no email was sent. The migration is recorded in the live Supabase migration history; a repository migration source file still needs to be generated and committed using the Supabase CLI workflow before treating schema change control as complete.
+
 ## Production composition gaps
 
 ### Agent Platform
