@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "observed_at": "2026-11-03T08:45:11Z",
+  "repository": "LloydCoder/tinlance-web-intelligence",
+  "commit": "5a8a281cb615820703dd45c724d0822568694655",
+  "workflow": {
+    "name": "CI",
+    "run_id": 41605281852,
+    "url": "https://github.com/LloydCoder/tinlance-web-intelligence/actions/runs/41605281852",
+    "event": "push",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "Python quality and tests (3.12)",
+        "conclusion": "success",
+        "job_id": 125813460483
+      },
+      {
+        "name": "Python quality and tests (3.13)",
+        "conclusion": "success",
+        "job_id": 125813460630
+      },
+      {
+        "name": "Browser container isolation",
+        "conclusion": "success",
+        "job_id": 125813460777
+      },
+      {
+        "name": "Reproducible release artifact validation",
+        "conclusion": "success",
+        "job_id": 125813460836
+      }
+    ]
+  },
+  "release_decision": "NOT_CERTIFIED",
+  "notes": [
+    "This evidence records the exact main-branch CI run and its four successful jobs.",
+    "It does not attest to live deployment, authenticated API operation, privacy approval, operational readiness, TSIC conformance, or private beta/GA authorization."
+  ]
+}
