@@ -446,6 +446,72 @@ export class TwiApiClient {
     }
   }
 
+  async revokeSession(): Promise<void> {
+    let token: string;
+    let tokenTimeout: ReturnType<typeof globalThis.setTimeout> | undefined;
+    try {
+      token = await Promise.race([
+        this.tokenProvider.getAccessToken(),
+        new Promise<string>((_resolve, reject) => {
+          tokenTimeout = globalThis.setTimeout(
+            () => reject(new TwiApiError("request_timeout", "The Platform identity provider timed out.")),
+            this.timeoutMs,
+          );
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof TwiApiError) throw error;
+      throw new TwiApiError("authentication_required", "The approved Platform identity provider could not supply an access token.");
+    } finally {
+      if (tokenTimeout !== undefined) globalThis.clearTimeout(tokenTimeout);
+    }
+    if (!token || token !== token.trim() || /\\s/.test(token)) {
+      throw new TwiApiError("authentication_required", "The approved Platform identity provider returned an invalid access token.");
+    }
+
+    const controller = new AbortController();
+    const timeout = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await this.fetchImpl(
+        new URL("v1/session/revoke", `${this.baseUrl.replace(/\\/$/, "")}/`),
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Tinlance-API-Version": "1.1",
+            "X-Request-ID": globalThis.crypto.randomUUID(),
+            Authorization: `Bearer ${token}`,
+          },
+          body: "{}",
+          signal: controller.signal,
+          redirect: "error",
+          credentials: "omit",
+          cache: "no-store",
+        },
+      );
+      const requestId = response.headers.get("x-request-id");
+      if (!response.ok) throw errorForStatus(response.status, requestId);
+      const contentType = response.headers.get("content-type") ?? "";
+      const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+      if (mediaType !== "application/json") {
+        throw new TwiApiError("invalid_response", "The Platform session endpoint returned an unsupported response media type.", response.status, requestId);
+      }
+      const envelope = await readBoundedJson(response, 4096, "The Platform session revocation response", controller.signal);
+      if (!isRecord(envelope) || Object.keys(envelope).length !== 1 || envelope.status !== "revoked") {
+        throw new TwiApiError("invalid_response", "The Platform did not confirm durable session revocation.", response.status, requestId);
+      }
+    } catch (error) {
+      if (error instanceof TwiApiError) throw error;
+      if (controller.signal.aborted) {
+        throw new TwiApiError("request_timeout", "The Platform session revocation request timed out.");
+      }
+      throw new TwiApiError("network_error", "The Platform session revocation request could not be completed.");
+    } finally {
+      globalThis.clearTimeout(timeout);
+    }
+  }
+
   async createJob(request: CreateJobRequest, idempotencyKey?: string): Promise<Job> {
     validateCreateRequest(request);
     const key = validIdempotencyKey(idempotencyKey ?? this.idempotencyKeyFactory());
