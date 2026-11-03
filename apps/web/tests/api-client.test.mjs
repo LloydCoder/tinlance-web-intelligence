@@ -38,11 +38,13 @@ function makeClient(fetchImpl, overrides = {}) {
       'twi.monitors.read': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}`, 'GET'],
       'twi.monitors.run': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/runs`, 'POST'],
       'twi.monitors.pause': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/pause`, 'POST'],
-      'twi.monitors.resume': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/resume`, 'POST']
+      'twi.monitors.resume': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/resume`, 'POST'],
+      'twi.usage.read': ['/v1/usage', 'GET']
     };
     const route = routes[operation];
     if (!route) throw new Error(`Unexpected Platform operation: ${operation}`);
-    const [path, method, body] = route;
+    const [basePath, method, body] = route;
+    const path = operation === 'twi.usage.read' ? `${basePath}?${new URLSearchParams(payload).toString()}` : basePath;
     const headers = { ...init.headers };
     const virtualInit = {
       ...init,
