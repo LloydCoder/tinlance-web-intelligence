@@ -56,6 +56,14 @@ Sources reviewed:
 
 This table is an operational assessment, not a legal opinion. Tinlance must ensure each purpose has a documented lawful basis before enabling intake.
 
+### Legitimate-interest assessment — endpoint security
+
+- **Purpose:** prevent automated abuse, duplicate spam, credential-stuffing attempts and denial-of-service patterns against the public request endpoint.
+- **Necessity:** Turnstile challenge verification and short-lived IP/email-derived HMAC counters provide proportionate abuse controls. The endpoint does not persist raw IP addresses in the rate-limit table.
+- **Balancing:** the processing is limited to a request form, does not profile applicants for unrelated purposes, does not determine access eligibility automatically, and uses keyed hashes with short retention. The impact is limited compared with the security benefit.
+- **Safeguards:** server-only database access, RLS, no browser-role table permissions, origin/hostname checks, HMAC-SHA256 identifiers, five requests per 15-minute window, and scheduled expiry of rate-limit rows.
+- **Conclusion:** legitimate interests are the proposed basis for narrowly scoped endpoint-security processing. This conclusion must be revisited if the data collected, abuse controls, retention or service scope changes. Data subjects may raise an objection through the privacy contact; security processing necessary to protect the endpoint may continue where the applicable legal test permits it.
+
 ## 5. Cross-border transfer analysis
 
 Personal data may be processed in Ireland/EU, the United States and other locations used by Vercel or Cloudflare subprocessors. The Resend sending region does not change the fact that Resend stores customer data in the United States.
