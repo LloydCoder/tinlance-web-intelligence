@@ -661,7 +661,7 @@ test('revokes the authenticated session through the dedicated Platform endpoint'
     }
   });
   await client.revokeSession();
-  assert.match(captured.url, /\\/api\\/twi\\/v1\\/session\\/revoke$/);
+  assert.equal(new URL(captured.url).pathname, '/api/twi/v1/session/revoke');
   assert.equal(captured.init.method, 'POST');
   assert.equal(captured.init.headers.Authorization, 'Bearer ephemeral-test-token');
   assert.equal(captured.init.headers['X-Tinlance-API-Version'], '1.1');
