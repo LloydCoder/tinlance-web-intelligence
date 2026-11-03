@@ -102,7 +102,7 @@ test('exchanges a one-time code using the stored verifier and keeps access token
   assert.equal(body.get('grant_type'), 'authorization_code');
   assert.equal(body.get('code'), 'one-time-code');
   assert.equal(body.get('code_verifier'), transaction.verifier);
-  assert.equal(body.get('resource'), 'https://twi.example.com');
+  assert.equal(body.has('resource'), false, 'Cognito resource binding belongs on /oauth2/authorize, not /oauth2/token');
   assert.equal(body.has('client_secret'), false);
   assert.equal(storage.getItem('tinlyt.oauth.pkce.transaction.v1'), null);
   assert.equal(replaced.length, 1);
