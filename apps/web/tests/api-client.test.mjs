@@ -66,12 +66,12 @@ function makeClient(fetchImpl, overrides = {}) {
     } catch {
       return new Response(text, { status: 200, headers: { 'content-type': 'application/json' } });
     }
-    const headers = { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' };
+    const responseHeaders = { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' };
     const originalLength = response.headers.get('content-length');
-    if (originalLength) headers['content-length'] = originalLength;
+    if (originalLength) responseHeaders['content-length'] = originalLength;
     return new Response(JSON.stringify({ status: 'success', payload: payloadResult }), {
       status: 200,
-      headers
+      headers: responseHeaders
     });
   };
   return new TwiApiClient({
