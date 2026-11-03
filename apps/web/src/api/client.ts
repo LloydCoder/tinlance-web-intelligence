@@ -545,14 +545,8 @@ export class TwiApiClient {
   }
 
   async deleteMonitor(monitorId: string): Promise<Monitor> {
-    const requestedId = this.validateId(monitorId);
-    throw new TwiApiError("permission_denied", "Monitor deletion requires a Platform approval binding; the browser cannot authorize this destructive action.");
-    const monitor = parseMonitor(await this.request(
-      `/v1/monitors/${encodeURIComponent(requestedId)}`,
-      { method: "DELETE" },
-    ));
-    if (monitor.monitor_id !== requestedId) throw new TwiApiError("invalid_response", "The API returned a different monitor than the requested resource.");
-    return monitor;
+    this.validateId(monitorId);
+    throw new TwiApiError("permission_denied", "Monitor deletion requires an explicit Platform approval binding.");
   }
 
   async readUsage(query: UsageQuery): Promise<UsageResponse> {
@@ -568,12 +562,6 @@ export class TwiApiClient {
     ) {
       throw new TwiApiError("validation_error", "The usage query does not match the supported contract.");
     }
-    const params = new URLSearchParams({
-      dimension: query.dimension,
-      period_start: query.period_start,
-      limit: String(query.limit ?? 100),
-    });
-    if (query.cursor !== undefined) params.set("cursor", query.cursor);
     throw new TwiApiError("configuration_error", "Usage retrieval is not yet exposed as a governed Platform operation; direct TWI access is disabled.");
   }
 
