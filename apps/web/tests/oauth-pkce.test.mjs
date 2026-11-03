@@ -48,6 +48,19 @@ test('requires explicit trusted HTTPS issuer origins', () => {
   }), (error) => error instanceof TwiApiError && error.code === 'configuration_error');
 });
 
+test('accepts Cognito issuer and managed-login endpoints on separately trusted origins', () => {
+  const { provider } = makeProvider({
+    issuer: 'https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_Abc123',
+    authorizationEndpoint: 'https://tinlyt.auth.eu-west-1.amazoncognito.com/oauth2/authorize',
+    tokenEndpoint: 'https://tinlyt.auth.eu-west-1.amazoncognito.com/oauth2/token',
+    trustedIssuerOrigins: [
+      'https://cognito-idp.eu-west-1.amazonaws.com',
+      'https://tinlyt.auth.eu-west-1.amazoncognito.com'
+    ]
+  });
+  assert.ok(provider);
+});
+
 test('starts Authorization Code + PKCE with S256 and no client secret', async () => {
   const { provider, storage, navigations } = makeProvider();
   await provider.beginLogin();
@@ -102,7 +115,7 @@ test('exchanges a one-time code using the stored verifier and keeps access token
   assert.equal(body.get('grant_type'), 'authorization_code');
   assert.equal(body.get('code'), 'one-time-code');
   assert.equal(body.get('code_verifier'), transaction.verifier);
-  assert.equal(body.get('resource'), 'https://twi.example.com');
+  assert.equal(body.has('resource'), false, 'Cognito resource binding belongs on /oauth2/authorize, not /oauth2/token');
   assert.equal(body.has('client_secret'), false);
   assert.equal(storage.getItem('tinlyt.oauth.pkce.transaction.v1'), null);
   assert.equal(replaced.length, 1);
@@ -172,9 +185,8 @@ test('rejects access-token lifetimes above one hour', async () => {
 });
 
 
-test('rejects trusted endpoints whose origin differs from the configured issuer', () => {
+test('rejects OAuth endpoints on origins outside the explicit trust allowlist', () => {
   assert.throws(() => makeProvider({
-    issuer: 'https://other-issuer.example',
-    trustedIssuerOrigins: ['https://identity.example.com', 'https://other-issuer.example']
+    tokenEndpoint: 'https://untrusted.example.com/oauth2/token'
   }), (error) => error instanceof TwiApiError && error.code === 'configuration_error');
 });

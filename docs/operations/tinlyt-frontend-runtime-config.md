@@ -9,21 +9,23 @@ refresh token, private key, database credential or service credential.
 
 | Variable | Purpose |
 | --- | --- |
-| `TINLYT_API_BASE_URL` | TWI API base URL. Use a same-origin path only when a real Vercel rewrite/proxy exists; otherwise use the dedicated HTTPS API origin. |
+| `TINLYT_API_BASE_URL` | Tinlance Agent Platform API base URL. Browser requests use the governed `/v1/agent-platform` boundary; never point this at the downstream TWI REST service. |
 | `TINLYT_API_ALLOWED_ORIGINS` | Comma-separated exact HTTPS origins allowed for cross-origin API calls. |
 | `TINLYT_OAUTH_ISSUER` | Exact identity-provider issuer URL. |
 | `TINLYT_OAUTH_AUTHORIZATION_ENDPOINT` | Authorization Code + PKCE authorization endpoint. |
 | `TINLYT_OAUTH_TOKEN_ENDPOINT` | Authorization Code + PKCE token endpoint. |
 | `TINLYT_OAUTH_CLIENT_ID` | Public OAuth client ID; no client secret is used by the browser. |
 | `TINLYT_OAUTH_SCOPE` | Space-delimited least-privilege scopes requested by the public client. |
-| `TINLYT_OAUTH_RESOURCE` | RFC 8707 resource indicator for the TWI resource server. |
-| `TINLYT_OAUTH_TRUSTED_ISSUER_ORIGINS` | Comma-separated HTTPS origins explicitly trusted by the browser adapter. |
+| `TINLYT_OAUTH_RESOURCE` | RFC 8707 resource indicator for the Tinlance Agent Platform API. Cognito receives it on `/oauth2/authorize`; do not send it again to `/oauth2/token`. |
+| `TINLYT_OAUTH_TRUSTED_ISSUER_ORIGINS` | Comma-separated HTTPS origins explicitly trusted for the issuer and OAuth endpoints. For Cognito, include both the regional `cognito-idp` issuer origin and the managed-login/custom-domain origin. |
 
 The redirect URI is generated as the current deployment origin plus `/auth/callback`. Register
 that exact URI in the identity provider for both preview/staging and production clients as
-appropriate. The issuer, authorization endpoint and token endpoint must share a trusted HTTPS
-origin. The browser stores only the one-time PKCE transaction in session storage; access tokens
-remain in memory.
+appropriate. The authorization and token endpoints must share one trusted HTTPS origin. The issuer
+must also be trusted, but may use a separate origin; Cognito's regional issuer and managed-login
+domain are different origins. Cognito resource binding is requested at the authorization endpoint
+and inherited by the resulting access token. The browser stores only the one-time PKCE transaction
+in session storage; access tokens remain in memory.
 
 ## Fail-closed behavior
 
