@@ -178,3 +178,51 @@ Live privilege verification returned:
 The repository's Supabase database test workflow passed after replaying the baseline and hardening migration against an isolated local Supabase stack (run #51). The full CI workflow passed on PR #138 (run #1744), including Python 3.12/3.13 tests, PostgreSQL integration and dump/restore drills, reproducible release artifact validation, container vulnerability scans, browser egress-proxy bypass checks, and Chromium sandbox checks. A subsequent baseline-source correction was committed to main as `47cc0c4a14af4655bf0b2699e421ecd102edc106`; its push-triggered CI and Supabase database workflows are pending at the time of this addendum.
 
 This hardening changes database privileges only. It does not enable intake, create applicant records, send email, or deploy the latest frontend. `EARLY_ACCESS_ENABLED=false` remains in every environment pending credential, privacy, deployment, and end-to-end acceptance gates.
+
+
+## PR #139 — privacy notice, migration tests and live retention enforcement — 2026-11-03
+
+PR [#139](https://github.com/LloydCoder/tinlance-web-intelligence/pull/139) was merged as `40307a90ef064f31b75579b3c336df7a2f4c04b9`.
+
+Verified checks on the final PR head `578ddc2917847fe31a3796a4caa35ce54608717b`:
+- Frontend workflow run #351 passed, including lint, syntax, typecheck, dependency audit, static security checks, web tests, build, production artifact smoke test, and browser accessibility/responsive checks.
+- Supabase database workflow run #59 passed, including isolated migration replay and pgTAP security/retention tests.
+- Full CI workflow run #1754 passed, including Python 3.12/3.13 quality/tests, reproducible release artifact validation, container vulnerability scans, browser egress-proxy bypass verification and Chromium sandbox checks.
+- Vercel deployment check did not pass because the Hobby team reached its build-rate limit. This is a hosting quota blocker, not a code-test failure.
+
+The live Supabase retention migration was applied as version `20261103061953` and the repository migration file is aligned to that exact version:
+- Early-access request rows older than 12 months are purged.
+- Rate-limit HMAC rows older than 24 hours are purged by an hourly job (maximum approximate cleanup delay 25 hours).
+- Live cron job `tinlyt-early-access-retention` is active on schedule `0 * * * *`.
+- The maintenance function is private, SECURITY DEFINER with an empty search path, and not executable by anon, authenticated or service_role.
+- The project still has zero applicant records; no email was sent.
+
+The source tree now contains a versioned early-access privacy notice, a homepage cookie/tracking disclosure, EU/US processing disclosure beside the form consent, and an internal NDPA/GAID cross-border processing assessment. The notice is not represented as a completed legal opinion. The cross-border transfer assessment and processor-contract verification remain launch gates.
+
+## Production and infrastructure status after PR #139
+
+The custom domain `https://tinlyt.tinlance.com` still serves the prior production deployment (commit `f94d024e0949a75dafe6df1d7c401d2ac7c0df9b`). The updated privacy notice and cookie disclosure are merged to main but are not yet live on the production domain because Vercel reports `build-rate-limit` for the Hobby team. The existing preview deployment is from the earlier migration branch and is not promoted to production.
+
+The early-access API remains disabled. Vercel still lacks `SUPABASE_SECRET_KEY` and `RESEND_API_KEY`; `EARLY_ACCESS_PRIVACY_NOTICE_VERSION` is to be set to `2026-11-03-v1` for all environments. Turnstile, sender-domain configuration, routing address and rate-limit salt are already configured. No applicant records or emails exist.
+
+AWS deployment remains intentionally unprovisioned:
+- The connected AWS identity is the account root identity.
+- `TinlytGitHubActionsDeployRole` has no attached or inline deployment policies.
+- No AWS Budgets are configured.
+- No Tinlyt EC2/backend resources exist in `eu-west-1`; existing `eu-north-1` resources belong to other projects and must not be modified.
+- Cost Explorer shows approximately USD 17.93 of AWS credits applied against usage from 1 October through 3 November 2026. The current remaining credit balance is not exposed by the available API. The account's Free Tier usage response did not show an EC2 free-tier allowance.
+- The prior user-reported USD 34.32 balance is historical and cannot be treated as a current available balance.
+
+No paid AWS resources were created, no Vercel plan was upgraded, and no production credentials were exposed. The backend is not deployed and the workspace health endpoint remains unavailable (404).
+
+## Remaining hard launch gates
+
+1. Add a dedicated Supabase server secret and a dedicated Resend sending-only key directly to Vercel sensitive environment variables. Do not paste secrets into chat.
+2. Set `EARLY_ACCESS_PRIVACY_NOTICE_VERSION=2026-11-03-v1` in production, preview and development.
+3. Verify the applicable NDPA cross-border transfer basis and processor DPAs/subprocessor disclosures with qualified Nigerian privacy review.
+4. Wait for Vercel build-rate quota reset or obtain explicit approval for a paid plan before deploying the latest main revision.
+5. Run the controlled end-to-end intake test in preview after credentials and deployment are available; verify Turnstile, rate limiting, DB insert, duplicate handling, both email flows and delivery-status updates.
+6. Confirm the live cron job's first scheduled execution succeeds in Supabase Cron history.
+7. Establish a least-privilege non-root AWS deployment identity and cost controls before any EC2/backend provisioning. Do not use the account root identity for deployment and do not modify unrelated infrastructure.
+
+Until these gates are verified, `EARLY_ACCESS_ENABLED=false` remains the correct production state.

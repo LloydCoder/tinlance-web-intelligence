@@ -88,7 +88,7 @@ If a required transfer basis or safeguard is not established, the form remains d
 - Marketing opt-in is stored on the request row and is removed with that row; withdrawal must be honoured earlier.
 - Provider email, log and backup retention follows the provider's current plan and published deletion/backup policy. Tinlance must not promise provider-side deletion sooner than the provider contract permits.
 
-The database migration `20261103070000_early_access_retention.sql` creates a private SECURITY DEFINER cleanup function with an empty search path, revokes execution from browser and application roles, and schedules it hourly through Supabase Cron. The corresponding pgTAP tests insert synthetic expired/current rows inside a rollback transaction and verify the boundaries.
+The database migration `20261103061953_early_access_retention.sql` is applied to the live Supabase project. It creates a private SECURITY DEFINER cleanup function with an empty search path, revokes execution from browser and application roles, and schedules it hourly through Supabase Cron. The live cron job is active; the corresponding pgTAP tests insert synthetic expired/current rows inside a rollback transaction and verify the boundaries.
 
 ## 7. Technical and organisational safeguards
 
