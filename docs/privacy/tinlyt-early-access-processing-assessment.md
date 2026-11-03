@@ -32,10 +32,10 @@ No individual is described as a statutory Data Protection Officer in this assess
 
 | Provider | Function in this workflow | Verified processing/location facts |
 |---|---|---|
-| Vercel | Public website hosting and serverless intake endpoint | Vercel's DPA describes services running across AWS, Azure and Google Cloud infrastructure, multiple regions and globally replicated backups. Do not promise a single Vercel data region. |
-| Supabase | Early-access request database and rate-limit store | Dedicated project `Tinlyt-Early-Access`, region `eu-west-1` (Ireland). Supabase states core project data is primarily hosted in the selected region; limited support/subprocessor processing may occur elsewhere. |
-| Resend | Applicant confirmation and internal notification email | Sending domain uses `eu-west-1` for sending. Resend states customer data, message content and delivery logs are stored in the United States. |
-| Cloudflare Turnstile | Bot and abuse prevention | Turnstile processes browser/device/interaction signals to provide the challenge service; Cloudflare also describes separate processing to improve detection capabilities. |
+| Vercel | Public website hosting and serverless intake endpoint | Vercel's DPA (last updated 17 March 2026; effective 31 March 2026) expressly applies to customers on Pro and Enterprise plans. The connected Tinlyt project is on Hobby. DPA coverage for this controller/processor relationship is therefore **not established** by the published DPA; confirm separately with Vercel or move the personal-data intake endpoint to a processor with an applicable DPA. Vercel infrastructure and subprocessors are global; do not promise a single processing region. |
+| Supabase | Early-access request database and rate-limit store | Dedicated project `Tinlyt-Early-Access`, region `eu-west-1` (Ireland). Supabase's current published DPA is Version 1 dated 1 August 2026 and is effective as of the service agreement. Data is primarily stored/processed in the selected region, while authorized subprocessors may process elsewhere. |
+| Resend | Applicant confirmation and internal notification email | The sending domain uses `eu-west-1` for sending, but this does not provide EU data residency: Resend states primary processing/storage is in the United States. Its published DPA is dated 31 December 2025 and becomes binding through acceptance of the Terms of Service or execution. Confirm actual account-plan retention and current subprocessor list before intake. |
+| Cloudflare Turnstile | Bot and abuse prevention | The Turnstile Privacy Addendum (last updated 18 June 2025) identifies Signals including client IP, TLS fingerprint, User-Agent, sitekey and associated origin. Cloudflare acts as processor for challenge security and as a separate controller when using Signals to improve detection capabilities. |
 
 Sources reviewed:
 - NDPC, Nigeria Data Protection Act 2023 — General Application and Implementation Directive 2025, Article 7, Article 34, Article 45 and Schedule 5: https://ndpc.gov.ng/wp-content/uploads/2025/07/NDP-ACT-GAID-2025-MARCH-20TH.pdf
@@ -68,7 +68,7 @@ This table is an operational assessment, not a legal opinion. Tinlance must ensu
 
 Personal data may be processed in Ireland/EU, the United States and other locations used by Vercel or Cloudflare subprocessors. The Resend sending region does not change the fact that Resend stores customer data in the United States.
 
-The NDPA sections 41–42 and GAID 2025 Article 45/Schedule 5 govern transfers from Nigeria. Schedule 5 identifies an NDPC adequacy decision, an NDPC-approved cross-border data transfer instrument, or another lawful basis as potential grounds. It also describes transfers necessary for a contract or steps taken at the data subject's request before entering a contract.
+The NDPA sections 41–42 and GAID 2025 Article 45/Schedule 5 govern transfers from Nigeria. Article 45(2) says Schedule 5 is to be used pending a further NDPC cross-border instrument. Schedule 5 identifies an NDPC adequacy decision, an NDPC-approved cross-border data transfer instrument, or another lawful basis as potential grounds, including transfers necessary for a contract or steps taken at the data subject's request before entering a contract. Article 34 expects a controller/processor DPA with specified parties, purposes, processing locations, lawful bases, responsibilities, technical/organisational measures, DPIA/risk details and other contractual terms. The applicable transfer basis and DPA adequacy must be confirmed by qualified Nigerian privacy counsel; this engineering assessment does not decide the legal test.
 
 The narrow proposed basis for this workflow is that the data subject requests evaluation and a response, and the selected cloud/database/email services are used to perform those requested steps. That basis must be assessed provider-by-provider and destination-by-destination. Resend's EU Standard Contractual Clauses are relevant contractual safeguards but are not represented here as an NDPC adequacy decision or an NDPC-approved Nigerian transfer instrument.
 
@@ -109,12 +109,35 @@ The following remain outstanding and must be evidenced before enabling early acc
 1. Add a dedicated Supabase server secret to Vercel. The publishable/anon key is not sufficient and must never be substituted.
 2. Create a dedicated Resend sending-only key restricted to `tinlance.com`, then add it as a sensitive Vercel environment variable without exposing the token in chat.
 3. Add the approved notice version to Vercel; keep `EARLY_ACCESS_ENABLED=false` until the deployment includes the notice and runtime configuration.
-4. Complete the NDPA cross-border transfer assessment and verify processor DPAs/subprocessor disclosures.
-5. Verify the latest frontend deployment on Vercel; the current production alias is behind main while the Hobby deployment/build-rate limit is active.
-6. Run controlled end-to-end tests on a non-production preview or isolated test environment: Turnstile pass/fail, rate limits, duplicate submission, database persistence, both email flows, delivery status update and deletion.
-7. Verify the hourly retention job runs successfully in the live Supabase Cron history.
-8. Keep public workspace, account, investigation and evidence processing disabled until their separate privacy notice, terms and live data flows are documented.
+4. Complete the NDPA cross-border transfer assessment with qualified Nigerian privacy counsel and verify provider DPAs/subprocessor disclosures.
+5. Resolve Vercel DPA coverage: the published DPA applies to Pro and Enterprise, while Tinlyt is on Hobby. Obtain written confirmation of applicable processor terms or move the personal-data intake endpoint to a suitable processor; keep the static frontend on Vercel if desired.
+6. The latest frontend code is now deployed to the production aliases and the privacy notice is live. This gate is complete for the public frontend only; it does not prove the API/backend is deployed.
+7. Add the missing Supabase server secret and dedicated Resend sending-only key directly to Vercel sensitive environment variables. Do not paste secrets into chat.
+8. Run controlled end-to-end tests on a non-production preview or isolated test environment: Turnstile pass/fail, rate limits, duplicate submission, database persistence, both email flows, delivery-status update and deletion.
+9. Verify the first scheduled hourly retention execution appears as successful in live Supabase Cron history. The job is active; the 06:33 UTC check preceded the next 07:00 UTC GMT schedule boundary.
+10. Keep public workspace, account, investigation and evidence processing disabled until their separate privacy notice, terms and live data flows are documented.
 
 ## 9. Current state
 
-The dedicated Supabase project is healthy, has no applicant rows, and its migration history is aligned with the repository through the least-privilege migration. The retention migration is prepared in source control and must pass the isolated database workflow before being applied to the live project. No applicant emails have been sent. No AWS application infrastructure has been provisioned. The frontend is hosted on Vercel, but the latest main revision has not been promoted to the custom production domain.
+The dedicated Supabase project is healthy and has no applicant rows. Live migration history is aligned with the repository through `20261103061953_early_access_retention`; the hourly Cron job is active, the cleanup function has passed manual execution, and the first scheduled run is pending confirmation in `cron.job_run_details`. Supabase advisors currently report only informational findings: RLS enabled with no policies on the two tables (intentional deny-by-default) and one unused index (no applicant workload exists yet). No applicant emails have been sent. No AWS application infrastructure has been provisioned. The frontend production deployment `dpl_BMSDcwrQn7EMNUbX8BRZtPfFEPBQ` is READY from commit `24f9a99f90b8d217b3b3d24ed72f105b8c9b64df`, with aliases `https://tinlyt.tinlance.com` and `https://tinlyt-web.vercel.app`; the subsequent main commit `4397d3f57b2eecae221be4a36bcf5010db311eea` changed only readiness documentation. The public `/privacy` page serves version `2026-11-03-v1`; `/api/twi/health` remains HTTP 404, so the TWI backend is not deployed. `EARLY_ACCESS_ENABLED=false` remains in all Vercel environments. The AWS identity remains root, the OIDC deployment role has no resource policies, no AWS Budget exists, and current credit balance is not exposed by the connected API.
+
+
+## 10. Provider contract review update — 3 November 2026
+
+The current public provider documents sharpen the outstanding contractual gate:
+
+- **Vercel:** its DPA says it applies to customers on Pro and Enterprise plans. Tinlyt's connected project is on Hobby. Do not assume Vercel is contractually engaged as a processor under that DPA for early-access personal data. Obtain written confirmation of a suitable DPA/processor agreement or move the personal-data endpoint to another provider with applicable contractual terms. This does not require moving the static marketing frontend away from Vercel.
+- **Supabase:** the current DPA is Version 1 dated 1 August 2026. It is effective with the service agreement, authorizes the published subprocessor list, and says customer-directed region data is stored and primarily processed in that region, subject to the DPA's stated exceptions and subprocessor processing. Confirm the account's agreement and subscribe to subprocessor changes.
+- **Resend:** its DPA is dated 31 December 2025 and is effective through acceptance of the Terms of Service or execution. Its security documentation states data is stored in the United States; an EU sending region affects where email is sent from, not where data is stored. Confirm the account plan's retention and current subprocessors.
+- **Cloudflare Turnstile:** its privacy addendum identifies client IP, TLS fingerprint, User-Agent, sitekey and origin as Signals; Cloudflare processes Signals as a processor to secure the site and as a controller for improving Turnstile detection. The public notice should continue to describe both purposes accurately.
+
+Official provider references:
+- Vercel DPA (last updated 17 March 2026): https://vercel.com/legal/dpa
+- Supabase DPA (Version 1, 1 August 2026): https://supabase.com/legal/customer-resources/data-processing-addendum
+- Resend DPA (last updated 31 December 2025): https://resend.com/legal/dpa
+- Resend security/data-location details: https://resend.com/security
+- Resend subprocessors (last updated 15 July 2026): https://resend.com/legal/subprocessors
+- Cloudflare Turnstile Privacy Addendum: https://www.cloudflare.com/turnstile-privacy-policy/
+- NDPC GAID 2025, especially Article 34 and Article 45/Schedule 5: https://ndpc.gov.ng/wp-content/uploads/2025/07/NDP-ACT-GAID-2025-MARCH-20TH.pdf
+
+**Release decision:** these sources do not by themselves establish that Tinlance's actual contracts satisfy the NDPA. A qualified Nigerian privacy review must inspect the executed account agreements, processing purposes, destinations, subprocessor chains, transfer grounds and safeguards. The early-access form remains disabled until that review is signed off.
