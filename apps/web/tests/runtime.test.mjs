@@ -32,7 +32,7 @@ test('runtime rejects an untrusted or insecure identity configuration', () => {
   assert.match(runtime.message, /configuration is invalid/);
 });
 
-test('runtime composes the API client and Platform token adapter only with explicit configuration', () => {
+test('runtime composes the API client and Platform token adapter only with explicit configuration', async () => {
   const originalWindow = globalThis.window;
   const storage = new Map();
   globalThis.window = {
