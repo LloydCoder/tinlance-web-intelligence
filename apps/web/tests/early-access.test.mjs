@@ -244,7 +244,7 @@ test("Supabase secret keys use apikey only; legacy service_role uses a JWT beare
   const submissions = [];
   globalThis.fetch = async (url, options = {}) => {
     const target = String(url);
-    submissions.push({ url: target, headers: options.headers || {} });
+    submissions.push({ url: target, headers: options.headers || {}, payload: target === "https://api.resend.com/emails" ? JSON.parse(options.body) : null });
     if (target.includes("challenges.cloudflare.com/turnstile/v0/siteverify")) {
       return { ok: true, status: 200, json: async () => ({ success: true, hostname: "tinlyt.tinlance.com" }) };
     }
@@ -284,6 +284,12 @@ test("Supabase secret keys use apikey only; legacy service_role uses a JWT beare
   try {
     submissions.length = 0;
     const modernCalls = await run(configuredEnv);
+    const emailCalls = submissions.filter((call) => call.url === "https://api.resend.com/emails");
+    assert.equal(emailCalls.length, 2);
+    const teamNotification = emailCalls.find((call) => call.payload.to?.includes(configuredEnv.EARLY_ACCESS_NOTIFY_EMAIL));
+    const applicantConfirmation = emailCalls.find((call) => call.payload.to?.includes(validBody.email));
+    assert.equal(teamNotification?.payload.reply_to, validBody.email);
+    assert.equal(applicantConfirmation?.payload.reply_to, configuredEnv.EARLY_ACCESS_NOTIFY_EMAIL);
     for (const call of modernCalls) {
       assert.equal(call.headers.apikey, configuredEnv.SUPABASE_SECRET_KEY);
       assert.equal(call.headers.Authorization, undefined);

@@ -180,6 +180,7 @@ export default async function handler(req, res) {
   const mailResults = await Promise.allSettled([
     sendEmail(process.env.RESEND_API_KEY, {
       from: process.env.RESEND_FROM_EMAIL, to: [process.env.EARLY_ACCESS_NOTIFY_EMAIL],
+      reply_to: email,
       subject: "New Tinlyt early-access request — " + useCase,
       html: "<h2>New Tinlyt early-access request</h2><p><strong>Request ID:</strong> " + requestId +
         "</p><p><strong>Name:</strong> " + safeName + "</p><p><strong>Email:</strong> " + safeEmail +
@@ -189,6 +190,7 @@ export default async function handler(req, res) {
     }),
     sendEmail(process.env.RESEND_API_KEY, {
       from: process.env.RESEND_FROM_EMAIL, to: [email],
+      reply_to: process.env.EARLY_ACCESS_NOTIFY_EMAIL,
       subject: "We received your Tinlyt early-access request",
       html: "<p>Hello " + safeName + ",</p><p>We received your request to evaluate Tinlyt. Our team will review the use case; this message does not guarantee acceptance or immediate workspace access.</p><p>Reference: " + requestId + "</p><p>If you did not submit this request, you can ignore this message.</p>"
     })
