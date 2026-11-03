@@ -37,7 +37,7 @@ The project live flag is `false`. Custom domains include `tinlyt.tinlance.com` a
 
 A separate PR #133 preview was also built successfully from commit `82f1c56b6b169b835ce63378b7615a55d8b9e041`. Its rendered `/` and `/app` routes both returned HTTP 200. The workspace correctly remains in foundation mode: the sign-in control is disabled and the page states that authentication/runtime configuration is unavailable. The preview build log confirms Vercel selected Node `22.x` after the package engine was pinned; this corrects the previous `>=22` declaration that caused Vercel to select Node `26.x`.
 
-A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory returned only `EARLY_ACCESS_ENABLED=false`; no OAuth issuer/client/resource/scope or Platform API URL configuration was present. Recheck environment variables before any production promotion. Do not enable live operations by setting the frontend flag alone.
+A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory returned only `EARLY_ACCESS_ENABLED=false`; the rendered preview runtime config has `apiBaseUrl=/api/twi`, an empty `apiAllowedOrigins` list, and empty OAuth issuer, authorization endpoint, token endpoint, client ID, scope, resource, and trusted issuer origins. The sign-in control is therefore disabled and the workspace accurately remains in foundation mode. Recheck environment variables and reverse-proxy routing before any production promotion. Do not enable live operations by setting the frontend flag alone.
 
 ## AWS and runtime state
 
