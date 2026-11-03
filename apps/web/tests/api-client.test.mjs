@@ -21,10 +21,48 @@ const job = {
 };
 
 function makeClient(fetchImpl, overrides = {}) {
+  const platformFetch = async (url, init) => {
+    const requestUrl = new URL(String(url));
+    if (requestUrl.pathname !== '/api/twi/v1/agent-platform') return fetchImpl(url, init);
+    const request = JSON.parse(init.body);
+    const { operation, payload } = request;
+    const routes = {
+      'twi.jobs.create_search': ['/v1/jobs', 'POST', { kind: 'search', payload }],
+      'twi.jobs.create_fetch': ['/v1/jobs', 'POST', { kind: 'fetch', payload }],
+      'twi.jobs.create_browser': ['/v1/jobs', 'POST', { kind: 'browser', payload }],
+      'twi.jobs.read': [`/v1/jobs/${encodeURIComponent(payload.job_id)}`, 'GET'],
+      'twi.jobs.cancel': [`/v1/jobs/${encodeURIComponent(payload.job_id)}/cancel`, 'POST'],
+      'twi.jobs.export_evidence': [`/v1/jobs/${encodeURIComponent(payload.job_id)}/evidence`, 'GET'],
+      'twi.research.verify': ['/v1/research/verify', 'POST', payload],
+      'twi.monitors.create': ['/v1/monitors', 'POST', payload],
+      'twi.monitors.read': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}`, 'GET'],
+      'twi.monitors.run': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/runs`, 'POST'],
+      'twi.monitors.pause': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/pause`, 'POST'],
+      'twi.monitors.resume': [`/v1/monitors/${encodeURIComponent(payload.monitor_id)}/resume`, 'POST']
+    };
+    const route = routes[operation];
+    if (!route) throw new Error(`Unexpected Platform operation: ${operation}`);
+    const [path, method, body] = route;
+    const headers = { ...init.headers };
+    const virtualInit = {
+      ...init,
+      method,
+      headers,
+      ...(body === undefined ? { body: undefined } : { body: JSON.stringify(body) })
+    };
+    const response = await fetchImpl(new URL(path, 'https://tinlyt.test'), virtualInit);
+    if (!response.ok) return response;
+    const text = await response.text();
+    const payloadResult = text ? JSON.parse(text) : {};
+    return new Response(JSON.stringify({ status: 'success', payload: payloadResult }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'x-request-id': 'req-platform-test' }
+    });
+  };
   return new TwiApiClient({
     baseUrl: '/api/twi',
     tokenProvider: { async getAccessToken() { return 'ephemeral-test-token'; } },
-    fetchImpl,
+    fetchImpl: platformFetch,
     idempotencyKeyFactory: () => 'test-idempotency-key-0001',
     ...overrides
   });
