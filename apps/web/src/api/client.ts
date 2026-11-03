@@ -469,13 +469,38 @@ export class TwiApiClient {
   }
 
   async exportEvidencePackage(jobId: string): Promise<EvidenceExport> {
-    const value = await this.request(
+    const response = await this.request(
       `/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`,
       { method: "GET" },
       60_000,
     );
-    const evidence = await parseEvidencePackage(value);
-    const bytes = new TextEncoder().encode(JSON.stringify(evidence));
+    if (
+      !isRecord(response)
+      || !hasOnlyKeys(response, ["evidence_package", "response_bytes_base64"])
+      || typeof response.response_bytes_base64 !== "string"
+      || response.response_bytes_base64.length > 1_400_000
+      || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(response.response_bytes_base64)
+    ) {
+      throw new TwiApiError("invalid_response", "The Platform returned an invalid evidence byte envelope.");
+    }
+    let decoded: string;
+    try {
+      decoded = atob(response.response_bytes_base64);
+    } catch {
+      throw new TwiApiError("invalid_response", "The Platform evidence bytes are not valid base64.");
+    }
+    const bytes = Uint8Array.from(decoded, (character) => character.charCodeAt(0));
+    let originalPackage: unknown;
+    try {
+      originalPackage = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
+    } catch {
+      throw new TwiApiError("invalid_response", "The original evidence package is not valid UTF-8 JSON.");
+    }
+    const evidence = await parseEvidencePackage(originalPackage);
+    const returnedEvidence = await parseEvidencePackage(response.evidence_package);
+    if (JSON.stringify(evidence) !== JSON.stringify(returnedEvidence)) {
+      throw new TwiApiError("invalid_response", "The evidence object does not match the preserved original response bytes.");
+    }
     return { evidence, bytes };
   }
 
