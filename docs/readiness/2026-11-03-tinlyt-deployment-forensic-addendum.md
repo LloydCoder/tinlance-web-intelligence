@@ -151,3 +151,30 @@ The sender uses the previously verified `tinlance.com` Resend domain. The salt i
 
 The intake feature flag remains `EARLY_ACCESS_ENABLED=false`. No Resend API key or Supabase server secret is available through the connected credential interfaces, and no credential was created or exposed in chat. The missing server credentials and privacy approval remain hard activation blockers. No email was sent and no real/synthetic applicant record was created.
 
+
+
+## Early-access migration-history reconciliation and least-privilege hardening — 2026-11-03
+
+PR [#138](https://github.com/LloydCoder/tinlance-web-intelligence/pull/138) was merged after the full CI workflow and Supabase pgTAP workflow passed. Merge commit: `82561bafdf34f7410a82b24607b9b808aba7efe2`.
+
+The migration history is now reconciled as follows:
+- The obsolete, unrecorded `20261022072400_early_access_requests.sql` migration is removed from the active migration directory.
+- `20261103050033_create_tinlyt_early_access_intake.sql` is the clean-database baseline and preserves the original live grants at that migration point.
+- `20261103060000_tighten_early_access_service_role.sql` is the forward hardening migration that narrows `service_role` access on the public intake table to INSERT, SELECT of only `id, created_at`, and UPDATE of only delivery-status/timestamp fields.
+- The private rate-limit table retains only INSERT, SELECT, UPDATE for `service_role`; browser roles have no access.
+
+The forward migration was applied to the dedicated live Supabase project `iiluzdjaeunalqmuarxv` using the Supabase migration workflow. Live migration history now contains:
+- `20261103050033` — `create_tinlyt_early_access_intake`
+- `20261103055338` — `tighten_early_access_service_role`
+
+Live privilege verification returned:
+- `anon` cannot SELECT the intake table.
+- `authenticated` cannot INSERT into the intake table.
+- `service_role` can INSERT and read only generated `id` and `created_at` columns.
+- `service_role` cannot SELECT stored email, UPDATE review status, or DELETE requests.
+- `service_role` can update notification/confirmation delivery status and timestamp.
+- Private rate-limit storage remains accessible only to the server role with INSERT/SELECT/UPDATE.
+
+The repository's Supabase database test workflow passed after replaying the baseline and hardening migration against an isolated local Supabase stack (run #51). The full CI workflow passed on PR #138 (run #1744), including Python 3.12/3.13 tests, PostgreSQL integration and dump/restore drills, reproducible release artifact validation, container vulnerability scans, browser egress-proxy bypass checks, and Chromium sandbox checks. A subsequent baseline-source correction was committed to main as `47cc0c4a14af4655bf0b2699e421ecd102edc106`; its push-triggered CI and Supabase database workflows are pending at the time of this addendum.
+
+This hardening changes database privileges only. It does not enable intake, create applicant records, send email, or deploy the latest frontend. `EARLY_ACCESS_ENABLED=false` remains in every environment pending credential, privacy, deployment, and end-to-end acceptance gates.
