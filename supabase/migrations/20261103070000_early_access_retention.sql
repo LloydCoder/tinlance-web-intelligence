@@ -25,6 +25,6 @@ revoke all on function private.purge_early_access_data()
 
 select cron.schedule(
   'tinlyt-early-access-retention',
-  '30 2 * * *',
+  '0 * * * *',
   'select private.purge_early_access_data();'
 );
