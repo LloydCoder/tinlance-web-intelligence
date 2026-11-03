@@ -67,10 +67,7 @@ create index early_access_requests_status_created_at_idx
 
 alter table public.early_access_requests enable row level security;
 revoke all on table public.early_access_requests from public, anon, authenticated;
-revoke all on table public.early_access_requests from service_role;
-grant insert on table public.early_access_requests to service_role;
-grant select (id, created_at) on table public.early_access_requests to service_role;
-grant update (notification_status, confirmation_status, updated_at) on table public.early_access_requests to service_role;
+grant all privileges on table public.early_access_requests to service_role;
 
 create table private.early_access_rate_limits (
   key_hash text primary key
