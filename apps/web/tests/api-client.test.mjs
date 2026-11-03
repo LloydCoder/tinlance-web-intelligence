@@ -45,7 +45,7 @@ function makeClient(fetchImpl, overrides = {}) {
     if (!route) throw new Error(`Unexpected Platform operation: ${operation}`);
     const [basePath, method, body] = route;
     const path = operation === 'twi.usage.read' ? `${basePath}?${new URLSearchParams(payload).toString()}` : basePath;
-    const headers = { ...init.headers };
+    const headers = { ...init.headers, 'X-Test-Platform-Request': init.body };
     const virtualInit = {
       ...init,
       method,
@@ -624,7 +624,7 @@ test('usage reads call the governed Platform operation', async () => {
     return new Response(JSON.stringify(usage), { status: 200, headers: { 'content-type': 'application/json' } });
   });
   const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
-  const request = JSON.parse(captured.init.body);
+  const request = JSON.parse(captured.init.headers['X-Test-Platform-Request']);
   const url = new URL(captured.url);
   assert.equal(url.pathname, '/api/twi/v1/usage');
   assert.equal(url.searchParams.get('limit'), '25');
