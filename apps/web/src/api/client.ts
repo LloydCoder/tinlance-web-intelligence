@@ -465,7 +465,7 @@ export class TwiApiClient {
     } finally {
       if (tokenTimeout !== undefined) globalThis.clearTimeout(tokenTimeout);
     }
-    if (!token || token !== token.trim() || /\\s/.test(token)) {
+    if (!token || token !== token.trim() || /\s/.test(token)) {
       throw new TwiApiError("authentication_required", "The approved Platform identity provider returned an invalid access token.");
     }
 
@@ -473,7 +473,7 @@ export class TwiApiClient {
     const timeout = globalThis.setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const response = await this.fetchImpl(
-        new URL("v1/session/revoke", `${this.baseUrl.replace(/\\/$/, "")}/`),
+        new URL("v1/session/revoke", `${this.baseUrl.replace(/\/$/, "")}/`),
         {
           method: "POST",
           headers: {
