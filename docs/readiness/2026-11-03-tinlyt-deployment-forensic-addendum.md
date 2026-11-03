@@ -41,11 +41,13 @@ A READY deployment is not proof that the authenticated application works. The Ve
 
 ## AWS and runtime state
 
-The previous read-only AWS audit found no Tinlyt backend stack in `eu-west-1`: no Tinlyt EC2, ECS, Lambda, Cognito, API Gateway, DynamoDB, RDS, ECR, Secrets Manager, customer KMS key, or CloudFormation stack was found there. The wider multi-region scan did not complete because the connector reached its API-call limit; this statement is limited to the fully inspected region and resource inventory.
+A targeted read-only inventory covered all 17 currently enabled AWS regions and queried EC2, ECS, Lambda, Cognito user pools, API Gateway v2, DynamoDB, RDS, and CloudFormation. No Tinlyt backend resources or CloudFormation stacks were found in any of those regions. The only active EC2 instances discovered were separately tagged `fusionops-production` and `Threatfade` in `eu-north-1`; these belong to other projects and were not modified. The scan is broad across the listed service families but is not a claim that every AWS service in every region was enumerated.
 
-The connected AWS identity was the account root principal, with MFA enabled. Only AWS service-linked roles were present in the inspected IAM role inventory; no Tinlyt deployment role was found. No AWS Budgets configuration was found. Cost Explorer showed charges offset by credits, but this does not establish the remaining credit balance.
+The connected AWS identity remains the account root principal, with MFA enabled. The account initially had no customer-managed IAM policies, no deployment role, and no GitHub OIDC provider. No AWS Budgets configuration was found. Cost Explorer charges offset by credits do not establish the remaining credit balance.
 
-**No infrastructure was provisioned by this audit.** Root credentials must not be used as a substitute for a dedicated deployment identity. Do not create billable infrastructure until an approved spend ceiling, alerts, and a least-privilege deployment role/workflow are in place.
+A GitHub OIDC provider was created at `arn:aws:iam::381661387870:oidc-provider/token.actions.githubusercontent.com`. The role `arn:aws:iam::381661387870:role/TinlytGitHubActionsDeployRole` now trusts only version-tagged releases from `LloydCoder/tinlance-web-intelligence` (including the repository immutable-subject form). Verification confirms it has no attached managed policies and no inline policies. The release workflow has not yet been wired to assume this role, and the role cannot provision resources in its current state.
+
+**No application infrastructure was provisioned by this audit.** The OIDC provider and empty-trust role are IAM identity scaffolding, not a deployment. Do not add resource permissions or create billable infrastructure until the production deployment design, least-privilege action/resource policy, budget ceiling, and alerts are reviewed.
 
 ## Production composition gaps
 
