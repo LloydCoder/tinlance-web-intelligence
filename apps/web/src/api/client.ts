@@ -1,5 +1,5 @@
 import { errorForStatus, TwiApiError } from "./errors.js";
-import { readBoundedBytes, readBoundedJson } from "./json.js";
+import { readBoundedJson } from "./json.js";
 import type {
   CreateJobRequest,
   EvidenceExport,
@@ -469,23 +469,14 @@ export class TwiApiClient {
   }
 
   async exportEvidencePackage(jobId: string): Promise<EvidenceExport> {
-    const bytes = await this.request(
+    const value = await this.request(
       `/v1/jobs/${encodeURIComponent(this.validateId(jobId))}/evidence`,
       { method: "GET" },
       60_000,
-      "bytes",
-      "application/vnd.tinlance.twi-evidence+json",
     );
-    if (!(bytes instanceof Uint8Array)) {
-      throw new TwiApiError("invalid_response", "The API did not return evidence package bytes.");
-    }
-    let value: unknown;
-    try {
-      value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as unknown;
-    } catch {
-      throw new TwiApiError("invalid_response", "The evidence package response is not valid UTF-8 JSON.");
-    }
-    return { evidence: await parseEvidencePackage(value), bytes };
+    const evidence = await parseEvidencePackage(value);
+    const bytes = new TextEncoder().encode(JSON.stringify(evidence));
+    return { evidence, bytes };
   }
 
   async createMonitor(request: MonitorCreateRequest, idempotencyKey?: string): Promise<Monitor> {
@@ -555,6 +546,7 @@ export class TwiApiClient {
 
   async deleteMonitor(monitorId: string): Promise<Monitor> {
     const requestedId = this.validateId(monitorId);
+    throw new TwiApiError("permission_denied", "Monitor deletion requires a Platform approval binding; the browser cannot authorize this destructive action.");
     const monitor = parseMonitor(await this.request(
       `/v1/monitors/${encodeURIComponent(requestedId)}`,
       { method: "DELETE" },
@@ -582,7 +574,7 @@ export class TwiApiClient {
       limit: String(query.limit ?? 100),
     });
     if (query.cursor !== undefined) params.set("cursor", query.cursor);
-    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }), query);
+    throw new TwiApiError("configuration_error", "Usage retrieval is not yet exposed as a governed Platform operation; direct TWI access is disabled.");
   }
 
   private parseUsageResponse(value: unknown, query: UsageQuery): UsageResponse {
@@ -790,7 +782,64 @@ export class TwiApiClient {
     return value;
   }
 
-  private async request(path: string, init: RequestInit, timeoutMs = this.timeoutMs, responseMode: "json" | "bytes" = "json", expectedMediaType?: string): Promise<unknown | Uint8Array> {
+  private toPlatformRequest(path: string, init: RequestInit): { operation: string; payload: Record<string, unknown>; idempotencyKey?: string } {
+    const url = new URL(path, "https://tinlyt.invalid");
+    const method = (init.method ?? "GET").toUpperCase();
+    const idempotencyKey = new Headers(init.headers).get("Idempotency-Key") ?? undefined;
+    const body = typeof init.body === "string" ? JSON.parse(init.body) as unknown : {};
+    const record = isRecord(body) ? body : {};
+    const segments = url.pathname.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+    if (segments[0] !== "v1") throw new TwiApiError("configuration_error", "Only Platform-governed TWI routes are supported.");
+    if (segments[1] === "jobs" && segments.length === 2 && method === "POST") {
+      const request = record;
+      if (!isRecord(request.payload)) throw new TwiApiError("validation_error", "The job payload is invalid.");
+      const operationByKind: Record<string, string> = {
+        search: "twi.jobs.create_search",
+        fetch: "twi.jobs.create_fetch",
+        browser: "twi.jobs.create_browser",
+      };
+      const operation = operationByKind[String(request.kind)];
+      if (!operation) throw new TwiApiError("validation_error", "The job kind is not supported.");
+      return { operation, payload: request.payload, ...(idempotencyKey ? { idempotencyKey } : {}) };
+    }
+    if (segments[1] === "jobs" && segments.length === 3 && method === "GET") {
+      return { operation: "twi.jobs.read", payload: { job_id: segments[2] } };
+    }
+    if (segments[1] === "jobs" && segments.length === 4 && segments[3] === "cancel" && method === "POST") {
+      return { operation: "twi.jobs.cancel", payload: { job_id: segments[2] } };
+    }
+    if (segments[1] === "jobs" && segments.length === 4 && segments[3] === "evidence" && method === "GET") {
+      return { operation: "twi.jobs.export_evidence", payload: { job_id: segments[2] } };
+    }
+    if (segments[1] === "research" && segments[2] === "verify" && method === "POST" && Array.isArray(record.claims)) {
+      return { operation: "twi.research.verify", payload: { claims: record.claims } };
+    }
+    if (segments[1] === "monitors" && segments.length === 2 && method === "POST") {
+      return { operation: "twi.monitors.create", payload: record, ...(idempotencyKey ? { idempotencyKey } : {}) };
+    }
+    if (segments[1] === "monitors" && segments.length === 3 && method === "GET") {
+      return { operation: "twi.monitors.read", payload: { monitor_id: segments[2] } };
+    }
+    if (segments[1] === "monitors" && segments.length === 4 && segments[3] === "runs" && method === "POST") {
+      return { operation: "twi.monitors.run", payload: { monitor_id: segments[2] }, ...(idempotencyKey ? { idempotencyKey } : {}) };
+    }
+    if (segments[1] === "monitors" && segments.length === 5 && segments[3] === "runs" && method === "GET") {
+      return { operation: "twi.jobs.read", payload: { job_id: segments[4] } };
+    }
+    if (segments[1] === "monitors" && segments.length === 4 && method === "POST" && ["pause", "resume"].includes(segments[3])) {
+      return { operation: segments[3] === "pause" ? "twi.monitors.pause" : "twi.monitors.resume", payload: { monitor_id: segments[2] } };
+    }
+    if (segments[1] === "monitors" && segments.length === 3 && method === "DELETE") {
+      throw new TwiApiError("permission_denied", "Monitor deletion requires an explicit Platform approval binding.");
+    }
+    if (segments[1] === "usage") {
+      throw new TwiApiError("configuration_error", "Usage retrieval is not yet exposed as a governed Platform operation; direct TWI access is disabled.");
+    }
+    throw new TwiApiError("configuration_error", "This TWI route has no governed Platform operation.");
+  }
+
+  private async request(path: string, init: RequestInit, timeoutMs = this.timeoutMs): Promise<unknown> {
+    const platformRequest = this.toPlatformRequest(path, init);
     if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60_000) {
       throw new TwiApiError("configuration_error", "The API request timeout must be between 1000 and 60000 milliseconds.");
     }
@@ -819,13 +868,17 @@ export class TwiApiClient {
     const controller = new AbortController();
     const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await this.fetchImpl(new URL(path.replace(/^\//, ""), `${this.baseUrl.replace(/\/$/, "")}/`), {
-        ...init,
+      const response = await this.fetchImpl(new URL("/v1/agent-platform", this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`), {
+        method: "POST",
         headers: {
           Accept: "application/json",
-          ...init.headers,
+          "Content-Type": "application/json",
+          "X-Tinlance-API-Version": "1.1",
+          "X-Request-ID": globalThis.crypto.randomUUID(),
+          ...(platformRequest.idempotencyKey ? { "Idempotency-Key": platformRequest.idempotencyKey } : {}),
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ operation: platformRequest.operation, payload: platformRequest.payload }),
         signal: controller.signal,
         redirect: "error",
         credentials: "omit",
@@ -836,16 +889,19 @@ export class TwiApiClient {
       if (response.status === 204) return null;
       const contentType = response.headers.get("content-type") ?? "";
       const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-      if (expectedMediaType && mediaType !== expectedMediaType.toLowerCase()) {
-        throw new TwiApiError("invalid_response", "The API returned an unexpected evidence media type.", response.status, requestId);
+      if (mediaType !== "application/json") {
+        throw new TwiApiError("invalid_response", "The Platform API returned an unsupported response media type.", response.status, requestId);
       }
-      if (mediaType !== "application/json" && mediaType !== "application/vnd.tinlance.twi-evidence+json") {
-        throw new TwiApiError("invalid_response", "The API returned an unsupported response media type.", response.status, requestId);
+      const envelope = await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The Platform API response", controller.signal);
+      if (!isRecord(envelope) || typeof envelope.status !== "string" || !isRecord(envelope.payload)) {
+        throw new TwiApiError("invalid_response", "The Platform API response envelope is invalid.", response.status, requestId);
       }
-      if (responseMode === "bytes") {
-        return await readBoundedBytes(response, MAX_API_RESPONSE_BYTES, "The API response", controller.signal);
+      if (envelope.status !== "success") {
+        if (envelope.status === "denied") throw new TwiApiError("permission_denied", "The Platform policy denied this operation.", response.status, requestId);
+        if (envelope.status === "conflict") throw new TwiApiError("conflict", "The Platform rejected a conflicting operation.", response.status, requestId);
+        throw new TwiApiError("server_error", "The Platform could not complete this operation.", response.status, requestId);
       }
-      return await readBoundedJson(response, MAX_API_RESPONSE_BYTES, "The API response", controller.signal);
+      return envelope.payload;
     } catch (error) {
       if (error instanceof TwiApiError) throw error;
       if (controller.signal.aborted) {
