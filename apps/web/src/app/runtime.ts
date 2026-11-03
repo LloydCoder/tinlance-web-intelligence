@@ -25,7 +25,7 @@ export type TinlytRuntime =
       tokenProvider: OAuthPkceTokenProvider;
       beginLogin(): Promise<void>;
       handleCallback(callbackUrl?: string): Promise<void>;
-      clearSession(): void;
+      clearSession(): Promise<void>;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -88,7 +88,13 @@ export function createRuntime(config: unknown): TinlytRuntime {
       tokenProvider,
       beginLogin: () => tokenProvider.beginLogin(),
       handleCallback: (callbackUrl) => tokenProvider.handleCallback(callbackUrl),
-      clearSession: () => tokenProvider.clear(),
+      clearSession: async () => {
+        try {
+          await apiClient.revokeSession();
+        } finally {
+          tokenProvider.clear();
+        }
+      },
     };
   } catch {
     return {

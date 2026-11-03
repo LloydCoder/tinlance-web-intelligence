@@ -14,6 +14,8 @@ The browser sends authenticated JSON requests to `POST /v1/agent-platform` with:
 
 The browser does not submit `tenant_id` or `subject_id`. The Platform HTTP boundary derives both from the authenticated principal and rejects mismatches. The Platform handler routes TWI operations through its MCP policy gateway and mints a short-lived, audience-bound downstream token. The inbound browser token is not forwarded to TWI.
 
+Session sign-out is a separate `POST /v1/session/revoke` request with the same bearer token, API version and fresh request ID, plus an empty JSON object. The Platform verifies the token and atomically persists both its `jti` and token-family `origin_jti` before returning `{"status":"revoked"}`. The browser clears its in-memory token whether the request succeeds or fails; if the Platform cannot confirm durable revocation, the UI explicitly reports that the server-side revocation is unconfirmed. The endpoint uses no cookies and does not accept tenant or subject identifiers.
+
 ## Current operation mapping
 
 | Browser capability | Platform operation |
