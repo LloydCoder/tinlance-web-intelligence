@@ -1,3 +1,4 @@
+-- Validated by replay against the original October migration chain.
 -- Upgrade the original Tinlyt early-access intake schema to the live
 -- 2026-11-03 shape. The earlier 20261022072400 migration already creates
 -- public.early_access_requests and tinlyt_private.early_access_rate_limits.
