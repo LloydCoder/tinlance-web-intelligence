@@ -4,7 +4,7 @@
   "private": true,
   "description": "Tinlyt customer-facing web application foundation",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "lint": "node scripts/lint.mjs",
