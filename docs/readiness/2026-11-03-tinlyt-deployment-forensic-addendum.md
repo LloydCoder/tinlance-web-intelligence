@@ -147,7 +147,7 @@ Vercel production and preview environments now contain:
 
 The sender uses the previously verified `tinlance.com` Resend domain. The salt is stored as a sensitive Vercel variable and is not included in source control or this document.
 
-**Important implementation boundary:** the current Vercel intake handler does not set a `reply_to` property in its Resend payloads. The selected address is confirmed for internal notifications only; reply-to routing has not been represented as configured. A follow-up code change and tests are required before promising applicant replies will route to the team inbox.
+**Reply-to routing verification:** the current `apps/web/api/early-access.js` handler sets `reply_to` on both Resend messages: applicant email on the internal team notification, and the internal notification inbox on the applicant confirmation. The `apps/web/tests/early-access.test.mjs` integration-style handler test asserts both values. This is repository-level implementation and test evidence; actual delivery and reply handling remain unverified until the missing Resend credential is configured and a controlled end-to-end test is run.
 
 The intake feature flag remains `EARLY_ACCESS_ENABLED=false`. No Resend API key or Supabase server secret is available through the connected credential interfaces, and no credential was created or exposed in chat. The missing server credentials and privacy approval remain hard activation blockers. No email was sent and no real/synthetic applicant record was created.
 
@@ -226,3 +226,47 @@ No paid AWS resources were created, no Vercel plan was upgraded, and no producti
 7. Establish a least-privilege non-root AWS deployment identity and cost controls before any EC2/backend provisioning. Do not use the account root identity for deployment and do not modify unrelated infrastructure.
 
 Until these gates are verified, `EARLY_ACCESS_ENABLED=false` remains the correct production state.
+
+
+## Post-merge production deployment verification — 2026-11-03 06:34 UTC
+
+The latest reviewed `main` revision was deployed to the existing Vercel production project without changing the plan or creating additional cloud infrastructure:
+- Commit: `24f9a99f90b8d217b3b3d24ed72f105b8c9b64df`
+- Deployment: `dpl_BMSDcwrQn7EMNUbX8BRZtPfFEPBQ`
+- State: `READY`
+- Production aliases: `tinlyt.tinlance.com`, `tinlyt-web.vercel.app`
+- Project: `tinlyt-web` (`prj_ypYtRbHtPYejZUHRwAYmHurmXgSM`)
+
+Live HTTP verification against the custom domain:
+- `/`: HTTP 200; latest landing page is live.
+- `/privacy`: HTTP 200; privacy notice version `2026-11-03-v1` is live.
+- `/app`: HTTP 200; workspace remains in foundation mode and its authenticated controls remain disabled until the Platform OAuth/API runtime and TWI service are deployed.
+- `/api/early-access` GET: HTTP 405 with `Allow: POST`, as designed. This does not test or enable POST intake.
+- `/api/twi/health`: HTTP 404; no production TWI API is deployed behind the frontend.
+- Security response headers include CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Permissions-Policy and Referrer-Policy.
+- Vercel's 24-hour runtime-error query returned no error clusters.
+
+The production deployment removes the earlier frontend deployment/quota blocker for this exact revision. It does not remove the backend, OAuth, early-access credential, privacy/legal, or private-beta gates.
+
+### Live Supabase retention and advisor recheck
+
+The dedicated project `iiluzdjaeunalqmuarxv` reports the three expected migration versions:
+- `20261103050033` — `create_tinlyt_early_access_intake`
+- `20261103055338` — `tighten_early_access_service_role`
+- `20261103061953` — `early_access_retention`
+
+The hourly `tinlyt-early-access-retention` job is active with command `select private.purge_early_access_data();` and schedule `0 * * * *` (GMT). At the 06:33 UTC database check, the first scheduled execution had not yet occurred; the next scheduled boundary was 07:00 UTC. The maintenance function had previously passed a manual execution and its privileges remain revoked from browser and service roles. Do not mark scheduled execution verified until a successful row appears in `cron.job_run_details`.
+
+Supabase advisors returned only informational findings:
+- RLS enabled with no policies on the two intake tables. This is the intended deny-by-default posture; no browser policies should be added.
+- One unused status/created-at index. The project has no applicant traffic, so this is not evidence of a production query regression; reconsider only after representative workload data exists.
+
+### Current outstanding release gates
+
+1. **TWI runtime:** no backend API, PostgreSQL engine database, acquisition workers, isolated browser workers, egress proxy, or production observability/backup stack is deployed. `/api/twi/health` remains 404. The AWS OIDC role still has zero attached and inline permissions; the connected identity is AWS root; no AWS Budget exists; remaining AWS credit balance is not available through the connected API. No unrelated infrastructure was modified and no paid AWS resources were provisioned.
+2. **Platform identity:** repository integration code is merged, but no live Cognito user pool, OAuth client, trusted issuer configuration, API gateway/service or end-to-end Platform→TWI identity journey has been verified.
+3. **Early-access intake:** `EARLY_ACCESS_ENABLED=false` remains set for production, preview and development. `SUPABASE_SECRET_KEY` and a dedicated sending-only `RESEND_API_KEY` are still absent from Vercel. The public POST handler has not been exercised with real provider credentials; no applicant records or emails exist.
+4. **Privacy/legal:** the privacy notice is now live, but it remains an operational draft rather than legal approval. A qualified Nigerian privacy review must confirm the NDPA cross-border transfer basis, provider DPAs, subprocessors, retention and deletion responsibilities before intake is enabled.
+5. **Operational certification:** no deployment-specific tenant-isolation/SSRF/browser-egress test, encrypted backup and witnessed restore drill, monitoring/alert delivery, SLO/on-call assignment, rollback exercise, live-quality benchmark, TSIC target conformance or owner beta/GA approval has been evidenced.
+
+Do not enable intake, OAuth controls, live job execution, monitors, billing or customer workspace access until the relevant release gates have evidence for the exact deployed revisions and environment.
