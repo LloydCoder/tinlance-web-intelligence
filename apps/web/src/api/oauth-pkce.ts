@@ -70,11 +70,8 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
     this.issuer = this.parseIssuer(config.issuer, config.trustedIssuerOrigins);
     this.authorizationEndpoint = this.parseTrustedEndpoint(config.authorizationEndpoint, config.trustedIssuerOrigins);
     this.tokenEndpoint = this.parseTrustedEndpoint(config.tokenEndpoint, config.trustedIssuerOrigins);
-    if (
-      this.authorizationEndpoint.origin !== this.tokenEndpoint.origin
-      || this.authorizationEndpoint.origin !== new URL(this.issuer).origin
-    ) {
-      throw new TwiApiError("configuration_error", "The issuer, authorization endpoint, and token endpoint must share one trusted origin.");
+    if (this.authorizationEndpoint.origin !== this.tokenEndpoint.origin) {
+      throw new TwiApiError("configuration_error", "The authorization and token endpoints must share one explicitly trusted origin.");
     }
     this.redirectUri = this.parseRedirectUri(config.redirectUri);
     this.clientId = config.clientId;
