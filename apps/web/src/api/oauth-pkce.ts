@@ -167,7 +167,6 @@ export class OAuthPkceTokenProvider implements AccessTokenProvider {
       redirect_uri: this.redirectUri.toString(),
       client_id: this.clientId,
       code_verifier: transaction.verifier,
-      resource: this.resource,
     });
 
     let response: Response;
