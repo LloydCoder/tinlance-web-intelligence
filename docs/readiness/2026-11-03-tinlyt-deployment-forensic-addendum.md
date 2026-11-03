@@ -27,15 +27,18 @@ These are repository-level implementation facts. They do not prove that the corr
 
 The Vercel project is `tinlyt-web` (`prj_ypYtRbHtPYejZUHRwAYmHurmXgSM`).
 
-The latest main-branch deployment observed during this audit:
-- Deployment: `dpl_8Q2jgrgwkNgm2KYz8iwYomvp6dqD`
+The latest main-branch production deployment observed during this audit:
+- Deployment: `dpl_Bkh3ppPTCarHUmJvESvPL9vV3piT`
 - State: `READY`
-- URL: `tinlyt-hc1x8zzny-lloydcoders-projects.vercel.app`
-- Source commit: `45211fac5138b1df5923d746bf94fff6103d2857`
+- URL: `tinlyt-9lxk0dwfl-lloydcoders-projects.vercel.app`
+- Source commit: `f94d024e0949a75dafe6df1d7c401d2ac7c0df9b` (Node 22 runtime pin)
+- Aliases: `tinlyt.tinlance.com`, `tinlyt-web.vercel.app`, and the Vercel main aliases
+
+The previous main deployment from commit `45211fac5138b1df5923d746bf94fff6103d2857` was superseded by this production deployment.
 
 The project live flag was reported as `false` in the earlier project metadata snapshot; deployment-level metadata now confirms the latest `main` deployment is targeted at `production` and aliases include `tinlyt.tinlance.com` and `tinlyt-web.vercel.app`. Preview SSO protection is enabled; custom domains are excluded from that protection. The project-level `live` field and a production-targeted deployment are different signals; the latter confirms the current frontend release was promoted to the production deployment target.
 
-A separate PR #133 preview was also built successfully from commit `82f1c56b6b169b835ce63378b7615a55d8b9e041`. Its rendered `/` and `/app` routes both returned HTTP 200. The workspace correctly remains in foundation mode: the sign-in control is disabled and the page states that authentication/runtime configuration is unavailable. The preview build log confirms Vercel selected Node `22.x` after the package engine was pinned; this corrects the previous `>=22` declaration that caused Vercel to select Node `26.x`.
+PR #133 was merged as commit `f94d024e0949a75dafe6df1d7c401d2ac7c0df9b`; its frontend and full CI workflows passed, including Python 3.12/3.13, reproducible artifacts, and browser-container isolation. Vercel selected Node `22.x` after the package engine was pinned; this corrects the previous `>=22` declaration that caused Vercel to select Node `26.x`. The production custom-domain landing and `/app` routes both return HTTP 200.
 
 A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory returned only `EARLY_ACCESS_ENABLED=false`; the rendered production runtime config has `apiBaseUrl=/api/twi`, an empty `apiAllowedOrigins` list, and empty OAuth issuer, authorization endpoint, token endpoint, client ID, scope, resource, and trusted issuer origins. The sign-in control is therefore disabled and the workspace accurately remains in foundation mode. Direct requests to `/api/twi` and `/api/twi/health` on the production custom domain both return HTTP 404, confirming no live TWI API route is currently exposed through this frontend deployment. Do not enable live operations by setting the frontend flag alone.
 
