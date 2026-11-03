@@ -22,7 +22,7 @@ def test_current_consumer_findings_are_exact_and_fail_closed() -> None:
 def test_current_platform_catalog_registers_monitor_and_evidence_operations() -> None:
     fixture = json.loads(
         Path(
-            "contracts/fixtures/platform/4e73e8272d222fd7234f86a3cf005ef2fc79b1a0/tool-catalog.json"
+            "contracts/fixtures/platform/e2e25bb21542e39a1fa3a2a5181915ba0029ac41/tool-catalog.json"
         ).read_text(encoding="utf-8")
     )
     expected = {
@@ -34,7 +34,7 @@ def test_current_platform_catalog_registers_monitor_and_evidence_operations() ->
         "twi_monitor_run",
     }
     registered = set(fixture["registered_tools"])
-    assert fixture["revision"] == "4e73e8272d222fd7234f86a3cf005ef2fc79b1a0"
+    assert fixture["revision"] == "e2e25bb21542e39a1fa3a2a5181915ba0029ac41"
     assert fixture["status"] == "pass"
     assert expected == set(fixture["expected_monitor_tools"])
     assert not fixture["missing_monitor_tools"]
@@ -45,6 +45,11 @@ def test_current_platform_catalog_registers_monitor_and_evidence_operations() ->
     assert fixture["expected_usage_tools"] == ["twi_usage_read"]
     assert not fixture["missing_usage_tools"]
     assert set(fixture["expected_usage_tools"]) <= registered
+    manifest_names = {
+        json.loads(path.read_text(encoding="utf-8"))["name"]
+        for path in Path("schemas/mcp-tools").glob("*.json")
+    }
+    assert registered == manifest_names
     assert set(fixture["approval_gated_tools"]) == {
         "twi_world_intelligence_export",
         "twi_monitor_delete",
@@ -69,7 +74,7 @@ def test_w15_consumer_gate_uses_the_current_platform_snapshot() -> None:
     gate = next(item for item in registry["gates"] if item["gate"] == "external.consumer_approvals")
     assert gate["status"] == "pass"
     assert gate["evidence_reference"] == (
-        "contracts/fixtures/platform/4e73e8272d222fd7234f86a3cf005ef2fc79b1a0/tool-catalog.json"
+        "contracts/fixtures/platform/e2e25bb21542e39a1fa3a2a5181915ba0029ac41/tool-catalog.json"
     )
 
 
@@ -130,6 +135,8 @@ def test_usage_read_manifest_matches_the_platform_scoped_usage_contract() -> Non
         "destructive": False,
         "open_world": False,
     }
+    assert manifest["data_class"] == "confidential"
+    assert manifest["input_schema"]["properties"]["period_start"]["maxLength"] == 40
     assert manifest["input_schema"]["required"] == ["dimension", "period_start"]
     assert set(manifest["input_schema"]["properties"]) == {
         "dimension", "period_start", "limit", "cursor"
