@@ -587,7 +587,13 @@ export class TwiApiClient {
     ) {
       throw new TwiApiError("validation_error", "The usage query does not match the supported contract.");
     }
-    throw new TwiApiError("configuration_error", "Usage retrieval is not yet exposed as a governed Platform operation; direct TWI access is disabled.");
+    const params = new URLSearchParams({
+      dimension: query.dimension,
+      period_start: query.period_start,
+      limit: String(query.limit ?? 100),
+    });
+    if (query.cursor !== undefined) params.set("cursor", query.cursor);
+    return this.parseUsageResponse(await this.request(`/v1/usage?${params.toString()}`, { method: "GET" }), query);
   }
 
   private parseUsageResponse(value: unknown, query: UsageQuery): UsageResponse {
@@ -845,8 +851,23 @@ export class TwiApiClient {
     if (segments[1] === "monitors" && segments.length === 3 && method === "DELETE") {
       throw new TwiApiError("permission_denied", "Monitor deletion requires an explicit Platform approval binding.");
     }
-    if (segments[1] === "usage") {
-      throw new TwiApiError("configuration_error", "Usage retrieval is not yet exposed as a governed Platform operation; direct TWI access is disabled.");
+    if (segments[1] === "usage" && method === "GET") {
+      const dimension = url.searchParams.get("dimension");
+      const periodStart = url.searchParams.get("period_start");
+      const limit = url.searchParams.get("limit");
+      const cursor = url.searchParams.get("cursor");
+      if (!dimension || !periodStart || !limit || url.searchParams.size > 4) {
+        throw new TwiApiError("validation_error", "The usage query does not match the Platform operation contract.");
+      }
+      return {
+        operation: "twi.usage.read",
+        payload: {
+          dimension,
+          period_start: periodStart,
+          limit: Number(limit),
+          ...(cursor === null ? {} : { cursor }),
+        },
+      };
     }
     throw new TwiApiError("configuration_error", "This TWI route has no governed Platform operation.");
   }
