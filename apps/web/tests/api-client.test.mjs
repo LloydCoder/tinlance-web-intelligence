@@ -555,144 +555,23 @@ test('monitor run client validates result outcome and baseline digest fields', a
   assert.equal((await staleCapture.getMonitorRun('mon_01', 'job_monitor_01')).result.outcome, 'stale_capture');
 });
 
-test('usage client validates tenant-scoped usage facts and preserves opaque cursor pagination', async () => {
-  let captured;
-  const usage = {
-    schema_version: 1,
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    used: 12,
-    quota_limit: 1000,
-    remaining: 988,
-    plan_id: 'customer-basic',
-    plan_version: 1,
-    events: [{
-      event_id: 'opaque-event-id',
-      feature: 'search',
-      dimension: 'search_requests_month',
-      period_start: '2026-10-01T00:00:00Z',
-      quantity: 1,
-      occurred_at: '2026-10-19T10:00:00+00:00',
-      schema_version: 1
-    }],
-    returned: 1,
-    has_more: true,
-    next_cursor: 'opaque-cursor-value'
-  };
-  const client = makeClient(async (url, init) => {
-    captured = { url: String(url), init };
-    return new Response(JSON.stringify(usage), { status: 200, headers: { 'content-type': 'application/json' } });
-  });
-  const result = await client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 25 });
-  const url = new URL(captured.url);
-  assert.equal(url.pathname, '/api/twi/v1/usage');
-  assert.equal(url.searchParams.get('dimension'), 'search_requests_month');
-  assert.equal(url.searchParams.get('period_start'), '2026-10-01T00:00:00Z');
-  assert.equal(url.searchParams.get('limit'), '25');
-  assert.equal(captured.init.method, 'GET');
-  assert.equal(captured.init.credentials, 'omit');
-  assert.equal(result.used, 12);
-  assert.equal(result.events[0].event_id, 'opaque-event-id');
-  assert.equal(result.next_cursor, 'opaque-cursor-value');
-
-  const paged = makeClient(async (url) => {
-    assert.equal(new URL(String(url)).searchParams.get('cursor'), 'opaque-cursor-value');
-    return new Response(JSON.stringify({ ...usage, has_more: false, next_cursor: null }), {
-      status: 200, headers: { 'content-type': 'application/json' }
-    });
-  });
-  assert.equal((await paged.readUsage({
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    cursor: 'opaque-cursor-value'
-  })).has_more, false);
+test('usage reads fail closed until a governed Platform usage operation exists', async () => {
+  let called = false;
+  const client = makeClient(async () => { called = true; return new Response('{}'); });
+  await assert.rejects(
+    client.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
+    (error) => error instanceof TwiApiError && error.code === 'configuration_error'
+      && error.message.includes('governed Platform operation')
+  );
+  assert.equal(called, false);
 });
 
-test('usage client rejects malformed pagination, inconsistent quotas and invalid query before network access', async () => {
+test('usage client rejects malformed query data before the Platform request', async () => {
   let called = false;
-  const invalidQuery = makeClient(async () => { called = true; return new Response('{}'); });
+  const client = makeClient(async () => { called = true; return new Response('{}'); });
   await assert.rejects(
-    invalidQuery.readUsage({ dimension: 'bad dimension', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'validation_error'
-  );
-  await assert.rejects(
-    invalidQuery.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01' }),
+    client.readUsage({ dimension: 'bad dimension', period_start: '2026-10-01T00:00:00Z' }),
     (error) => error instanceof TwiApiError && error.code === 'validation_error'
   );
   assert.equal(called, false);
-
-  const base = {
-    schema_version: 1,
-    dimension: 'search_requests_month',
-    period_start: '2026-10-01T00:00:00Z',
-    used: 12,
-    quota_limit: 1000,
-    remaining: 988,
-    plan_id: 'customer-basic',
-    plan_version: 1,
-    events: [],
-    returned: 0,
-    has_more: false,
-    next_cursor: null
-  };
-  const malformed = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    remaining: 987,
-    has_more: true,
-    next_cursor: null
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    malformed.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const partialEntitlement = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    plan_id: null,
-    plan_version: null
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    partialEntitlement.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongResponseDimension = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    dimension: 'fetch_requests_month'
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongResponseDimension.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongResponsePeriod = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    period_start: '2026-09-01T00:00:00Z'
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongResponsePeriod.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const oversizedPage = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    events: [
-      { event_id: 'event-1', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:00:00Z', schema_version: 1 },
-      { event_id: 'event-2', feature: 'search', dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', quantity: 1, occurred_at: '2026-10-19T10:01:00Z', schema_version: 1 }
-    ],
-    returned: 2
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    oversizedPage.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z', limit: 1 }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
-  const wrongDimension = makeClient(async () => new Response(JSON.stringify({
-    ...base,
-    events: [{
-      event_id: 'event-1', feature: 'search', dimension: 'fetch_requests_month',
-      period_start: '2026-10-01T00:00:00Z', quantity: 1,
-      occurred_at: '2026-10-19T10:00:00Z', schema_version: 1
-    }],
-    returned: 1
-  }), { status: 200, headers: { 'content-type': 'application/json' } }));
-  await assert.rejects(
-    wrongDimension.readUsage({ dimension: 'search_requests_month', period_start: '2026-10-01T00:00:00Z' }),
-    (error) => error instanceof TwiApiError && error.code === 'invalid_response'
-  );
 });
