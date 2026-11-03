@@ -42,6 +42,8 @@ PR #133 was merged as commit `f94d024e0949a75dafe6df1d7c401d2ac7c0df9b`; its fro
 
 A READY deployment is not proof that the authenticated application works. The Vercel project environment inventory returned only `EARLY_ACCESS_ENABLED=false`; the rendered production runtime config has `apiBaseUrl=/api/twi`, an empty `apiAllowedOrigins` list, and empty OAuth issuer, authorization endpoint, token endpoint, client ID, scope, resource, and trusted issuer origins. The sign-in control is therefore disabled and the workspace accurately remains in foundation mode. Direct requests to `/api/twi` and `/api/twi/health` on the production custom domain both return HTTP 404, confirming no live TWI API route is currently exposed through this frontend deployment. Do not enable live operations by setting the frontend flag alone.
 
+The Vercel project now has an ignored-build-step guard that skips deployment only when the Git diff contains no changes under `apps/web`. If the previous/current Git SHA variables are missing, it proceeds with a build. This prevents documentation-only commits from consuming frontend build quota while keeping frontend changes build-triggered.
+
 ## AWS and runtime state
 
 A targeted read-only inventory covered all 17 currently enabled AWS regions and queried EC2, ECS, Lambda, Cognito user pools, API Gateway v2, DynamoDB, RDS, and CloudFormation. No Tinlyt backend resources or CloudFormation stacks were found in any of those regions. The only active EC2 instances discovered were separately tagged `fusionops-production` and `Threatfade` in `eu-north-1`; these belong to other projects and were not modified. The scan is broad across the listed service families but is not a claim that every AWS service in every region was enumerated.
