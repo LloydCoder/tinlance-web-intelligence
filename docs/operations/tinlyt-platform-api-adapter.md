@@ -29,13 +29,14 @@ The browser does not submit `tenant_id` or `subject_id`. The Platform HTTP bound
 | Run monitor | `twi.monitors.run` |
 | Read monitor run | `twi.jobs.read` |
 | Pause / resume monitor | `twi.monitors.pause` / `twi.monitors.resume` |
+| Read tenant usage | `twi.usage.read` |
 | Export evidence | `twi.jobs.export_evidence` |
 
 ## Explicitly unavailable until governed support exists
 
-- Usage retrieval is fail-closed in the browser. Add a tenant/subject-scoped Platform operation and policy capability before re-enabling it.
+- Usage retrieval uses `twi.usage.read`, requiring the `web.usage.read` capability and downstream `twi:usage:read` scope. Usage and plan details are classified as confidential, and query pagination is bounded and validated.
 - Monitor deletion is fail-closed in the browser. It is destructive and the Platform operation requires a run ID, approval ID and intent fingerprint bound to the exact request. A generic browser call must not bypass this approval workflow.
-- Evidence export currently traverses the bounded MCP transport (1 MiB response ceiling). Larger exports require a Platform-governed streaming or signed-download flow with tenant/subject binding, short expiry, content digest verification, audit evidence and revocation/expiry semantics. Do not increase the limit or add a direct TWI URL as a workaround.
+- Evidence export preserves the exact original response bytes through a base64 envelope and is bounded by the MCP transport (1 MiB response ceiling). Larger exports require a Platform-governed streaming or signed-download flow with tenant/subject binding, short expiry, content digest verification, audit evidence and revocation/expiry semantics. Do not increase the limit or add a direct TWI URL as a workaround.
 
 ## Deployment gates
 
