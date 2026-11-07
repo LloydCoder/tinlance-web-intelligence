@@ -1,24 +1,56 @@
+# Python
 __pycache__/
 *.py[cod]
 .venv/
-.tmp/
-.worktrees/
-.env
-.env.*
-!.env.example
-.coverage
-htmlcov/
+.tox/
+.nox/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 .bandit
+*.egg-info/
 build/
 dist/
-*.egg-info/
+
+# Node and frontend build output
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+.next/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+.npm/
+
+# Local runtime data and databases
 var/
+.tmp/
+.worktrees/
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
 *.db
 *.db-wal
 *.db-shm
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.log

@@ -1,59 +1,222 @@
-# Tinlance Web Intelligence
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="apps/web/tinlyt-logo-dark-bg.svg">
+    <img src="apps/web/tinlyt-logo-light-bg.svg" width="220" alt="Tinlyt">
+  </picture>
+</p>
 
-Evidence-first web discovery, retrieval, extraction, and monitoring for the Tinlance ecosystem.
+<h1 align="center">Tinlyt</h1>
+<p align="center"><strong>Discover sources. Verify claims. Preserve evidence.</strong></p>
+<p align="center">Evidence-first web intelligence for research teams, developers, and governed AI agents — turning web acquisition into traceable, reviewable evidence.</p>
+<p align="center">
+  <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml"><img alt="Python CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml"><img alt="Frontend CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml/badge.svg?branch=main"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/LloydCoder/tinlance-web-intelligence"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/LloydCoder/tinlance-web-intelligence/badge"></a>
+  <a href="https://github.com/LloydCoder/tinlance-web-intelligence/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/github/license/LloydCoder/tinlance-web-intelligence"></a>
+</p>
+<p align="center">
+  <a href="https://tinlyt-web.vercel.app">Product site</a> · <a href="docs/README.md">Documentation</a> · <a href="docs/api/">API reference</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a>
+</p>
 
-> **Status:** Workstream implementation and acceptance status are tracked in [the phase ledger](docs/roadmap/phases.md). Production readiness is not claimed.
+## Product preview
 
-## Scope
+Explore the [public Tinlyt product site](https://tinlyt-web.vercel.app). Its workflow panel is explicitly illustrative; it is not a live acquisition or verification result. The authenticated workspace remains dependent on approved identity and API deployment configuration.
 
-TWI owns web search and retrieval adapters, safe HTTP acquisition, isolated browser work, content extraction, acquisition artifacts, collection provenance, and source-backed observations. It exports observations to Tinlance World Intelligence through versioned contracts.
+> **Project status:** Tinlyt is under active development. Repository implementation and CI evidence do not certify a live deployment, private beta, or general availability. See [release readiness](docs/operations/private-beta-readiness.md).
 
-## Authority boundaries
+## What Tinlyt does
 
-- **Tinlance Agent Platform** is authoritative for identity, authorization, policy, approvals, governed execution, secrets, budgets, audit, and the canonical remote MCP endpoint.
-- **Tinlance Agent OS** owns workspace, task orchestration, and lifecycle.
-- **Platform SDK** provides typed consumer contracts.
-- **TADL** owns governed agent artifacts and developer workflows.
-- **Tinlance World Intelligence** owns canonical entities, events, relationships, temporal world state, correlation, contradiction, and world-level signals.
-- **TSIC** validates cross-repository interoperability and conformance.
+Tinlyt is evidence-first web intelligence infrastructure for research teams, developers, and governed AI agents. It provides controlled web search, retrieval, extraction, isolated browser acquisition, source provenance, claim-to-citation checks, and exportable evidence packages.
 
-TWI is a service/product layer, not an authority plane. It must not bypass Platform policy or duplicate World Intelligence semantics. It publishes operation manifests for the existing Platform MCP gateway rather than hosting a competing MCP server.
+The system makes acquisition inspectable: what was requested, what was retrieved, how it was captured, and which evidence supports a finding. Retrieval and citation matching do **not** independently establish factual truth or source authority.
 
-The versioned monitor API stores tenant-scoped monitor definitions and explicit durable capture runs. Agent OS controls recurrence. Results expose bounded deterministic change digests and do not claim truth; see [Monitor API v1](docs/api/monitors-v1.md). The commercial boundary provides atomic operation quotas, append-only usage facts, provider-neutral signed-event primitives, and a tenant-scoped [Usage API v1](docs/api/usage-v1.md). The [Tinlyt Commercial Pricing Policy v1](docs/commercial/tinlyt-pricing-policy-v1.md) records the approved market-facing launch rates and the implementation gates required before billing is enabled. Pricing documentation does not assert that payment collection, plan entitlements, or production billing are operational. Successful fetch jobs can expose a deterministic, tenant-authorized [Evidence Export API v1](docs/api/evidence-packages-v1.md) package containing captured bytes and versioned acquisition provenance; exports require `twi:evidence:export` and a full `TWI_SOURCE_REVISION`. The package is integrity-checked but not digitally signed, does not assert source truth, and includes source bytes unchanged; exports must be treated as customer data. The [W15 evidence pack](docs/readiness/w15-gates.json) is a separate source-bound release-readiness artifact; external owner and deployment gates remain open until evidenced.
+## Why this architecture
 
-## Development
+| Need | Tinlyt approach |
+| --- | --- |
+| Traceable research | Preserve acquisition metadata and source-linked observations. |
+| Safer web access | Validate destinations and redirects, bound resource use, and isolate browser execution behind controlled egress. |
+| Governed agent use | Integrate with Tinlance Agent Platform contracts rather than creating a parallel identity or execution authority. |
+| Reviewable evidence | Export versioned packages with captured bytes, provenance, and integrity checks. |
+| Ongoing observation | Store tenant-scoped monitor definitions and explicit capture runs; recurrence belongs to Agent OS. |
 
-Requires Python 3.12+ or 3.13.
+Tinlyt is not a general-purpose chatbot, a truth oracle, or an independent agent authority plane.
+
+## Quick start
+
+This starts the local API in development mode and checks liveness. It does not configure a live identity provider or external search credentials.
+
+```bash
+git clone https://github.com/LloydCoder/tinlance-web-intelligence.git
+cd tinlance-web-intelligence
+make install
+python -m uvicorn apps.api.main:app --reload
+```
+
+In a second terminal:
+
+```bash
+curl --fail http://127.0.0.1:8000/health/live
+```
+
+Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for the development OpenAPI interface. The local development verifier denies protected API requests by default; configure the approved Platform identity integration before submitting authenticated jobs.
+
+## Installation
+
+### Prerequisites
+
+| Component | Requirement |
+| --- | --- |
+| Python | 3.12 or 3.13 |
+| Node.js | 22.x, for frontend work |
+| PostgreSQL | Required for staging/production; local development can use SQLite |
+| Docker Compose | Required for containerized staging/browser-isolation topologies |
+
+### Python API and workers
+
+For a development checkout:
 
 ```bash
 make install
 make check
 ```
 
-PostgreSQL is the production persistence backend for jobs, usage facts, billing-event receipts, raw content-addressed artifacts, and the World Intelligence evidence outbox. Production requires TWI_DATABASE_URL with sslmode=verify-full and an injected entitlement resolver backed by the approved billing boundary; startup fails closed without it. No provider-specific billing adapter or production commercial plan catalogue is claimed until explicitly selected and configured. SQLite is limited to development, tests, and the single-host browser-isolation harness. PostgreSQL integration tests run when TWI_TEST_POSTGRES_DSN is set.
+For a runtime-only Python installation:
 
-`make check` runs tests, lint, typing, security lint, migration synchronization, deterministic evaluation, consumer contract checks, W15 evidence pack validation, and GA v1 release-contract validation. Build a local package with `python -m build --no-isolation` when the host cannot create isolated build environments.
-
-Network-capable acquisition must use connection-time DNS/IP validation, redirect revalidation, bounded resource use, and deployment egress controls. See [SSRF controls](docs/security/ssrf-controls.md). Backup and recovery procedures are documented in [backup and restore](docs/operations/backup-and-restore.md). W6 private-beta readiness is tracked in [the readiness checklist](docs/operations/private-beta-readiness.md).
-
-See [workstream plan](docs/roadmap/phases.md), [component boundaries](docs/architecture/component-boundaries.md), [browser isolation](docs/security/browser-isolation.md), and [Platform MCP integration](docs/integration/platform-mcp.md).
-
-## Tinlyt frontend
-
-The customer-facing Tinlyt web workspace lives in `apps/web/`. It is intentionally in foundation mode until the approved Platform identity integration and typed API client are implemented. The current UI does not submit jobs or display live account, run, evidence, or usage data.
-
-Run the dependency-free frontend checks with Node.js 22 or newer:
-
-```sh
-cd apps/web
-npm ci --ignore-scripts --no-audit --no-fund
-npm run lint
-npm run syntax-check
-npm run typecheck
-npm run security
-npm audit --audit-level=high
-npm test
-npm run build
+```bash
+python -m pip install .
 ```
 
-The build output is written to `apps/web/dist/`. The independent frontend workflow is defined in `.github/workflows/frontend.yml`; it complements rather than replaces the existing Python CI. See `docs/product/tinlyt-frontend-contract.md` and `docs/product/tinlyt-frontend-f1-foundation.md` for product truth rules, screen boundaries, and phase acceptance gates.
+Package metadata and pinned development dependencies are in [pyproject.toml](pyproject.toml) and [requirements-dev.txt](requirements-dev.txt). The canonical repository validation command is `make check`.
+
+### Frontend
+
+```bash
+cd apps/web
+npm ci --ignore-scripts --no-audit --no-fund
+npm run check
+npm audit --audit-level=high
+```
+
+The frontend build writes generated output to `apps/web/dist/`. Frontend checks do not replace API or Platform identity configuration.
+
+### Containerized deployment
+
+Deployment definitions are maintained under [deployments/compose/](deployments/compose/). The staging topology requires externally managed PostgreSQL, Platform identity/JWKS settings, and runtime secrets. Do not treat the local browser-isolation Compose file as a production deployment profile. Review [operations documentation](docs/operations/) before exposing services.
+
+## Usage
+
+### Check service health
+
+With the API running locally:
+
+```bash
+curl --fail http://127.0.0.1:8000/health/live
+curl --fail http://127.0.0.1:8000/health/ready
+```
+
+### Submit an authenticated search job
+
+Use this example only in an environment where the approved Tinlance Agent Platform identity provider is configured and the caller has the `twi:search` scope. A local development instance with the default deny-all verifier will reject this request.
+
+```bash
+export TWI_API_URL="https://your-configured-twi-api.example"
+export TWI_ACCESS_TOKEN="replace-with-a-short-lived-platform-access-token"
+IDEMPOTENCY_KEY="$(python -c 'import uuid; print(uuid.uuid4())')"
+
+curl --fail-with-body --request POST "$TWI_API_URL/v1/jobs" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: $IDEMPOTENCY_KEY" \
+  --data '{"kind":"search","payload":{"query":"primary sources for a research question","limit":5}}'
+```
+
+Job creation returns `202 Accepted`. The idempotency key must be 16–256 printable ASCII characters. Reuse the same key only when retrying the same logical request. See [Jobs API v1](docs/api/jobs-v1.md) for scopes, payload constraints, job states, cancellation, and error behavior.
+
+### Export evidence
+
+A successful fetch job can expose `GET /v1/jobs/{job_id}/evidence` to a caller with `twi:evidence:export`. The export contains captured source bytes and acquisition provenance. It is integrity-checked, but it is not digitally signed and does not prove that the source is accurate. See [Evidence Export API v1](docs/api/evidence-packages-v1.md).
+
+## Configuration
+
+Start with [.env.example](.env.example). Never commit populated secrets. This table lists important settings; it is not an exhaustive substitute for the validated configuration model.
+
+| Variable | Development default | Purpose |
+| --- | --- | --- |
+| `TWI_ENV` | `development` | Runtime environment: development, test, staging, or production |
+| `TWI_DATABASE_PATH` | `./var/twi.sqlite3` | Local SQLite path |
+| `TWI_DATABASE_URL` | unset | PostgreSQL DSN; staging/production require `sslmode=verify-full` |
+| `TWI_IDENTITY_ISSUER` | unset | Platform token issuer |
+| `TWI_IDENTITY_AUDIENCE` | unset | TWI API audience |
+| `TWI_IDENTITY_JWKS_URL` | unset | HTTPS JWKS endpoint |
+| `TWI_BROWSER_ENABLED` | `false` | Enables browser acquisition when isolated services are configured |
+| `TWI_BRAVE_SEARCH_API_KEY` | unset | Optional Brave Search provider credential |
+| `TWI_SOURCE_REVISION` | unset | Full 40-character commit SHA used by evidence exports |
+| `TWI_OTEL_EXPORTER_OTLP_ENDPOINT` | unset | Optional OTLP/HTTP trace collector endpoint |
+
+Production additionally requires the approved Platform token verifier, an entitlement resolver from the approved billing boundary, durable PostgreSQL persistence, and required worker/deployment controls. See [configuration validation](src/tinlance_web_intelligence/config.py) and [staging Compose](deployments/compose/staging.yml).
+
+## Capabilities
+
+| Area | Repository capability | Boundary or qualification |
+| --- | --- | --- |
+| Search | Provider-backed search adapter | Provider credentials and quotas are deployment-specific. |
+| Fetch and extraction | Controlled HTTP acquisition and content extraction | URL, DNS/IP, redirect, timeout, and response-size controls apply. |
+| Browser acquisition | Isolated browser worker, broker, and egress proxy topology | Disabled by default; deployment isolation must be verified. |
+| Jobs API | Authenticated, tenant-scoped job lifecycle | Requires Platform-issued identity and operation scopes. |
+| Claim checks | Compare claims and citations against captured text | Quote matching is not a factual-truth verdict. |
+| Evidence export | Versioned package with captured bytes and provenance | Integrity checking is not a digital signature or source-truth guarantee. |
+| Monitors | Tenant-scoped definitions and explicit capture runs | Agent OS owns recurrence and scheduling. |
+| Usage | Tenant-scoped usage facts and quota interfaces | Not a statement of invoice, payment settlement, or provider billing status. |
+| Frontend | Tinlyt website and workspace foundation | Live authenticated journeys depend on approved identity and API deployment configuration. |
+
+## Documentation
+
+The [documentation index](docs/README.md) organizes existing project material.
+
+| Topic | Start here |
+| --- | --- |
+| Architecture and authority boundaries | [Component boundaries](docs/architecture/component-boundaries.md) |
+| Workstream status | [Phase ledger](docs/roadmap/phases.md) |
+| Jobs and acquisition | [Jobs API v1](docs/api/jobs-v1.md) |
+| Evidence packages | [Evidence Export API v1](docs/api/evidence-packages-v1.md) |
+| Monitors | [Monitor API v1](docs/api/monitors-v1.md) |
+| Usage and quotas | [Usage API v1](docs/api/usage-v1.md) |
+| SSRF and egress | [SSRF controls](docs/security/ssrf-controls.md) |
+| Threat model | [Threat model](docs/security/threat-model.md) |
+| Operations and recovery | [Operations documentation](docs/operations/) |
+| Product and frontend contracts | [Frontend contract](docs/product/tinlyt-frontend-contract.md) |
+| Evaluation methodology | [TWI benchmark](docs/evaluation/twi-benchmark.md) |
+| Release gates | [Private-beta readiness](docs/operations/private-beta-readiness.md) |
+
+## Contributing
+
+Contributions are welcome through focused pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), follow security and authority boundaries, add tests for behavior changes, and run `make check` before requesting review.
+
+## License and acknowledgements
+
+Tinlyt is distributed under the [Apache License 2.0](LICENSE). Third-party dependencies retain their respective licenses; see package metadata and dependency notices. The Tinlyt wordmark uses outlined artwork in the repository's web assets. The Tinlyt name and logo are project identity assets and are not represented here as trademark-cleared.
+
+<details>
+<summary>Roadmap and release status</summary>
+
+Workstream acceptance and outstanding external gates are tracked in the [phase ledger](docs/roadmap/phases.md). The current release decision remains **NOT CERTIFIED** until deployment, branch governance, privacy, SLO/on-call, security, interoperability, and owner-approval evidence is complete.
+
+</details>
+
+<details>
+<summary>Troubleshooting</summary>
+
+- **Protected API routes return 401 locally:** expected with the default deny-all development verifier. Configure the approved Platform identity integration; do not disable authorization to make the example work.
+- **Staging startup rejects the database URL:** staging/production require PostgreSQL with `sslmode=verify-full`.
+- **Browser jobs are unavailable:** browser acquisition is disabled by default and requires the isolated broker, worker, proxy, and deployment configuration.
+- **Evidence export is unavailable:** check successful fetch-job state, caller scope, durable artifact storage, provenance, and a full source revision.
+
+</details>
+
+<details>
+<summary>Support</summary>
+
+Use GitHub Issues for reproducible defects and feature proposals. For private security reports, follow [SECURITY.md](SECURITY.md). General project guidance is in [SUPPORT.md](SUPPORT.md).
+
+</details>
