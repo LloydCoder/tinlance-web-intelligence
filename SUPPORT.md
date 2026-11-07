@@ -27,4 +27,4 @@ A public product site or a green repository workflow does not establish that the
 
 ## Maintainer contact
 
-For non-sensitive project questions that cannot be handled through an issue, contact **@LloydCoder** through GitHub. Sensitive security reports must follow [SECURITY.md](SECURITY.md).
+For non-sensitive project questions that cannot be handled through an issue, email [hello@tinlance.com](mailto:hello@tinlance.com) or contact **@LloydCoder**. Sensitive security reports must follow [SECURITY.md](SECURITY.md).

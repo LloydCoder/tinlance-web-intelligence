@@ -35,7 +35,7 @@ This Code of Conduct applies within project spaces and when an individual is off
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainer **@LloydCoder** privately through GitHub. Reports will be reviewed and investigated promptly and fairly. Project leaders are obligated to respect the privacy and security of the reporter.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported privately to the project maintainer **@LloydCoder** at [hello@tinlance.com](mailto:hello@tinlance.com?subject=%5BCOMMUNITY%20CONDUCT%5D%20Tinlyt), using the subject **[COMMUNITY CONDUCT] Tinlyt**. Reports will be reviewed and investigated promptly and fairly. Project leaders are obligated to respect the privacy and security of the reporter.
 
 ## Enforcement Guidelines
 

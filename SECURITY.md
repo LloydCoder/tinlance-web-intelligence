@@ -16,7 +16,7 @@ Preferred reporting path:
 2. Select **Report a vulnerability** to create a private GitHub Security Advisory, if private vulnerability reporting is enabled.
 3. Include the affected commit/tag, impact, prerequisites, reproduction steps, and suggested mitigation. Redact secrets and personal data.
 
-If private vulnerability reporting is unavailable, contact the repository maintainer **@LloydCoder** privately through GitHub. Do not use a public issue as a fallback for sensitive details.
+If private vulnerability reporting is unavailable, email [hello@tinlance.com](mailto:hello@tinlance.com?subject=%5BSECURITY%5D%20Tinlyt%20vulnerability%20report) with the subject **[SECURITY] Tinlyt vulnerability report**. This mailbox is the project's public contact route; the maintainer should confirm that it is actively monitored. Do not use a public issue as a fallback for sensitive details.
 
 ## Response expectations
 
