@@ -32,7 +32,7 @@ yarl==1.25.1
 idna==3.20
 fastapi==0.162.0
 uvicorn==0.54.0
-PyJWT==2.15.0
+PyJWT==2.15.1
 cryptography==50.0.2
 psycopg[binary,pool]==3.3.6
 prometheus-client==0.26.0
