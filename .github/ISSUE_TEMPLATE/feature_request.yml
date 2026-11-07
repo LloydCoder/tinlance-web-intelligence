@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a capability or improvement.
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature proposals must respect Tinlyt's authority boundaries, evidence semantics, privacy requirements, and deployment constraints.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or user need
+      description: What task is difficult or unsupported today?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the user-visible or developer-facing result.
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: Include alternatives considered, if known.
+    validations:
+      required: false
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Security, privacy, and authority implications
+      description: Consider tenancy, untrusted content, data retention, permissions, and cross-repository ownership.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable outcomes and required tests.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and the documentation index.
+          required: true
+        - label: This proposal does not assume an unimplemented capability is already available.
+          required: true

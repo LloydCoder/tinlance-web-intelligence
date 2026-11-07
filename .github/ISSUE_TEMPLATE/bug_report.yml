@@ -1,0 +1,84 @@
+name: Bug report
+description: Report a reproducible defect in Tinlyt.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets, access tokens, customer data, private source URLs, or exploit details. Report vulnerabilities privately using SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Commit, tag, or version
+      description: Provide the exact commit SHA or release tag.
+      placeholder: "main @ full SHA"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - API / jobs
+        - Search / fetch / extraction
+        - Browser isolation / egress
+        - Evidence export / provenance
+        - Monitors
+        - Usage / quotas
+        - Frontend
+        - Documentation
+        - CI / build / release
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include the smallest safe reproduction and sanitized inputs.
+      placeholder: |
+        1. Configure ...
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python/Node versions, OS, deployment mode, and relevant non-secret settings.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove credentials, personal data, private URLs, and customer evidence.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and documentation.
+          required: true
+        - label: I removed secrets and sensitive data from this report.
+          required: true
+        - label: This is not a security vulnerability requiring private disclosure.
+          required: true
