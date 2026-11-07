@@ -7,6 +7,7 @@
 
 <h1 align="center">Tinlyt</h1>
 <p align="center"><strong>Discover sources. Verify claims. Preserve evidence.</strong></p>
+<p align="center">Evidence-first web intelligence for research teams, developers, and governed AI agents — turning web acquisition into traceable, reviewable evidence.</p>
 <p align="center">
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml"><img alt="Python CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml"><img alt="Frontend CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml/badge.svg?branch=main"></a>
@@ -15,6 +16,10 @@
 <p align="center">
   <a href="https://tinlyt-web.vercel.app">Product site</a> · <a href="docs/README.md">Documentation</a> · <a href="docs/api/">API reference</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a>
 </p>
+
+## Product preview
+
+Explore the [public Tinlyt product site](https://tinlyt-web.vercel.app). Its workflow panel is explicitly illustrative; it is not a live acquisition or verification result. The authenticated workspace remains dependent on approved identity and API deployment configuration.
 
 > **Project status:** Tinlyt is under active development. Repository implementation and CI evidence do not certify a live deployment, private beta, or general availability. See [release readiness](docs/operations/private-beta-readiness.md).
 
@@ -189,7 +194,7 @@ Contributions are welcome through focused pull requests. Read [CONTRIBUTING.md](
 
 ## License and acknowledgements
 
-Tinlyt is distributed under the [Apache License 2.0](LICENSE). Third-party dependencies retain their respective licenses; see package metadata and dependency notices. The Tinlyt wordmark uses outlined artwork in the repository's web assets. The supplied draft identity kit states that the Tinlyt name and logo have not been trademark-cleared.
+Tinlyt is distributed under the [Apache License 2.0](LICENSE). Third-party dependencies retain their respective licenses; see package metadata and dependency notices. The Tinlyt wordmark uses outlined artwork in the repository's web assets. The Tinlyt name and logo are project identity assets and are not represented here as trademark-cleared.
 
 <details>
 <summary>Roadmap and release status</summary>
