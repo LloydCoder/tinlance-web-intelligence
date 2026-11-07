@@ -11,6 +11,7 @@
 <p align="center">
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml"><img alt="Python CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml"><img alt="Frontend CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml/badge.svg?branch=main"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/LloydCoder/tinlance-web-intelligence"><img alt="OpenSSF Scorecard" src="https://api.scorecard.dev/projects/github.com/LloydCoder/tinlance-web-intelligence/badge"></a>
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/github/license/LloydCoder/tinlance-web-intelligence"></a>
 </p>
 <p align="center">
