@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml"><img alt="Python CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml"><img alt="Frontend CI" src="https://github.com/LloydCoder/tinlance-web-intelligence/actions/workflows/frontend.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/LloydCoder/tinlance-web-intelligence/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
+  <a href="https://github.com/LloydCoder/tinlance-web-intelligence/blob/main/LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/github/license/LloydCoder/tinlance-web-intelligence"></a>
 </p>
 <p align="center">
   <a href="https://tinlyt-web.vercel.app">Product site</a> · <a href="docs/README.md">Documentation</a> · <a href="docs/api/">API reference</a> · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a>
@@ -40,18 +40,18 @@ Tinlyt is not a general-purpose chatbot, a truth oracle, or an independent agent
 
 This starts the local API in development mode and checks liveness. It does not configure a live identity provider or external search credentials.
 
-\`\`\`bash
+```bash
 git clone https://github.com/LloydCoder/tinlance-web-intelligence.git
 cd tinlance-web-intelligence
 make install
 python -m uvicorn apps.api.main:app --reload
-\`\`\`
+```
 
 In a second terminal:
 
-\`\`\`bash
+```bash
 curl --fail http://127.0.0.1:8000/health/live
-\`\`\`
+```
 
 Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for the development OpenAPI interface. The local development verifier denies protected API requests by default; configure the approved Platform identity integration before submitting authenticated jobs.
 
@@ -70,29 +70,29 @@ Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for the developmen
 
 For a development checkout:
 
-\`\`\`bash
+```bash
 make install
 make check
-\`\`\`
+```
 
 For a runtime-only Python installation:
 
-\`\`\`bash
+```bash
 python -m pip install .
-\`\`\`
+```
 
-Package metadata and pinned development dependencies are in [pyproject.toml](pyproject.toml) and [requirements-dev.txt](requirements-dev.txt). The canonical repository validation command is \`make check\`.
+Package metadata and pinned development dependencies are in [pyproject.toml](pyproject.toml) and [requirements-dev.txt](requirements-dev.txt). The canonical repository validation command is `make check`.
 
 ### Frontend
 
-\`\`\`bash
+```bash
 cd apps/web
 npm ci --ignore-scripts --no-audit --no-fund
 npm run check
 npm audit --audit-level=high
-\`\`\`
+```
 
-The frontend build writes generated output to \`apps/web/dist/\`. Frontend checks do not replace API or Platform identity configuration.
+The frontend build writes generated output to `apps/web/dist/`. Frontend checks do not replace API or Platform identity configuration.
 
 ### Containerized deployment
 
@@ -104,32 +104,32 @@ Deployment definitions are maintained under [deployments/compose/](deployments/c
 
 With the API running locally:
 
-\`\`\`bash
+```bash
 curl --fail http://127.0.0.1:8000/health/live
 curl --fail http://127.0.0.1:8000/health/ready
-\`\`\`
+```
 
 ### Submit an authenticated search job
 
-Use this example only in an environment where the approved Tinlance Agent Platform identity provider is configured and the caller has the \`twi:search\` scope. A local development instance with the default deny-all verifier will reject this request.
+Use this example only in an environment where the approved Tinlance Agent Platform identity provider is configured and the caller has the `twi:search` scope. A local development instance with the default deny-all verifier will reject this request.
 
-\`\`\`bash
+```bash
 export TWI_API_URL="https://your-configured-twi-api.example"
 export TWI_ACCESS_TOKEN="replace-with-a-short-lived-platform-access-token"
 IDEMPOTENCY_KEY="$(python -c 'import uuid; print(uuid.uuid4())')"
 
-curl --fail-with-body --request POST "$TWI_API_URL/v1/jobs" \\
-  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \\
-  --header "Content-Type: application/json" \\
-  --header "Idempotency-Key: $IDEMPOTENCY_KEY" \\
+curl --fail-with-body --request POST "$TWI_API_URL/v1/jobs" \
+  --header "Authorization: Bearer $TWI_ACCESS_TOKEN" \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: $IDEMPOTENCY_KEY" \
   --data '{"kind":"search","payload":{"query":"primary sources for a research question","limit":5}}'
-\`\`\`
+```
 
-Job creation returns \`202 Accepted\`. The idempotency key must be 16–256 printable ASCII characters. Reuse the same key only when retrying the same logical request. See [Jobs API v1](docs/api/jobs-v1.md) for scopes, payload constraints, job states, cancellation, and error behavior.
+Job creation returns `202 Accepted`. The idempotency key must be 16–256 printable ASCII characters. Reuse the same key only when retrying the same logical request. See [Jobs API v1](docs/api/jobs-v1.md) for scopes, payload constraints, job states, cancellation, and error behavior.
 
 ### Export evidence
 
-A successful fetch job can expose \`GET /v1/jobs/{job_id}/evidence\` to a caller with \`twi:evidence:export\`. The export contains captured source bytes and acquisition provenance. It is integrity-checked, but it is not digitally signed and does not prove that the source is accurate. See [Evidence Export API v1](docs/api/evidence-packages-v1.md).
+A successful fetch job can expose `GET /v1/jobs/{job_id}/evidence` to a caller with `twi:evidence:export`. The export contains captured source bytes and acquisition provenance. It is integrity-checked, but it is not digitally signed and does not prove that the source is accurate. See [Evidence Export API v1](docs/api/evidence-packages-v1.md).
 
 ## Configuration
 
@@ -137,16 +137,16 @@ Start with [.env.example](.env.example). Never commit populated secrets. This ta
 
 | Variable | Development default | Purpose |
 | --- | --- | --- |
-| \`TWI_ENV\` | \`development\` | Runtime environment: development, test, staging, or production |
-| \`TWI_DATABASE_PATH\` | \`./var/twi.sqlite3\` | Local SQLite path |
-| \`TWI_DATABASE_URL\` | unset | PostgreSQL DSN; staging/production require \`sslmode=verify-full\` |
-| \`TWI_IDENTITY_ISSUER\` | unset | Platform token issuer |
-| \`TWI_IDENTITY_AUDIENCE\` | unset | TWI API audience |
-| \`TWI_IDENTITY_JWKS_URL\` | unset | HTTPS JWKS endpoint |
-| \`TWI_BROWSER_ENABLED\` | \`false\` | Enables browser acquisition when isolated services are configured |
-| \`TWI_BRAVE_SEARCH_API_KEY\` | unset | Optional Brave Search provider credential |
-| \`TWI_SOURCE_REVISION\` | unset | Full 40-character commit SHA used by evidence exports |
-| \`TWI_OTEL_EXPORTER_OTLP_ENDPOINT\` | unset | Optional OTLP/HTTP trace collector endpoint |
+| `TWI_ENV` | `development` | Runtime environment: development, test, staging, or production |
+| `TWI_DATABASE_PATH` | `./var/twi.sqlite3` | Local SQLite path |
+| `TWI_DATABASE_URL` | unset | PostgreSQL DSN; staging/production require `sslmode=verify-full` |
+| `TWI_IDENTITY_ISSUER` | unset | Platform token issuer |
+| `TWI_IDENTITY_AUDIENCE` | unset | TWI API audience |
+| `TWI_IDENTITY_JWKS_URL` | unset | HTTPS JWKS endpoint |
+| `TWI_BROWSER_ENABLED` | `false` | Enables browser acquisition when isolated services are configured |
+| `TWI_BRAVE_SEARCH_API_KEY` | unset | Optional Brave Search provider credential |
+| `TWI_SOURCE_REVISION` | unset | Full 40-character commit SHA used by evidence exports |
+| `TWI_OTEL_EXPORTER_OTLP_ENDPOINT` | unset | Optional OTLP/HTTP trace collector endpoint |
 
 Production additionally requires the approved Platform token verifier, an entitlement resolver from the approved billing boundary, durable PostgreSQL persistence, and required worker/deployment controls. See [configuration validation](src/tinlance_web_intelligence/config.py) and [staging Compose](deployments/compose/staging.yml).
 
@@ -185,7 +185,7 @@ The [documentation index](docs/README.md) organizes existing project material.
 
 ## Contributing
 
-Contributions are welcome through focused pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), follow security and authority boundaries, add tests for behavior changes, and run \`make check\` before requesting review.
+Contributions are welcome through focused pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), follow security and authority boundaries, add tests for behavior changes, and run `make check` before requesting review.
 
 ## License and acknowledgements
 
@@ -202,7 +202,7 @@ Workstream acceptance and outstanding external gates are tracked in the [phase l
 <summary>Troubleshooting</summary>
 
 - **Protected API routes return 401 locally:** expected with the default deny-all development verifier. Configure the approved Platform identity integration; do not disable authorization to make the example work.
-- **Staging startup rejects the database URL:** staging/production require PostgreSQL with \`sslmode=verify-full\`.
+- **Staging startup rejects the database URL:** staging/production require PostgreSQL with `sslmode=verify-full`.
 - **Browser jobs are unavailable:** browser acquisition is disabled by default and requires the isolated broker, worker, proxy, and deployment configuration.
 - **Evidence export is unavailable:** check successful fetch-job state, caller scope, durable artifact storage, provenance, and a full source revision.
 

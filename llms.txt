@@ -41,10 +41,10 @@ Tinlyt is not an independent identity authority, a general-purpose chatbot, or a
 - Python package metadata: [pyproject.toml](pyproject.toml)
 - Development dependency pins: [requirements-dev.txt](requirements-dev.txt)
 - Environment variable template: [.env.example](.env.example)
-- Backend validation: \`make check\`
-- Frontend validation: \`cd apps/web && npm ci && npm run check\`
-- API entrypoint: \`apps.api.main:app\`
-- API routes: \`src/tinlance_web_intelligence/api/http/routes/\`
+- Backend validation: `make check`
+- Frontend validation: `cd apps/web && npm ci && npm run check`
+- API entrypoint: `apps.api.main:app`
+- API routes: `src/tinlance_web_intelligence/api/http/routes/`
 - API schemas and operation manifests: [schemas/](schemas/)
 - Consumer contracts: [contracts/](contracts/)
 

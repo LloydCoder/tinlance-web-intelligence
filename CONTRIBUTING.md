@@ -13,30 +13,30 @@ Thank you for helping improve Tinlyt. Contributions should preserve the project'
 
 Requirements: Python 3.12 or 3.13. Frontend work also requires Node.js 22.
 
-\`\`\`bash
+```bash
 git clone https://github.com/LloydCoder/tinlance-web-intelligence.git
 cd tinlance-web-intelligence
 make install
-\`\`\`
+```
 
 For frontend changes:
 
-\`\`\`bash
+```bash
 cd apps/web
 npm ci --ignore-scripts --no-audit --no-fund
 npm run check
 npm audit --audit-level=high
-\`\`\`
+```
 
 ## Branch and pull request workflow
 
-1. Fork the repository (external contributors) or create a focused branch from \`main\`.
-2. Use a descriptive branch name, such as \`fix/redirect-validation\`, \`feat/evidence-metadata\`, or \`docs/api-examples\`.
+1. Fork the repository (external contributors) or create a focused branch from `main`.
+2. Use a descriptive branch name, such as `fix/redirect-validation`, `feat/evidence-metadata`, or `docs/api-examples`.
 3. Keep each pull request focused on one coherent change.
 4. Add or update tests for behavior, negative paths, authorization boundaries, and regressions.
 5. Update API schemas, contracts, operational guidance, and user documentation when behavior changes.
 6. Run relevant focused tests and the full required checks.
-7. Push your branch and open a pull request against \`main\`.
+7. Push your branch and open a pull request against `main`.
 8. Explain the problem, implementation, security impact, compatibility impact, and verification evidence.
 9. Address review feedback and wait for required CI and maintainer approval before merge.
 
@@ -56,31 +56,31 @@ npm audit --audit-level=high
 
 The canonical backend/repository validation command is:
 
-\`\`\`bash
+```bash
 make check
-\`\`\`
+```
 
 It runs lint, type checking, security lint, tests, migration synchronization, shell syntax checks, evaluation, consumer-contract validation, W15 evidence-pack validation, and GA contract validation.
 
 For frontend changes:
 
-\`\`\`bash
+```bash
 cd apps/web
 npm run check
 npm audit --audit-level=high
-\`\`\`
+```
 
-If a test depends on PostgreSQL, set \`TWI_TEST_POSTGRES_DSN\` to a disposable test database. Never point tests at production data. Document checks that could not be run; do not report an unexecuted check as passing.
+If a test depends on PostgreSQL, set `TWI_TEST_POSTGRES_DSN` to a disposable test database. Never point tests at production data. Document checks that could not be run; do not report an unexecuted check as passing.
 
 ## Commit messages
 
 Use Conventional Commits where practical:
 
-- \`feat(scope): add capability\`
-- \`fix(scope): correct behavior\`
-- \`docs(scope): update guidance\`
-- \`test(scope): add regression coverage\`
-- \`chore(scope): maintain tooling\`
+- `feat(scope): add capability`
+- `fix(scope): correct behavior`
+- `docs(scope): update guidance`
+- `test(scope): add regression coverage`
+- `chore(scope): maintain tooling`
 
 Keep commits reviewable and avoid bundling unrelated formatting or generated artifacts.
 
@@ -88,7 +88,7 @@ Keep commits reviewable and avoid bundling unrelated formatting or generated art
 
 - [ ] The change is scoped and its purpose is clear.
 - [ ] Tests cover new behavior and important failure/security paths.
-- [ ] \`make check\` passes, or unrun checks are explicitly explained.
+- [ ] `make check` passes, or unrun checks are explicitly explained.
 - [ ] Frontend checks pass when frontend files change.
 - [ ] Contracts, migrations, and documentation are synchronized.
 - [ ] No secrets, personal data, or proprietary customer evidence are included.

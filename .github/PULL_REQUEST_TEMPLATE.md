@@ -27,7 +27,7 @@
 ## Verification
 
 - [ ] Focused tests pass.
-- [ ] \`make check\` passes.
+- [ ] `make check` passes.
 - [ ] Frontend checks pass when frontend files change.
 - [ ] Migrations and schemas are synchronized.
 - [ ] Documentation and examples match implementation.
