@@ -4,7 +4,7 @@ build==1.6.1
 pyproject-hooks==1.2.0
 pytest==9.1.1
 ruff==0.17.3
-mypy==2.4.0
+mypy==2.4.1
 bandit==1.9.4
 httpx==0.28.1
 httpx2==2.13.1
